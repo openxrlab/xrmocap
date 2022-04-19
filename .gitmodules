@@ -1,0 +1,3 @@
+[submodule "xrprimer"]
+	path = xrprimer
+	url = ../xrprimer.git
