@@ -1,0 +1,50 @@
+image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-ffmpeg4-pytorch3d-mmpose
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+    - linting
+    - test
+
+before_script:
+  - echo $PATH
+  - ls /workspace
+  - gcc --version
+  - python --version
+  - pip --version
+  - nvcc --version
+  - python -c "import torch; print(torch.__version__)"
+  - export http_proxy=http://172.16.1.135:3128/
+  - export https_proxy=http://172.16.1.135:3128/
+  - export HTTP_PROXY=http://172.16.1.135:3128/
+  - export HTTPS_PROXY=http://172.16.1.135:3128/
+
+linting:
+  stage: linting
+  script:
+    - pre-commit install
+    - pre-commit run --all-files --verbose
+    - echo "Docstring coverage results:"
+    - interrogate -vinmMI -f 40 xrmocap/
+test:
+  stage: test
+  tags:
+    - gpu
+  script:
+    - nvidia-smi
+    - echo "Start building..."
+    - cd xrprimer/python/
+    - pip install -e .
+    - python -c "import xrprimer; print(xrprimer.__version__)"
+    - cd ../../
+    - pip install -e .
+    - unset http_proxy
+    - unset https_proxy
+    - unset HTTP_PROXY
+    - unset HTTPS_PROXY
+    - sh script/download_weight.sh
+    - sh script/download_test_data.sh
+    - echo "Start testing..."
+    - coverage run --source xrmocap -m pytest -s test/
+    - coverage report -m
