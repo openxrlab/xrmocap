@@ -37,14 +37,6 @@ class SMCReader:
             self.iphone_depth_resolution = \
                 self.smc['iPhone'].attrs['depth_resolution']  # vertical
         self.keypoint_exists = 'Keypoints3D' in self.smc.keys()
-        if self.keypoint_exists:
-            self.keypoints_num_frames = self.smc['Keypoints3D'].attrs[
-                'num_frame']
-            self.keypoints_convention = self.smc['Keypoints3D'].attrs[
-                'convention']
-            self.keypoints_created_time = self.smc['Keypoints3D'].attrs[
-                'created_time']
-        self.smpl_exists = 'SMPL' in self.smc.keys()
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.

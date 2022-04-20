@@ -1,6 +1,27 @@
 import logging
 from typing import Union
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+
+def setup_logger(logger_name: str = 'root',
+                 logger_level: int = logging.INFO,
+                 logger_path: str = None,
+                 logger_format: str = None) -> logging.Logger:
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(level=logger_level)
+    if logger_path is not None:
+        handler = logging.FileHandler(logger_path)
+    else:
+        handler = logging.StreamHandler()
+    if logger_format is not None:
+        formatter = logging.Formatter(logger_format)
+        handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
+
 
 def get_logger(
         logger: Union[None, str, logging.Logger] = None) -> logging.Logger:
