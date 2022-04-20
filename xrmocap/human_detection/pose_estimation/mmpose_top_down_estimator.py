@@ -60,9 +60,10 @@ class MMposeTopDownEstimator:
         if digit_version(mmpose_version) <= digit_version('0.9.0') and\
                 self.batch_size > 1:
             self.batch_size = 1
-            self.logger.warn(f'mmpose {mmpose_version} does not support' +
-                             ' batch inference.' +
-                             ' MMposeTopDownEstimator.batch_size is set to 1.')
+            self.logger.warning(
+                f'mmpose {mmpose_version} does not support' +
+                ' batch inference.' +
+                ' MMposeTopDownEstimator.batch_size is set to 1.')
 
     def get_keypoints_convention_name(self) -> str:
         """Get data_source from dataset type in config file of the pose model.

@@ -42,7 +42,7 @@ def convert_bbox(
     """
     logger = get_logger(logger)
     if src == dst:
-        logger.warn('Src convention equals to dst convention.')
+        logger.warning('Src convention equals to dst convention.')
         return data
     if isinstance(data, torch.Tensor):
 
