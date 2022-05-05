@@ -1,10 +1,8 @@
-from mmcv.utils import Registry
-from xrprimer.ops.triangulation.builder import TRIANGULATORS  # noqa:F401
 from xrprimer.ops.triangulation.builder import build_triangulator  # noqa:F401
+from xrprimer.ops.triangulation.builder import TRIANGULATORS
 
-POINTSELECTORS = Registry('point_selector')
+from xrmocap.ops.triangulation.aniposelib_triangulator import \
+    AniposelibTriangulator  # prevent linting conflicts
 
-
-def build_point_selector(cfg):
-    """Build point selector."""
-    return POINTSELECTORS.build(cfg)
+TRIANGULATORS.register_module(
+    name='AniposelibTriangulator', module=AniposelibTriangulator)

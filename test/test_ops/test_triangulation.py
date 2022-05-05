@@ -73,3 +73,19 @@ def test_aniposelib_triangulator():
     with pytest.raises(ValueError):
         triangulator.triangulate(
             points=keypoints2d, points_mask=points_mask[:2, ...])
+    # test slice
+    int_triangulator = triangulator[0]
+    assert len(int_triangulator.camera_parameters) == 1
+    list_triangulator = triangulator[[0, 1]]
+    assert len(list_triangulator.camera_parameters) == 2
+    tuple_triangulator = triangulator[(0, 1)]
+    assert len(tuple_triangulator.camera_parameters) == 2
+    slice_triangulator = triangulator[:2]
+    assert len(slice_triangulator.camera_parameters) == 2
+    slice_triangulator = triangulator[::2]
+    assert len(slice_triangulator.camera_parameters) >= 2
+    # test error
+    keypoints3d = triangulator.triangulate(keypoints2d)
+    error = triangulator.get_reprojection_error(
+        points2d=keypoints2d, points3d=keypoints3d)
+    assert np.all(error.shape == keypoints2d[..., :2].shape)

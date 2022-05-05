@@ -1,11 +1,11 @@
 import logging
+from operator import itemgetter
 from typing import Union
 
 import numpy as np
 from scipy.spatial.transform import Rotation as scipy_Rotation
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
-from xrmocap.ops.triangulation.builder import TRIANGULATORS
 from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
 
@@ -19,7 +19,6 @@ except (ImportError, ModuleNotFoundError):
     import_exception = traceback.format_exc()
 
 
-@TRIANGULATORS.register_module(name=('AniposelibTriangulator'))
 class AniposelibTriangulator(BaseTriangulator):
 
     def __init__(self,
@@ -50,6 +49,35 @@ class AniposelibTriangulator(BaseTriangulator):
             raise ModuleNotFoundError(
                 'Please install aniposelib to run triangulation.')
 
+    def __getitem__(self, index: Union[slice, int, list, tuple]):
+        """Slice the cameras by batch dim.
+
+        Args:
+            index (Union[slice, int, list, tuple]):
+                The index for slicing.
+
+        Returns:
+            AniposelibTriangulator:
+                A sliced AniposelibTriangulator with selected items.
+        """
+        if isinstance(index, int):
+            index = [index]
+        if isinstance(index, list) or\
+                isinstance(index, tuple):
+            new_cam_param_list = itemgetter(*index)(self.camera_parameters)
+            if len(index) == 1:
+                new_cam_param_list = [
+                    new_cam_param_list,
+                ]
+        else:
+            new_cam_param_list = self.camera_parameters[index]
+        new_cam_param_list = list(new_cam_param_list)
+        new_triangulator = self.__class__(
+            camera_parameters=new_cam_param_list,
+            camera_convention=self.camera_convention,
+            logger=self.logger)
+        return new_triangulator
+
     def triangulate(
             self,
             points: Union[np.ndarray, list, tuple],
@@ -60,6 +88,9 @@ class AniposelibTriangulator(BaseTriangulator):
             points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
                 [view_number, ..., 2+n], n >= 0.
+                [...] could be [keypoint_num],
+                [frame_num, keypoint_num],
+                [frame_num, person_num, keypoint_num], etc.
                 If length of the last dim is greater
                 than 2, the redundant data will be
                 dropped.
@@ -75,7 +106,7 @@ class AniposelibTriangulator(BaseTriangulator):
         Returns:
             np.ndarray:
                 An ndarray of points3d, in shape
-                [view_number, ..., 3].
+                [..., 3].
         """
         points, points_mask = prepare_triangulate_input(
             camera_number=len(self.camera_parameters),
@@ -128,7 +159,7 @@ class AniposelibTriangulator(BaseTriangulator):
             self,
             points2d: Union[np.ndarray, list, tuple],
             points3d: Union[np.ndarray, list, tuple],
-            points_mask: Union[np.ndarray, list, tuple] = None) -> float:
+            points_mask: Union[np.ndarray, list, tuple] = None) -> np.ndarray:
         """Get reprojection error between reprojected points2d and input
         points2d. Not tested yet.
 
@@ -136,6 +167,9 @@ class AniposelibTriangulator(BaseTriangulator):
             points2d (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
                 [view_number, ..., 2+n], n >= 0.
+                [...] could be [keypoint_num],
+                [frame_num, keypoint_num],
+                [frame_num, person_num, keypoint_num], etc.
                 Data in points2d[..., 2:] will be ignored.
             points3d (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points3d, in shape
@@ -151,18 +185,29 @@ class AniposelibTriangulator(BaseTriangulator):
                 Defaults to None.
 
         Returns:
-            float: The error value.
+            np.ndarray:
+                An ndarray of error, in shape
+                [view_number, ..., 2].
         """
         points2d, points_mask = prepare_triangulate_input(
-            points2d, points_mask)
+            camera_number=len(self.camera_parameters),
+            points=points2d,
+            points_mask=points_mask,
+            logger=self.logger)
+        # backup shape for output
+        input_points2d_shape = points2d.shape
         # todo: check points3d
         camera_group = self.__prepare_aniposelib_camera__()
         view_number = points_mask.shape[0]
-        points2d = points2d[..., :2].reshape(view_number, -1, 2)
-        points3d = points3d[..., :3].reshape(-1, 3)
+        points2d = points2d[..., :2].copy().reshape(view_number, -1, 2)
+        points3d = points3d[..., :3].copy().reshape(-1, 3)
         # ignore points according to mask
         ignored_indices = np.where(points_mask != 1)
         points2d[ignored_indices[0], ignored_indices[1], :] = np.nan
         points3d[ignored_indices[1], :] = np.nan
-        errors = camera_group.reprojection_error(points3d, points2d)
+        errors = camera_group.reprojection_error(
+            points3d, points2d, mean=False)
+        output_errors_shape = np.array(input_points2d_shape)
+        output_errors_shape[-1] = 2
+        errors = errors.reshape(*output_errors_shape)
         return errors

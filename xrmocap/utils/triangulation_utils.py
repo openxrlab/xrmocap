@@ -80,6 +80,7 @@ def get_valid_views_stats(points_mask: np.ndarray,
     table.field_names = ['Valid Views', 'Pairs']
     for key, item in valid_stats_dict.items():
         table.add_row([key, item])
+    table = '\n' + table.get_string()
     return valid_stats_dict, table
 
 
@@ -98,6 +99,9 @@ def prepare_triangulate_input(
         points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
                 [view_number, ..., 2+n], n >= 0.
+                [...] could be [keypoint_num],
+                [frame_num, keypoint_num],
+                [frame_num, person_num, keypoint_num], etc.
                 If length of the last dim is greater
                 than 2, the redundant data will be
                 concatenated to output, not modified.
@@ -176,6 +180,9 @@ def parse_keypoints_mask(
         keypoints (Union[np.ndarray, list, tuple]):
             An ndarray or a nested list of points2d, in shape
             [view_number, ..., keypoints_number, 2+n].
+            [...] could be [keypoint_num],
+            [frame_num, keypoint_num],
+            [frame_num, person_num, keypoint_num], etc.
             It offers a shape reference for the returned mask.
         keypoints_mask (Union[np.ndarray, list, tuple], optional):
             keypoints_mask in HumanData,
@@ -198,6 +205,7 @@ def parse_keypoints_mask(
     logger = get_logger(logger)
     keypoints, triangulate_mask = prepare_triangulate_input(
         camera_number=keypoints.shape[0], points=keypoints, logger=logger)
+    init_points_mask_shape = triangulate_mask.shape
     if keypoints.shape[-2] != keypoints_mask.shape[0]:
         logger.error('Keypoints number of points does not' +
                      ' match length of keypoints_mask.\n' +
@@ -205,5 +213,8 @@ def parse_keypoints_mask(
                      f'keypoints_mask.shape: {keypoints_mask.shape}')
         raise ValueError
     nan_indices = np.where(keypoints_mask == 0)
-    triangulate_mask[..., nan_indices[0], :] = np.nan
+    triangulate_mask = triangulate_mask.reshape(-1, init_points_mask_shape[-2],
+                                                init_points_mask_shape[-1])
+    triangulate_mask[:, nan_indices[0], :] = np.nan
+    triangulate_mask = triangulate_mask.reshape(*init_points_mask_shape)
     return triangulate_mask
