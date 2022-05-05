@@ -3,7 +3,6 @@ from typing import Union
 
 import numpy as np
 
-from xrmocap.ops.triangulation.builder import POINTSELECTORS
 from xrmocap.ops.triangulation.point_selection.base_selector import \
     BaseSelector  # not in registry, cannot be built
 from xrmocap.utils.triangulation_utils import (
@@ -12,7 +11,6 @@ from xrmocap.utils.triangulation_utils import (
 )
 
 
-@POINTSELECTORS.register_module(name=('ManualThresholdSelector'))
 class ManualThresholdSelector(BaseSelector):
 
     def __init__(self,
@@ -48,6 +46,9 @@ class ManualThresholdSelector(BaseSelector):
                 An ndarray or a nested list of points2d, in shape
                 [view_number, ..., 3]. Confidence of points is in
                 [view_number, ..., 2:3].
+                [...] could be [keypoint_num],
+                [frame_num, keypoint_num],
+                [frame_num, person_num, keypoint_num], etc.
             init_points_mask (Union[np.ndarray, list, tuple], optional):
                 An ndarray or a nested list of mask, in shape
                 [view_number, ..., 1].
@@ -75,11 +76,11 @@ class ManualThresholdSelector(BaseSelector):
         points2d_conf = points2d_conf.reshape(view_number, -1, 1)
         points2d_mask = init_points_mask.reshape(view_number, -1, 1).copy()
         # ignore points according to threshold
-        ignored_indices = np.where(points2d_conf < self.threshold)
-        points2d_mask[ignored_indices[0], ignored_indices[1], :] = 0
-        points2d_mask = points2d_mask.reshape(*init_points_mask_shape)
+        points2d_mask = (points2d_conf >= self.threshold).astype(
+            np.uint8) * points2d_mask
         # log stats
         if self.verbose:
             _, stats_table = get_valid_views_stats(points2d_mask)
             self.logger.info(stats_table)
+        points2d_mask = points2d_mask.reshape(*init_points_mask_shape)
         return points2d_mask

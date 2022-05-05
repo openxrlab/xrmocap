@@ -13,10 +13,9 @@ from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.human_detection.builder import build_detector
 from xrmocap.io.camera import get_color_camera_parameter_from_smc
 from xrmocap.io.h5py_helper import H5Helper
-from xrmocap.ops.triangulation.builder import (
-    build_point_selector,
-    build_triangulator,
-)
+from xrmocap.ops.triangulation.builder import build_triangulator
+from xrmocap.ops.triangulation.point_selection.builder import \
+    build_point_selector  # prevent linting conflicts
 from xrmocap.transform.convention.bbox_convention import convert_bbox
 from xrmocap.transform.image.color import bgr2rgb
 from xrmocap.utils.log_utils import setup_logger
@@ -156,9 +155,12 @@ def triangulate_phase(args, smc_reader, human_data_2d_list,
     triangulator_config['camera_parameters'] = cam_param_list
     # build selector
     triangulator = build_triangulator(triangulator_config)
-    selector_config = dict(mmcv.Config.fromfile(args.selector_config))
-    selector_config['logger'] = logger
-    selector = build_point_selector(selector_config)
+    # build an auto threshold selector after camera selection
+    final_selector = dict(
+        mmcv.Config.fromfile(
+            'config/ops/triangulation/auto_threshold_selector.py'))
+    final_selector['logger'] = logger
+    final_selector = build_point_selector(final_selector)
     # concat views
     keypoints2d = human_data_2d_list[0]['keypoints2d']
     for view_index in range(1, len(human_data_2d_list), 1):
@@ -169,13 +171,20 @@ def triangulate_phase(args, smc_reader, human_data_2d_list,
     _, keypoints_num, dim_num = keypoints2d.shape
     keypoints2d = keypoints2d.reshape(kinect_number, -1, keypoints_num,
                                       dim_num)
-    # mask invalid keypoints
+    camera_indices = select_cameras(
+        keypoints2d=keypoints2d,
+        keypoints2d_mask=keypoints2d_mask,
+        triangulator=triangulator,
+        logger=logger)
+    # use the selected views to triangulate
+    keypoints2d = keypoints2d[np.array(camera_indices), ...]
+    # mask invalid keypoints for the new keypoints slice
     triangulate_mask = parse_keypoints_mask(
         keypoints=keypoints2d, keypoints_mask=keypoints2d_mask, logger=logger)
-    # mask low confindence keypoints
-    triangulate_mask = selector.get_selection_mask(
+    triangulate_mask = final_selector.get_selection_mask(
         points=keypoints2d, init_points_mask=triangulate_mask)
-    keypoints3d = triangulator.triangulate(
+    selected_triangulator = triangulator[camera_indices]
+    keypoints3d = selected_triangulator.triangulate(
         points=keypoints2d, points_mask=triangulate_mask)
     keypoints3d = np.concatenate(
         (keypoints3d, np.ones_like(keypoints3d[..., 0:1])), axis=-1)
@@ -184,6 +193,40 @@ def triangulate_phase(args, smc_reader, human_data_2d_list,
     human_data['keypoints3d'] = keypoints3d
     pipeline_results_dict['Keypoints3D'] = dict(human_data)
     return human_data
+
+
+def select_cameras(keypoints2d, keypoints2d_mask, triangulator, logger):
+    # build a strict manual selector for camera selection
+    manual_selector = dict(
+        mmcv.Config.fromfile(
+            'config/ops/triangulation/manual_threshold_selector.py'))
+    manual_selector['threshold'] = 0.8
+    manual_selector['logger'] = logger
+    manual_selector = build_point_selector(manual_selector)
+    # build a camera selector
+    camera_selector = dict(
+        mmcv.Config.fromfile(
+            'config/ops/triangulation/camera_error_selector.py'))
+    camera_selector['logger'] = logger
+    camera_selector['triangulator']['camera_parameters'] = \
+        triangulator.camera_parameters
+    camera_selector = build_point_selector(camera_selector)
+    # build an auto threshold selector after camera selection
+    final_selector = dict(
+        mmcv.Config.fromfile(
+            'config/ops/triangulation/auto_threshold_selector.py'))
+    final_selector['logger'] = logger
+    final_selector = build_point_selector(final_selector)
+    # mask invalid keypoints caused by convention
+    camera_selection_mask = parse_keypoints_mask(
+        keypoints=keypoints2d, keypoints_mask=keypoints2d_mask, logger=logger)
+    # mask low confidence points, use good points to select cameras
+    camera_selection_mask = manual_selector.get_selection_mask(
+        points=keypoints2d, init_points_mask=camera_selection_mask)
+    # select camera according to error
+    selected_camera_indices = camera_selector.get_camera_indices(
+        points=keypoints2d, init_points_mask=camera_selection_mask)
+    return selected_camera_indices
 
 
 def setup_parser():
@@ -225,11 +268,6 @@ def setup_parser():
         help='Config file for triangulator.',
         type=str,
         default='config/ops/triangulation/aniposelib_triangulator.py')
-    parser.add_argument(
-        '--selector_config',
-        help='Config file for point selector during triangulation.',
-        type=str,
-        default='config/ops/triangulation/manual_threshold_selector.py')
     # output args
     parser.add_argument(
         '--visualize',
@@ -239,7 +277,7 @@ def setup_parser():
     # log args
     parser.add_argument(
         '--disable_log_file',
-        action='store_false',
+        action='store_true',
         help='If checked, log will not be written as file.',
         default=False)
     args = parser.parse_args()
