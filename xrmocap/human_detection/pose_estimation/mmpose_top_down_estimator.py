@@ -80,7 +80,8 @@ class MMposeTopDownEstimator:
                     image_array: Union[np.ndarray, list],
                     bbox_list: Union[tuple, list],
                     disable_tqdm: bool = False,
-                    return_heatmap: bool = False) -> Tuple[list, list]:
+                    return_heatmap: bool = False,
+                    return_bbox: bool = False) -> Tuple[list, list]:
         """Infer frames already in memory(ndarray type).
 
         Args:
@@ -113,6 +114,7 @@ class MMposeTopDownEstimator:
         """
         ret_pose_list = []
         ret_heatmap_list = []
+        ret_bbox_list = []
         frame_num = len(image_array)
         for start_index in tqdm(
                 range(0, frame_num, self.batch_size), disable=disable_tqdm):
@@ -149,13 +151,20 @@ class MMposeTopDownEstimator:
                     for frame_outputs in returned_outputs
                 ]
                 ret_heatmap_list += frame_heatmap_results
-        return ret_pose_list, ret_heatmap_list
+            if return_bbox:
+                frame_bbox_results = [
+                    person_dict['bbox'] for person_dict in pose_results
+                ]
+                frame_bbox_results = [frame_bbox_results]
+                ret_bbox_list += frame_bbox_results
+        return ret_pose_list, ret_heatmap_list, ret_bbox_list
 
     def infer_frames(self,
                      frame_path_list: list,
                      bbox_list: Union[tuple, list],
                      disable_tqdm: bool = False,
-                     return_heatmap: bool = False) -> Tuple[list, list]:
+                     return_heatmap: bool = False,
+                     return_bbox: bool = False) -> Tuple[list, list]:
         """Infer frames from file.
 
         Args:
@@ -188,18 +197,20 @@ class MMposeTopDownEstimator:
         for frame_abs_path in frame_path_list:
             img_np = cv2.imread(frame_abs_path)
             image_array_list.append(img_np)
-        ret_pose_list, ret_heatmap_list = self.infer_array(
+        ret_pose_list, ret_heatmap_list, ret_boox_list = self.infer_array(
             image_array=image_array_list,
             bbox_list=bbox_list,
             disable_tqdm=disable_tqdm,
-            return_heatmap=return_heatmap)
-        return ret_pose_list, ret_heatmap_list
+            return_heatmap=return_heatmap,
+            return_bbox=return_bbox)
+        return ret_pose_list, ret_heatmap_list, ret_boox_list
 
     def infer_video(self,
                     video_path: str,
                     bbox_list: Union[tuple, list],
                     disable_tqdm: bool = False,
-                    return_heatmap: bool = False) -> Tuple[list, list]:
+                    return_heatmap: bool = False,
+                    return_bbox: bool = False) -> Tuple[list, list]:
         """Infer frames from a video file.
 
         Args:
@@ -229,12 +240,13 @@ class MMposeTopDownEstimator:
                     (human_num, keypoints_num, width, height).
         """
         image_array = video_to_array(input_path=video_path, logger=self.logger)
-        ret_pose_list, ret_heatmap_list = self.infer_array(
+        ret_pose_list, ret_heatmap_list, ret_boox_list = self.infer_array(
             image_array=image_array,
             bbox_list=bbox_list,
             disable_tqdm=disable_tqdm,
-            return_heatmap=return_heatmap)
-        return ret_pose_list, ret_heatmap_list
+            return_heatmap=return_heatmap,
+            return_bbox=return_bbox)
+        return ret_pose_list, ret_heatmap_list, ret_boox_list
 
 
 def __translate_data_source__(mmpose_dataset_name):

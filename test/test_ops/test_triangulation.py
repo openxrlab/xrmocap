@@ -21,7 +21,8 @@ def fixture():
 
 
 def test_aniposelib_triangulator():
-    keypoints2d = np.load(os.path.join(input_dir, 'keypoints2d.npz'))['arr_0']
+    keypoints2d = np.load(os.path.join(input_dir,
+                                       'keypoints2d.npz'))['keypoints2d']
     view_n, frame_n, keypoint_n, _ = keypoints2d.shape
     cam_param_list = []
     for kinect_index in range(view_n):

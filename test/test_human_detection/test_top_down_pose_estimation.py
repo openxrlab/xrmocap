@@ -57,7 +57,7 @@ def test_mmdet_detector():
     # test infer frames
     image_dir = os.path.join(output_dir, 'rgb_frames')
     frame_list = glob.glob(os.path.join(image_dir, '*.png'))
-    pose_list, _ = mmpose_estimator.infer_frames(
+    pose_list, _, _ = mmpose_estimator.infer_frames(
         frame_path_list=frame_list,
         bbox_list=single_person_bbox,
         disable_tqdm=False,
@@ -67,7 +67,7 @@ def test_mmdet_detector():
     assert len(pose_list[0][0]) == 133  # keypoints_num
     # test infer video
     video_path = os.path.join(output_dir, 'rgb_video.mp4')
-    pose_list, _ = mmpose_estimator.infer_video(
+    pose_list, _, _ = mmpose_estimator.infer_video(
         video_path=video_path,
         bbox_list=single_person_bbox,
         disable_tqdm=False,
@@ -79,7 +79,7 @@ def test_mmdet_detector():
     multi_person_bbox = np.load(
         os.path.join(input_dir, 'multi_person.npz'), allow_pickle=True)
     multi_person_bbox = multi_person_bbox['mmdet_result'].tolist()
-    pose_list, _ = mmpose_estimator.infer_frames(
+    pose_list, _, _ = mmpose_estimator.infer_frames(
         frame_path_list=frame_list,
         bbox_list=multi_person_bbox,
         disable_tqdm=False,
@@ -87,7 +87,7 @@ def test_mmdet_detector():
     assert len(pose_list) == len(frame_list)
     assert len(pose_list[0]) > 1
     # test return heatmap
-    _, heatmap_list = mmpose_estimator.infer_frames(
+    _, heatmap_list, _ = mmpose_estimator.infer_frames(
         frame_path_list=frame_list,
         bbox_list=multi_person_bbox,
         disable_tqdm=False,
