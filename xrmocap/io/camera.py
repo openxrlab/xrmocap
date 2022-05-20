@@ -1,8 +1,10 @@
+import json
 import logging
-from typing import Union
+from typing import Tuple, Union
 
+import numpy as np
 from xrprimer.data_structure.camera.pinhole_camera import \
-    PinholeCameraParameter  # PinholeCamera with distortion
+    PinholeCameraParameter  # noqa:E501
 
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.utils.log_utils import get_logger
@@ -11,6 +13,50 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
+
+
+def load_camera_parameters_from_zoemotion_dir(
+        camera_parameter_path: str,
+        enable_camera_id: Union[list, None] = None) -> Tuple[list, list]:
+    """Load camera parameter and get an RGB PinholeCameraParameter.
+
+    Args:
+        camera_parameter_path (str): path to the camera parameter
+        enable_camera_id (Union[list, None], optional): camera ID(str).
+        Defaults to None.
+
+    Returns:
+        cam_param_list (list): PinholeCameraParameter
+        enable_camera_list (list): enable camera list e.g.['0', '1']
+    """
+    enable_camera_list = []
+    camera_param_dict = json.load(open(camera_parameter_path))
+    if enable_camera_id is None:
+        enable_camera_list = [str(x) for x in range(len(camera_param_dict))]
+    else:
+        enable_camera_list = enable_camera_id.split('_')
+
+    cam_param_list = []
+    for camera_id in enable_camera_list:
+        cam_param = PinholeCameraParameter()
+        cam_param.name = camera_id
+        cam_param.k1 = camera_param_dict[camera_id]['distCoeff'][0]
+        cam_param.k2 = camera_param_dict[camera_id]['distCoeff'][1]
+        cam_param.k3 = camera_param_dict[camera_id]['distCoeff'][4]
+        cam_param.p1 = camera_param_dict[camera_id]['distCoeff'][2]
+        cam_param.p2 = camera_param_dict[camera_id]['distCoeff'][3]
+        cam_param.set_KRT(
+            K=camera_param_dict[camera_id]['K'],
+            R=np.array(camera_param_dict[camera_id]['R']).reshape(3,
+                                                                  3).tolist(),
+            T=camera_param_dict[camera_id]['T'],
+            world2cam=False)
+        cam_param.set_resolution(
+            height=camera_param_dict[camera_id]['imgSize'][1],
+            width=camera_param_dict[camera_id]['imgSize'][0])
+        cam_param_list.append(cam_param)
+
+    return cam_param_list, enable_camera_list
 
 
 def get_color_camera_parameter_from_smc(

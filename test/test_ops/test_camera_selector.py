@@ -13,7 +13,7 @@ from xrmocap.ops.triangulation.point_selection.builder import \
 def test_camera_error_selector():
     keypoints2d = np.load(
         os.path.join('test/data/test_ops/test_triangulation',
-                     'keypoints2d.npz'))['arr_0']
+                     'keypoints2d.npz'))['keypoints2d']
     view_n, frame_n, keypoint_n, _ = keypoints2d.shape
     cam_param_list = []
     for kinect_index in range(view_n):
@@ -53,7 +53,7 @@ def test_camera_error_selector():
 def test_slow_camera_error_selector():
     keypoints2d = np.load(
         os.path.join('test/data/test_ops/test_triangulation',
-                     'keypoints2d.npz'))['arr_0']
+                     'keypoints2d.npz'))['keypoints2d']
     view_n, frame_n, keypoint_n, _ = keypoints2d.shape
     cam_param_list = []
     for kinect_index in range(view_n):

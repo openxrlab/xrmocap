@@ -5,5 +5,5 @@ mmpose_kwargs = dict(
     config='config/human_detection/mmpose_hrnet_w48_' +
     'coco_wholebody_384x288_dark_plus.py',
     device='cuda')
-bbox_thr = 0.0
+bbox_thr = 0.95
 batch_size = 1
