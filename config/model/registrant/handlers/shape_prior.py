@@ -1,0 +1,9 @@
+handler_key = 'joint_prior'
+type = 'BodyPosePriorHandler'
+prior_loss = dict(
+    type='JointPriorLoss',
+    loss_weight=20.0,
+    reduction='sum',
+    smooth_spine=True,
+    smooth_spine_loss_weight=20,
+    use_full_body=True)

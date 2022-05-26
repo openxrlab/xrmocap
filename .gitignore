@@ -107,7 +107,7 @@ venv.bak/
 
 # custom
 test/data/
-data/
+data
 weight
 # data for pytest moved to http server
 .vscode

@@ -1,13 +1,14 @@
+# yapf: disable
 import logging
+import numpy as np
 from typing import Union
 
-import numpy as np
-
 from xrmocap.utils.triangulation_utils import (
-    get_valid_views_stats,
-    prepare_triangulate_input,
+    get_valid_views_stats, prepare_triangulate_input,
 )
 from .base_selector import BaseSelector
+
+# yapf: enable
 
 
 class AutoThresholdSelector(BaseSelector):

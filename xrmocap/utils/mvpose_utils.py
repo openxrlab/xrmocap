@@ -1,10 +1,10 @@
 from __future__ import absolute_import, print_function
-import copy
-import os
 
+import copy
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import torch
 
 

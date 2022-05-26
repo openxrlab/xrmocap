@@ -1,9 +1,8 @@
 import logging
+import numpy as np
 import os
 import pickle as pkl
 from typing import Union
-
-import numpy as np
 
 from xrmocap.utils.log_utils import get_logger
 

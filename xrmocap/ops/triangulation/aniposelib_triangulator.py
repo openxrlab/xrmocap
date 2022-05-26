@@ -1,14 +1,15 @@
+# yapf: disable
 import logging
-from operator import itemgetter
-from typing import Union
-
 import numpy as np
 from scipy.spatial.transform import Rotation as scipy_Rotation
-from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from typing import Union
 
 from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
+from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
+# yapf: enable
 try:
     import aniposelib
     has_aniposelib = True
@@ -29,8 +30,8 @@ class AniposelibTriangulator(BaseTriangulator):
 
         Args:
             camera_parameters (list):
-                A list of PinholeCameraParameter, or a list
-                of paths to dumped PinholeCameraParameters.
+                A list of Pinhole/FisheyeCameraParameter, or a list
+                of paths to dumped Pinhole/FisheyeCameraParameters.
             camera_convention (str, optional):
                 Expected convention name of cameras.
                 If camera_parameters do not match expectation,
@@ -48,35 +49,6 @@ class AniposelibTriangulator(BaseTriangulator):
             self.logger.error(import_exception)
             raise ModuleNotFoundError(
                 'Please install aniposelib to run triangulation.')
-
-    def __getitem__(self, index: Union[slice, int, list, tuple]):
-        """Slice the cameras by batch dim.
-
-        Args:
-            index (Union[slice, int, list, tuple]):
-                The index for slicing.
-
-        Returns:
-            AniposelibTriangulator:
-                A sliced AniposelibTriangulator with selected items.
-        """
-        if isinstance(index, int):
-            index = [index]
-        if isinstance(index, list) or\
-                isinstance(index, tuple):
-            new_cam_param_list = itemgetter(*index)(self.camera_parameters)
-            if len(index) == 1:
-                new_cam_param_list = [
-                    new_cam_param_list,
-                ]
-        else:
-            new_cam_param_list = self.camera_parameters[index]
-        new_cam_param_list = list(new_cam_param_list)
-        new_triangulator = self.__class__(
-            camera_parameters=new_cam_param_list,
-            camera_convention=self.camera_convention,
-            logger=self.logger)
-        return new_triangulator
 
     def triangulate(
             self,
@@ -133,22 +105,27 @@ class AniposelibTriangulator(BaseTriangulator):
     def __prepare_aniposelib_camera__(self):
         aniposelib_camera_list = []
         for cam_param in self.camera_parameters:
-            param_dict = cam_param.to_dict()
+            if isinstance(cam_param, FisheyeCameraParameter):
+                dist = [
+                    cam_param.k1, cam_param.k2, cam_param.p1, cam_param.p2,
+                    cam_param.k3
+                ]
+            else:
+                dist = [
+                    0.0,
+                ] * 5
             args_dict = {
                 'name':
-                param_dict['name'],
-                'dist': [
-                    param_dict['k1'], param_dict['k2'], param_dict['p1'],
-                    param_dict['p2'], param_dict['k3']
-                ],
-                'size': [param_dict['height'], param_dict['width']],
+                cam_param.name,
+                'dist':
+                dist,
+                'size': [cam_param.height, cam_param.width],
                 'matrix':
                 cam_param.get_intrinsic(k_dim=3),
                 'rvec':
-                scipy_Rotation.from_matrix(
-                    param_dict['extrinsic_r']).as_rotvec(),
+                scipy_Rotation.from_matrix(cam_param.extrinsic_r).as_rotvec(),
                 'tvec':
-                param_dict['extrinsic_t'],
+                cam_param.extrinsic_t,
             }
             camera = aniposelib.cameras.Camera(**args_dict)
             aniposelib_camera_list.append(camera)

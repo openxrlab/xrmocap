@@ -1,14 +1,14 @@
-import logging
-import os
-import pickle as pkl
-from typing import Union
-
+# yapf: disable
 import cv2
+import logging
 import mmcv
 import numpy as np
+import os
+import pickle as pkl
 import torch
 from mmcv.runner import load_checkpoint
 from tqdm import tqdm
+from typing import Union
 
 from xrmocap.dataset.men_dataset import MemDataset
 from xrmocap.io.camera import load_camera_parameters_from_zoemotion_dir
@@ -19,13 +19,11 @@ from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.mvpose_utils import (
-    check_bone_length,
-    geometry_affinity,
-    get_min_reprojection_error,
-    plot_paper_rows,
-    show_panel_mem,
-    visualize_match,
+    check_bone_length, geometry_affinity, get_min_reprojection_error,
+    plot_paper_rows, show_panel_mem, visualize_match,
 )
+
+# yapf: enable
 
 
 def init_model(config,
@@ -107,7 +105,7 @@ class Estimation:
                 logger=self.logger)
 
     def enable_camera(self):
-        """Get an RGB PinholeCameraParameter and enable certain cameras."""
+        """Get an RGB FisheyeCameraParameter and enable certain cameras."""
         self.cam_param_list, self.enable_camera_list = \
             load_camera_parameters_from_zoemotion_dir(
                 self.args.camera_parameter_path, self.args.enable_camera_id)

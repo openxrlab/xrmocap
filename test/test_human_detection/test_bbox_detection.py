@@ -1,19 +1,19 @@
+# yapf: disable
 import glob
-import os
-import shutil
-
 import mmcv
+import os
 import pytest
+import shutil
 import torch
 
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.human_detection.builder import build_detector
 from xrmocap.transform.image.color import bgr2rgb
 from xrmocap.utils.ffmpeg_utils import (
-    array_to_images,
-    array_to_video,
-    images_to_array,
+    array_to_images, array_to_video, images_to_array,
 )
+
+# yapf: enable
 
 input_dir = 'test/data/test_human_detection/test_bbox_detection'
 output_dir = 'test/data/output/test_human_detection/test_bbox_detection'

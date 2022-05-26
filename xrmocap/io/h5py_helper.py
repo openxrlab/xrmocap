@@ -1,6 +1,5 @@
-import io
-
 import h5py
+import io
 import numpy as np
 
 

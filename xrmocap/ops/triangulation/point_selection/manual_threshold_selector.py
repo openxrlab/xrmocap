@@ -1,14 +1,15 @@
+# yapf: disable
 import logging
-from typing import Union
-
 import numpy as np
+from typing import Union
 
 from xrmocap.ops.triangulation.point_selection.base_selector import \
     BaseSelector  # not in registry, cannot be built
 from xrmocap.utils.triangulation_utils import (
-    get_valid_views_stats,
-    prepare_triangulate_input,
+    get_valid_views_stats, prepare_triangulate_input,
 )
+
+# yapf: enable
 
 
 class ManualThresholdSelector(BaseSelector):

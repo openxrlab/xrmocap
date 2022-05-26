@@ -1,11 +1,10 @@
-from abc import ABCMeta
-from typing import Optional, Union
-
 import numpy as np
 import torch
+from abc import ABCMeta
 from mmcv.cnn.resnet import ResNet
 from torch.autograd import Variable
 from torch.nn import functional as F
+from typing import Optional, Union
 
 from .base_architecture import BaseArchitecture
 

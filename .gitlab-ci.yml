@@ -34,6 +34,7 @@ test:
   script:
     - nvidia-smi
     - echo "Start building..."
+    - sh script/download_compiled_xrprimer.sh
     - cd xrprimer/python/
     - pip install -e .
     - python -c "import xrprimer; print(xrprimer.__version__)"

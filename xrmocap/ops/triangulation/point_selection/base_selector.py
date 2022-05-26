@@ -1,7 +1,6 @@
 import logging
-from typing import Union
-
 import numpy as np
+from typing import Union
 
 from xrmocap.utils.log_utils import get_logger
 

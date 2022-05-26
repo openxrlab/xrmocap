@@ -1,7 +1,6 @@
-import json
-
 import cv2
 import h5py
+import json
 import numpy as np
 import tqdm
 

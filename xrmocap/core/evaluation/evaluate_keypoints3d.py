@@ -1,15 +1,14 @@
 import argparse
 import csv
+import numpy as np
 import os
 import os.path as osp
+import scipy.io as scio
 import time
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Tuple
-
-import numpy as np
-import scipy.io as scio
 from prettytable import PrettyTable
+from typing import Tuple
 
 from xrmocap.utils.geometry import compute_similarity_transform
 
