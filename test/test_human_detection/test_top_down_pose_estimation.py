@@ -1,10 +1,9 @@
 import glob
-import os
-import shutil
-
 import mmcv
 import numpy as np
+import os
 import pytest
+import shutil
 import torch
 
 from xrmocap.data_structure.smc_reader import SMCReader

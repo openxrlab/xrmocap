@@ -1,14 +1,14 @@
+import numpy as np
 import os.path as osp
 import sys
-from collections import OrderedDict
-
-import numpy as np
 import torch
+from collections import OrderedDict
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms as T
-from xrprimer.data_structure.camera.pinhole_camera import \
-    PinholeCameraParameter  # PinholeCamera with distortion
+
+from xrprimer.data_structure.camera import \
+    FisheyeCameraParameter  # PinholeCamera with distortion
 
 # Config project if not exist
 project_path = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
@@ -56,7 +56,7 @@ class MemDataset(Dataset):
         }
         distCoeff = np.zeros((num_cam, 5))
         for i, input_cam_param in enumerate(cam_param_list):
-            if issubclass(input_cam_param.__class__, PinholeCameraParameter):
+            if issubclass(input_cam_param.__class__, FisheyeCameraParameter):
                 cam_param = input_cam_param.clone()
             else:
                 raise TypeError

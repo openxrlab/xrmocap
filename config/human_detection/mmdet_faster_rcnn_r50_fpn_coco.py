@@ -1,12 +1,12 @@
 checkpoint_config = dict(interval=1)
-# yapf:disable
+# yapf: disable
 log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
     ])
-# yapf:enable
+# yapf: enable
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 load_from = None

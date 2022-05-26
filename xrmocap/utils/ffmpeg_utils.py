@@ -1,16 +1,21 @@
+# yapf: disable
+import cv2
 import glob
 import json
 import logging
+import numpy as np
 import os
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Tuple, Union
 
-import numpy as np
-
 from xrmocap.utils.log_utils import get_logger
-from xrmocap.utils.path_utils import check_input_path, prepare_output_path
+from xrmocap.utils.path_utils import (
+    check_input_path, check_path_suffix, prepare_output_path,
+)
+
+# yapf: enable
 
 
 class vid_info_reader():
@@ -224,6 +229,68 @@ def video_to_array(
     process.stdout.close()
     process.wait()
     return np.concatenate(array)
+
+
+def images_to_array_opencv(
+        input_folder: str,
+        resolution: Union[Tuple[int, int], Tuple[float, float]] = None,
+        img_format: str = '%06d.png',
+        start: int = 0,
+        end: int = None,
+        remove_raw_files: bool = False,
+        logger: Union[None, str, logging.Logger] = None) -> np.ndarray:
+    """
+    Read a folder of images as an array of (f * h * w * 3).
+
+    Args:
+        input_folder (str): folder of input images.
+        resolution (Union[Tuple[int, int], Tuple[float, float]]):
+            resolution(height, width) of output. Defaults to None.
+        img_format (str, optional): format of images to be read.
+            Defaults to '%06d.png'.
+        start (int, optional): start frame index. Inclusive.
+             If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Exclusive.
+            Could be positive int or negative int or None.
+            If None, all frames from start till the last frame are included.
+            Defaults to None.
+        remove_raw_files (bool, optional): whether remove raw images.
+            Defaults to False.
+    Raises:
+        FileNotFoundError: check the input path.
+
+    Returns:
+        np.ndarray: shape will be (f * h * w * 3).
+    """
+    check_input_path(
+        input_folder,
+        allowed_suffix=[''],
+        tag='input image folder',
+        path_type='dir')
+
+    if img_format is None:
+        frame_list = []
+        frame_names = sorted(os.listdir(input_folder))
+        for name in frame_names:
+            abs_path = os.path.join(input_folder, name)
+            if check_path_suffix(abs_path, ['jpg', 'jpeg', 'png']):
+                frame_list.append(abs_path)
+    else:
+        frame_list = sorted(glob.glob(os.path.join(input_folder, img_format)))
+    if end is None:
+        frame_list = frame_list[start:]
+    else:
+        frame_list = frame_list[start:end]
+    array_list = []
+    for index, frame_path in enumerate(frame_list):
+        img = cv2.imread(frame_path)
+        if index == 0 and resolution is None:
+            resolution = img.shape[0:2]
+        else:
+            img = cv2.resize(img, resolution)
+        array_list.append(img)
+    return np.concatenate(array_list)
 
 
 def images_to_array(

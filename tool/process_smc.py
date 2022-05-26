@@ -1,28 +1,37 @@
+# yapf: disable
 import argparse
 import datetime
-import os
-
 import h5py
 import mmcv
 import numpy as np
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+import os
+import torch
 from mmhuman3d.core.visualization.visualize_keypoints3d import visualize_kp3d
+from mmhuman3d.core.visualization.visualize_smpl import (
+    visualize_smpl_calibration,
+)
 from mmhuman3d.data.data_structures.human_data import HumanData
 
+from xrmocap.data_structure.body_model.smpl_data import SMPLData
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.human_detection.builder import build_detector
 from xrmocap.io.camera import get_color_camera_parameter_from_smc
 from xrmocap.io.h5py_helper import H5Helper
+from xrmocap.model.registrant.builder import build_registrant
+from xrmocap.model.registrant.handler.builder import build_handler
 from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.ops.triangulation.point_selection.builder import \
     build_point_selector  # prevent linting conflicts
 from xrmocap.transform.convention.bbox_convention import convert_bbox
+from xrmocap.transform.convention.keypoints_convention import \
+    convert_kps  # prevent linting conflicts
 from xrmocap.transform.image.color import bgr2rgb
 from xrmocap.utils.log_utils import setup_logger
 from xrmocap.utils.path_utils import Existence, check_path_existence
 from xrmocap.utils.triangulation_utils import parse_keypoints_mask
 
-PHASE_DICT = {'detect_kp2d': 0, 'triangulate_kp3d': 1}
+# yapf: enable
+PHASE_DICT = {'detect_kp2d': 0, 'triangulate_kp3d': 1, 'smplify': 2}
 
 
 def main(args):
@@ -34,7 +43,7 @@ def main(args):
     else:
         logger = setup_logger(logger_name=__name__)
     assert args.start_phase >= PHASE_DICT['detect_kp2d']
-    assert args.end_phase <= PHASE_DICT['triangulate_kp3d']
+    assert args.end_phase <= PHASE_DICT['smplify']
     assert args.start_phase <= args.end_phase
     # check input path
     exist_result = check_path_existence(args.smc_path, 'file')
@@ -49,6 +58,7 @@ def main(args):
     # default values
     human_data_2d_list = None
     human_data_3d = None
+    smpl_data = None
     # load smc file
     smc_reader = SMCReader(file_path=args.smc_path)
     pipeline_results_dict = {
@@ -74,7 +84,16 @@ def main(args):
                 human_data_2d_list.append(human_data)
         human_data_3d = triangulate_phase(args, smc_reader, human_data_2d_list,
                                           pipeline_results_dict, logger)
-        pipeline_results_dict[''] = human_data_3d
+    if PHASE_DICT['smplify'] >= args.start_phase and\
+            PHASE_DICT['smplify'] <= args.end_phase:
+        if human_data_3d is None:
+            h5_data = smc_reader.smc['Keypoints3D']
+            human_data_3d = HumanData()
+            human_data_3d['keypoints3d_mask'] = np.asarray(
+                h5_data['keypoints3d_mask'])
+            human_data_3d['keypoints3d'] = np.asarray(h5_data['keypoints3d'])
+        smpl_data = smplify_phase(args, human_data_3d, pipeline_results_dict,
+                                  logger)
 
     # write results to the output smc
     iob = H5Helper.h5py_to_binary(smc_reader.smc)
@@ -93,6 +112,38 @@ def main(args):
                                          f'{file_name}_keypoints3d.mp4'),
                 data_source='human_data',
                 mask=human_data_3d['keypoints3d_mask'])
+        if smpl_data is not None:
+            selected_kinect = 1
+            body_model_cfg = dict(
+                type='SMPL',
+                gender='neutral',
+                num_betas=10,
+                keypoint_src='smpl_45',
+                keypoint_dst='smpl',
+                model_path='data/body_models',
+                batch_size=1)
+            cam_param = get_color_camera_parameter_from_smc(
+                smc_reader=smc_reader,
+                camera_type='kinect',
+                camera_id=selected_kinect,
+                logger=logger)
+            image_array = smc_reader.get_kinect_color(
+                kinect_id=selected_kinect)
+            image_array = bgr2rgb(image_array)
+            motion_len = smpl_data['full_pose'].shape[0]
+            visualize_smpl_calibration(
+                poses=smpl_data['full_pose'].reshape(motion_len, -1),
+                betas=smpl_data['betas'],
+                transl=smpl_data['transl'],
+                output_path=os.path.join(args.output_dir,
+                                         f'{file_name}_smpl_overlay.mp4'),
+                body_model_config=body_model_cfg,
+                K=np.array(cam_param.get_intrinsic()),
+                R=np.array(cam_param.extrinsic_r),
+                T=np.array(cam_param.extrinsic_t),
+                image_array=image_array,
+                resolution=(image_array.shape[1], image_array.shape[2]),
+                overwrite=True)
 
 
 def detect_phase(args, smc_reader, pipeline_results_dict, logger):
@@ -211,12 +262,6 @@ def select_cameras(keypoints2d, keypoints2d_mask, triangulator, logger):
     camera_selector['triangulator']['camera_parameters'] = \
         triangulator.camera_parameters
     camera_selector = build_point_selector(camera_selector)
-    # build an auto threshold selector after camera selection
-    final_selector = dict(
-        mmcv.Config.fromfile(
-            'config/ops/triangulation/auto_threshold_selector.py'))
-    final_selector['logger'] = logger
-    final_selector = build_point_selector(final_selector)
     # mask invalid keypoints caused by convention
     camera_selection_mask = parse_keypoints_mask(
         keypoints=keypoints2d, keypoints_mask=keypoints2d_mask, logger=logger)
@@ -227,6 +272,48 @@ def select_cameras(keypoints2d, keypoints2d_mask, triangulator, logger):
     selected_camera_indices = camera_selector.get_camera_indices(
         points=keypoints2d, init_points_mask=camera_selection_mask)
     return selected_camera_indices
+
+
+def smplify_phase(args, human_data_3d, pipeline_results_dict, logger):
+    # build a registrant
+    registrant_config = dict(mmcv.Config.fromfile(args.registrant_config))
+    device = 'cuda'
+    registrant_config['logger'] = logger
+    registrant_config['device'] = device
+    registrant = build_registrant(registrant_config)
+    # prepare input
+    keypoints3d, keypoints3d_mask = convert_kps(
+        keypoints=human_data_3d['keypoints3d'][..., :3],
+        src='human_data',
+        dst='smpl',
+        mask=human_data_3d['keypoints3d_mask'])
+    keypoints3d = torch.from_numpy(keypoints3d).to(
+        dtype=torch.float32, device=device)
+    keypoints3d_conf = torch.from_numpy(np.expand_dims(
+        keypoints3d_mask, 0)).to(
+            dtype=torch.float32, device=device).repeat(keypoints3d.shape[0], 1)
+    # build and run
+    kp3d_mse_input = build_handler(
+        dict(
+            type='Keypoint3dMSEInput',
+            keypoints3d=keypoints3d,
+            keypoints3d_conf=keypoints3d_conf,
+            keypoints3d_convention='smpl',
+            handler_key='keypoints3d_mse'))
+    kp3d_llen_input = build_handler(
+        dict(
+            type='Keypoint3dLimbLenInput',
+            keypoints3d=keypoints3d,
+            keypoints3d_conf=keypoints3d_conf,
+            keypoints3d_convention='smpl',
+            handler_key='keypoints3d_limb_len'))
+    registrant_output = registrant(
+        input_list=[kp3d_mse_input, kp3d_llen_input])
+    smpl_data = SMPLData()
+    smpl_data.from_param_dict(registrant_output)
+    smpl_dict = smpl_data.to_param_dict()
+    pipeline_results_dict['smpl'] = smpl_dict
+    return smpl_data
 
 
 def setup_parser():
@@ -251,7 +338,7 @@ def setup_parser():
         '--end_phase',
         type=int,
         help='Which is the last phase before ending.',
-        default=PHASE_DICT['triangulate_kp3d'])
+        default=PHASE_DICT['smplify'])
     # model args
     parser.add_argument(
         '--det_config',
@@ -268,6 +355,11 @@ def setup_parser():
         help='Config file for triangulator.',
         type=str,
         default='config/ops/triangulation/aniposelib_triangulator.py')
+    parser.add_argument(
+        '--registrant_config',
+        help='Config file for smplify(x/d).',
+        type=str,
+        default='config/model/registrant/smplify.py')
     # output args
     parser.add_argument(
         '--visualize',

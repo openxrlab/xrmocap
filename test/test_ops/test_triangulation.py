@@ -1,13 +1,12 @@
-import os
-import shutil
-
 import mmcv
 import numpy as np
+import os
 import pytest
-from xrprimer.data_structure.camera.pinhole_camera import \
-    PinholeCameraParameter  # noqa:E501
+import shutil
 
 from xrmocap.ops.triangulation.builder import build_triangulator
+from xrmocap.utils.triangulation_utils import parse_keypoints_mask
+from xrprimer.data_structure.camera import FisheyeCameraParameter  # noqa:E501
 
 input_dir = 'test/data/test_ops/test_triangulation'
 output_dir = 'test/data/output/test_ops/test_triangulation'
@@ -21,14 +20,16 @@ def fixture():
 
 
 def test_aniposelib_triangulator():
-    keypoints2d = np.load(os.path.join(input_dir,
-                                       'keypoints2d.npz'))['keypoints2d']
+    keypoints2d_dict = dict(
+        np.load(os.path.join(input_dir, 'keypoints2d.npz')))
+    keypoints2d = keypoints2d_dict['keypoints2d']
     view_n, frame_n, keypoint_n, _ = keypoints2d.shape
+    keypoints2d_mask = keypoints2d_dict['keypoints2d_mask']
     cam_param_list = []
     for kinect_index in range(view_n):
         cam_param_path = os.path.join(input_dir,
                                       f'cam_{kinect_index:02d}.json')
-        cam_param = PinholeCameraParameter()
+        cam_param = FisheyeCameraParameter()
         cam_param.load(cam_param_path)
         cam_param_list.append(cam_param)
     triangulator_config = dict(
@@ -57,6 +58,12 @@ def test_aniposelib_triangulator():
     # test mask tuple
     keypoints3d = triangulator.triangulate(
         points=keypoints2d, points_mask=tuple(map(tuple, points_mask)))
+    # test mask from confidence
+    points_mask = parse_keypoints_mask(
+        keypoints=keypoints2d, keypoints_mask=keypoints2d_mask)
+    keypoints3d = triangulator.triangulate(
+        points=keypoints2d, points_mask=points_mask)
+    assert keypoints3d.shape[:2] == keypoints2d.shape[1:3]
     assert keypoints3d.shape[:2] == keypoints2d.shape[1:3]
     # test no confidence
     keypoints3d = triangulator.triangulate(points=keypoints2d[..., :2])

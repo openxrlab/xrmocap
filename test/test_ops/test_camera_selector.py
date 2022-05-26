@@ -1,13 +1,11 @@
-import os
-
 import mmcv
 import numpy as np
-from xrprimer.data_structure.camera.pinhole_camera import \
-    PinholeCameraParameter  # noqa:E501
+import os
 
 from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.ops.triangulation.point_selection.builder import \
     build_point_selector  # prevent linting conflicts
+from xrprimer.data_structure.camera import FisheyeCameraParameter  # noqa:E501
 
 
 def test_camera_error_selector():
@@ -19,7 +17,7 @@ def test_camera_error_selector():
     for kinect_index in range(view_n):
         cam_param_path = os.path.join('test/data/test_ops/test_triangulation',
                                       f'cam_{kinect_index:02d}.json')
-        cam_param = PinholeCameraParameter()
+        cam_param = FisheyeCameraParameter()
         cam_param.load(cam_param_path)
         cam_param_list.append(cam_param)
     # build a triangulator
@@ -42,10 +40,10 @@ def test_camera_error_selector():
     assert len(camera_indices) == len(triangulator.camera_parameters) - 1
     # test camera mask
     init_mask = np.ones_like(keypoints2d[..., 0:1])
-    points2d_backup = keypoints2d.copy()
+    keypoints2d_backup = keypoints2d.copy()
     init_mask_backup = init_mask.copy()
     points2d_mask = camera_selector.get_selection_mask(keypoints2d, init_mask)
-    assert np.all(points2d_backup == keypoints2d)
+    assert np.all(keypoints2d_backup == keypoints2d)
     assert np.allclose(init_mask_backup, init_mask, equal_nan=True)
     assert np.all(points2d_mask.shape == init_mask.shape)
 
@@ -59,7 +57,7 @@ def test_slow_camera_error_selector():
     for kinect_index in range(view_n):
         cam_param_path = os.path.join('test/data/test_ops/test_triangulation',
                                       f'cam_{kinect_index:02d}.json')
-        cam_param = PinholeCameraParameter()
+        cam_param = FisheyeCameraParameter()
         cam_param.load(cam_param_path)
         cam_param_list.append(cam_param)
     # build a triangulator
@@ -82,9 +80,9 @@ def test_slow_camera_error_selector():
     assert len(camera_indices) == len(triangulator.camera_parameters) - 1
     # test camera mask
     init_mask = np.ones_like(keypoints2d[..., 0:1])
-    points2d_backup = keypoints2d.copy()
+    keypoints2d_backup = keypoints2d.copy()
     init_mask_backup = init_mask.copy()
     points2d_mask = camera_selector.get_selection_mask(keypoints2d, init_mask)
-    assert np.all(points2d_backup == keypoints2d)
+    assert np.all(keypoints2d_backup == keypoints2d)
     assert np.allclose(init_mask_backup, init_mask, equal_nan=True)
     assert np.all(points2d_mask.shape == init_mask.shape)

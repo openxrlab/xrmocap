@@ -1,11 +1,10 @@
 import logging
 import os
+import prettytable
 import sys
 import time
-from typing import Union
-
-import prettytable
 import torch
+from typing import Union
 
 from xrmocap.keypoints3d_estimation.lib.pictorial import transform_closure
 from xrmocap.keypoints3d_estimation.match_solver import myproj2dpam

@@ -1,8 +1,7 @@
 import logging
-from typing import Tuple, Union
-
 import numpy as np
 import prettytable
+from typing import Tuple, Union
 
 from xrmocap.utils.log_utils import get_logger
 

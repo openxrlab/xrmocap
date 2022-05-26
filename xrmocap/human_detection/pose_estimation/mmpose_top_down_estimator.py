@@ -1,18 +1,17 @@
-import logging
-from typing import Tuple, Union
-
 import cv2
+import logging
 import numpy as np
 from tqdm import tqdm
+from typing import Tuple, Union
 
 from xrmocap.human_detection.builder import DETECTORS
 from xrmocap.utils.ffmpeg_utils import video_to_array
 from xrmocap.utils.log_utils import get_logger
 
 try:
-    from mmpose.apis import inference_top_down_pose_model, init_pose_model
-    from mmpose import __version__ as mmpose_version
     from mmcv import digit_version
+    from mmpose import __version__ as mmpose_version
+    from mmpose.apis import inference_top_down_pose_model, init_pose_model
     has_mmpose = True
     import_exception = ''
 except (ImportError, ModuleNotFoundError):

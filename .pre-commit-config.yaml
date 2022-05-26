@@ -8,10 +8,12 @@ repos:
     rev: v2.2.0
     hooks:
       - id: seed-isort-config
-  - repo: https://github.com/timothycrosley/isort.git
-    rev: 4.3.21
+        args: [--settings-path, ./]
+  - repo: https://github.com/PyCQA/isort.git
+    rev: 5.10.1
     hooks:
       - id: isort
+        args: [--settings-file, ./setup.cfg]
   - repo: https://github.com/pre-commit/mirrors-yapf.git
     rev: v0.30.0
     hooks:

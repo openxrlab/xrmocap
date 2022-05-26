@@ -1,12 +1,11 @@
 import logging
-from typing import Union
-
 import numpy as np
-from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from typing import Union
 
 from xrmocap.ops.triangulation.point_selection.camera_error_selector import \
     CameraErrorSelector  # prevent linting conflicts
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
 
 class SlowCameraErrorSelector(CameraErrorSelector):

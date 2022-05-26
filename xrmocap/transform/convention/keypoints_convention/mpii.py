@@ -1,0 +1,18 @@
+MPII_KEYPOINTS = [
+    'right_ankle',
+    'right_knee',
+    'right_hip_extra',
+    'left_hip_extra',
+    'left_knee',
+    'left_ankle',
+    'pelvis_extra',
+    'thorax_extra',
+    'neck_extra',
+    'headtop',
+    'right_wrist',
+    'right_elbow',
+    'right_shoulder',
+    'left_shoulder',
+    'left_elbow',
+    'left_wrist',
+]

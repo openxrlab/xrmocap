@@ -1,16 +1,17 @@
+# yapf: disable
 import logging
-from typing import Union
-
 import numpy as np
-from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from typing import Union
 
 from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.ops.triangulation.point_selection.base_selector import \
     BaseSelector  # not in registry, cannot be built
 from xrmocap.utils.triangulation_utils import (
-    get_valid_views_stats,
-    prepare_triangulate_input,
+    get_valid_views_stats, prepare_triangulate_input,
 )
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+
+# yapf: enable
 
 
 class CameraErrorSelector(BaseSelector):
@@ -66,9 +67,6 @@ class CameraErrorSelector(BaseSelector):
             points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
                 [view_number, ..., 2+n], n >= 0.
-                [...] could be [keypoint_num],
-                [frame_num, keypoint_num],
-                [frame_num, person_num, keypoint_num], etc.
             init_points_mask (Union[np.ndarray, list, tuple], optional):
                 An ndarray or a nested list of mask, in shape
                 [view_number, ..., 1].

@@ -1,7 +1,6 @@
-from typing import Union
-
 import numpy as np
 import torch
+from typing import Union
 
 
 def bgr2rgb(input_array: Union[np.ndarray, torch.Tensor], color_dim=-1):

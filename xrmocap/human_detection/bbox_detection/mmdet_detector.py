@@ -1,9 +1,8 @@
-import logging
-from typing import Union
-
 import cv2
+import logging
 import numpy as np
 from tqdm import tqdm
+from typing import Union
 
 from xrmocap.human_detection.builder import DETECTORS
 from xrmocap.transform.bbox import qsort_bbox_list

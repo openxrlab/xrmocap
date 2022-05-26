@@ -1,13 +1,12 @@
 import json
 import logging
-from typing import Tuple, Union
-
 import numpy as np
-from xrprimer.data_structure.camera.pinhole_camera import \
-    PinholeCameraParameter  # noqa:E501
+from typing import Tuple, Union
 
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.utils.log_utils import get_logger
+from xrprimer.data_structure.camera import \
+    FisheyeCameraParameter  # Camera with distortion
 
 try:
     from typing import Literal
@@ -18,7 +17,7 @@ except ImportError:
 def load_camera_parameters_from_zoemotion_dir(
         camera_parameter_path: str,
         enable_camera_id: Union[list, None] = None) -> Tuple[list, list]:
-    """Load camera parameter and get an RGB PinholeCameraParameter.
+    """Load camera parameter and get an RGB FisheyeCameraParameter.
 
     Args:
         camera_parameter_path (str): path to the camera parameter
@@ -26,7 +25,7 @@ def load_camera_parameters_from_zoemotion_dir(
         Defaults to None.
 
     Returns:
-        cam_param_list (list): PinholeCameraParameter
+        cam_param_list (list): FisheyeCameraParameter
         enable_camera_list (list): enable camera list e.g.['0', '1']
     """
     enable_camera_list = []
@@ -38,7 +37,7 @@ def load_camera_parameters_from_zoemotion_dir(
 
     cam_param_list = []
     for camera_id in enable_camera_list:
-        cam_param = PinholeCameraParameter()
+        cam_param = FisheyeCameraParameter()
         cam_param.name = camera_id
         cam_param.k1 = camera_param_dict[camera_id]['distCoeff'][0]
         cam_param.k2 = camera_param_dict[camera_id]['distCoeff'][1]
@@ -64,8 +63,8 @@ def get_color_camera_parameter_from_smc(
         camera_type: Literal['kinect', 'iphone'],
         camera_id: int,
         logger: Union[None, str,
-                      logging.Logger] = None) -> PinholeCameraParameter:
-    """Get an RGB PinholeCameraParameter from an smc reader.
+                      logging.Logger] = None) -> FisheyeCameraParameter:
+    """Get an RGB FisheyeCameraParameter from an smc reader.
 
     Args:
         smc_reader (SMCReader):
@@ -84,10 +83,10 @@ def get_color_camera_parameter_from_smc(
         KeyError: camera_type is neither kinect nor iphone.
 
     Returns:
-        PinholeCameraParameter
+        FisheyeCameraParameter
     """
     logger = get_logger(logger)
-    cam_param = PinholeCameraParameter(name=f'{camera_type}_{camera_id:02d}')
+    cam_param = FisheyeCameraParameter(name=f'{camera_type}_{camera_id:02d}')
     if camera_type == 'kinect':
         extrinsics_dict = \
             smc_reader.get_kinect_color_extrinsics(
