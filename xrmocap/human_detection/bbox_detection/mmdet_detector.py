@@ -4,7 +4,6 @@ import numpy as np
 from tqdm import tqdm
 from typing import Union
 
-from xrmocap.human_detection.builder import DETECTORS
 from xrmocap.transform.bbox import qsort_bbox_list
 from xrmocap.utils.ffmpeg_utils import video_to_array
 from xrmocap.utils.log_utils import get_logger
@@ -19,7 +18,6 @@ except (ImportError, ModuleNotFoundError):
     import_exception = traceback.format_exc()
 
 
-@DETECTORS.register_module(name=('MMdetDetector'))
 class MMdetDetector:
 
     def __init__(self,

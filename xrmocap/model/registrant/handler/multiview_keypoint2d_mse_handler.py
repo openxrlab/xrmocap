@@ -4,7 +4,7 @@ from pytorch3d.renderer import cameras
 from typing import TypeVar, Union
 
 from xrmocap.model.loss.builder import build_loss
-from xrmocap.transform.convention.keypoints_convention import convert_kps
+from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 from .base_handler import BaseHandler, BaseInput
 
 try:
@@ -171,7 +171,7 @@ class MultiviewKeypoint2dMSEHandler(BaseHandler):
         projected_joints = projected_joints_xyd[..., :2]
         # todo: check shape and dim
         # todo: make sure keypoints in range (-1, 1)
-        projected_joints, joint_mask = convert_kps(
+        projected_joints, joint_mask = convert_kps_mm(
             keypoints=projected_joints,
             src=model_joints_convention,
             dst=target_keypoints_convention,

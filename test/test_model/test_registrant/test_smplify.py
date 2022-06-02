@@ -16,7 +16,7 @@ from xrmocap.model.registrant.handler.keypoint3d_limb_length_handler import (
 from xrmocap.model.registrant.handler.keypoint3d_mse_handler import (
     Keypoint3dMSEInput,
 )
-from xrmocap.transform.convention.keypoints_convention import convert_kps
+from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 
 # yapf: enable
 input_dir = 'test/data/test_model/test_registrant'
@@ -63,7 +63,7 @@ def test_smplify_keypoints3d():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
     keypoints3d_path = os.path.join(input_dir, 'human_data_tri.npz')
     human_data = dict(np.load(keypoints3d_path, allow_pickle=True))
-    keypoints3d, keypoints3d_mask = convert_kps(
+    keypoints3d, keypoints3d_mask = convert_kps_mm(
         keypoints=human_data['keypoints3d'][:2, :, :3],
         src='human_data',
         dst='smpl',

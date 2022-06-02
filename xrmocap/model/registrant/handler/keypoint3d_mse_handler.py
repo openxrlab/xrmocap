@@ -3,7 +3,7 @@ import torch
 from typing import TypeVar, Union
 
 from xrmocap.model.loss.builder import build_loss
-from xrmocap.transform.convention.keypoints_convention import convert_kps
+from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 from .base_handler import BaseHandler, BaseInput
 
 try:
@@ -156,14 +156,14 @@ class Keypoint3dMSEHandler(BaseHandler):
         target_keypoints3d = related_input.keypoints3d
         target_keypoints_convention = related_input.keypoints3d_convention
         target_keypoints3d_conf = related_input.keypoints3d_conf
-        joints, joint_mask = convert_kps(
+        joints, joint_mask = convert_kps_mm(
             keypoints=model_joints,
             src=model_joints_convention,
             dst=target_keypoints_convention,
             approximate=self.keypoint_approximate)
         keypoints_like_weights = model_joints_weights.unsqueeze(1).unsqueeze(0)
         keypoints_like_weights = keypoints_like_weights.repeat(1, 1, 2)
-        model_joints_weights, _ = convert_kps(
+        model_joints_weights, _ = convert_kps_mm(
             keypoints=keypoints_like_weights,
             src=model_joints_convention,
             dst=target_keypoints_convention,

@@ -24,7 +24,7 @@ from xrmocap.ops.triangulation.point_selection.builder import \
     build_point_selector  # prevent linting conflicts
 from xrmocap.transform.convention.bbox_convention import convert_bbox
 from xrmocap.transform.convention.keypoints_convention import \
-    convert_kps  # prevent linting conflicts
+    convert_kps_mm  # prevent linting conflicts
 from xrmocap.transform.image.color import bgr2rgb
 from xrmocap.utils.log_utils import setup_logger
 from xrmocap.utils.path_utils import Existence, check_path_existence
@@ -173,7 +173,7 @@ def detect_phase(args, smc_reader, pipeline_results_dict, logger):
             disable_tqdm=False,
             return_heatmap=False)
         kp2d_src = np.array(pose_list)
-        kp2d_dst, mask_dst = convert_kps(
+        kp2d_dst, mask_dst = convert_kps_mm(
             keypoints=kp2d_src, src=keypoints_convention, dst='human_data')
         # squeeze multi-human dim
         bbox_np = np.squeeze(np.array(bbox_list), axis=1)
@@ -282,7 +282,7 @@ def smplify_phase(args, human_data_3d, pipeline_results_dict, logger):
     registrant_config['device'] = device
     registrant = build_registrant(registrant_config)
     # prepare input
-    keypoints3d, keypoints3d_mask = convert_kps(
+    keypoints3d, keypoints3d_mask = convert_kps_mm(
         keypoints=human_data_3d['keypoints3d'][..., :3],
         src='human_data',
         dst='smpl',

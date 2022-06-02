@@ -2,9 +2,9 @@ import cv2
 import logging
 import numpy as np
 from tqdm import tqdm
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
-from xrmocap.human_detection.builder import DETECTORS
+from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.utils.ffmpeg_utils import video_to_array
 from xrmocap.utils.log_utils import get_logger
 
@@ -21,7 +21,6 @@ except (ImportError, ModuleNotFoundError):
     mmpose_version = 'none'
 
 
-@DETECTORS.register_module(name=('MMposeTopDownEstimator'))
 class MMposeTopDownEstimator:
 
     def __init__(self,
@@ -101,7 +100,7 @@ class MMposeTopDownEstimator:
 
         Returns:
             Tuple[list, list]:
-                pose_list (list):
+                keypoints_list (list):
                     A list of human keypoints.
                     Shape of the nested lists is
                     (frame_num, human_num, keypoints_num, 3).
@@ -182,7 +181,7 @@ class MMposeTopDownEstimator:
 
         Returns:
             Tuple[list, list]:
-                pose_list (list):
+                keypoints_list (list):
                     A list of human keypoints.
                     Shape of the nested lists is
                     (frame_num, human_num, keypoints_num, 3).
@@ -228,7 +227,7 @@ class MMposeTopDownEstimator:
 
         Returns:
             Tuple[list, list]:
-                pose_list (list):
+                keypoints_list (list):
                     A list of human keypoints.
                     Shape of the nested lists is
                     (frame_num, human_num, keypoints_num, 3).
@@ -246,6 +245,31 @@ class MMposeTopDownEstimator:
             return_heatmap=return_heatmap,
             return_bbox=return_bbox)
         return ret_pose_list, ret_heatmap_list, ret_boox_list
+
+    def get_keypoints_from_result(self, kps2d_list: List[list]) -> Keypoints:
+        """Convert returned keypoints2d into an instance of class Keypoints.
+
+        Args:
+            kps2d_list (List[list]):
+                A list of human keypoints, returned by
+                infer methods.
+                Shape of the nested lists is
+                (frame_num, human_num, keypoints_num, 3).
+
+        Returns:
+            Keypoints:
+                An instance of Keypoints with mask and
+                convention, data type is numpy.
+        """
+        # shape: (frame_num, human_num, keypoints_num, 3)
+        kps2d_arr = np.asarray(kps2d_list)
+        mask_arr = np.ones_like(kps2d_arr[..., 0])
+        kps2d = Keypoints(
+            kps=kps2d_arr,
+            mask=mask_arr,
+            convention=self.get_keypoints_convention_name(),
+            logger=self.logger)
+        return kps2d
 
 
 def __translate_data_source__(mmpose_dataset_name):
