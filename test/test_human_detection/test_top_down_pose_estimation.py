@@ -64,6 +64,8 @@ def test_mmdet_detector():
     assert len(pose_list) == len(frame_list)  # frame_num
     assert len(pose_list[0]) == len(single_person_bbox[0])  # person_num
     assert len(pose_list[0][0]) == 133  # keypoints_num
+    kps2d = mmpose_estimator.get_keypoints_from_result(pose_list)
+    kps2d.dump(os.path.join(output_dir, 'kps2d.npz'))
     # test infer video
     video_path = os.path.join(output_dir, 'rgb_video.mp4')
     pose_list, _, _ = mmpose_estimator.infer_video(

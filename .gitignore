@@ -107,6 +107,9 @@ venv.bak/
 
 # custom
 test/data/
+# data folder
+data/
+# or data link
 data
 weight
 # data for pytest moved to http server

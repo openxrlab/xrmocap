@@ -2,7 +2,7 @@
 import logging
 import numpy as np
 import torch
-from typing import Any, TypeVar, Union
+from typing import Any, Union
 
 from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.path_utils import (
@@ -14,7 +14,6 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
-_SMPLData = TypeVar('_SMPLData')
 # yapf: enable
 
 
@@ -30,34 +29,19 @@ class SMPLData(dict):
         'body_pose',
     }
 
-    def __new__(cls: _SMPLData, *args: Any, **kwargs: Any) -> _SMPLData:
-        """New an instance of SMPLData.
-
-        Args:
-            cls (SMPLData): SMPLData class.
-
-        Returns:
-            SMPLData: An instance of SMPLData.
-        """
-        ret_instance = super().__new__(cls, args, kwargs)
-        setattr(ret_instance, 'logger', get_logger(None))
-        setattr(ret_instance, 'body_joints_num', cls.DEFAULT_BODY_JOINTS_NUM)
-        return ret_instance
-
-    @classmethod
-    def new(cls,
-            source_dict: dict = None,
-            gender: Literal['female', 'male', 'neutral'] = 'neutral',
-            full_pose: Union[np.ndarray, torch.Tensor, None] = None,
-            transl: Union[np.ndarray, torch.Tensor, None] = None,
-            betas: Union[np.ndarray, torch.Tensor, None] = None,
-            logger: Union[None, str, logging.Logger] = None) -> _SMPLData:
+    def __init__(self,
+                 src_dict: dict = None,
+                 gender: Literal['female', 'male', 'neutral'] = 'neutral',
+                 full_pose: Union[np.ndarray, torch.Tensor, None] = None,
+                 transl: Union[np.ndarray, torch.Tensor, None] = None,
+                 betas: Union[np.ndarray, torch.Tensor, None] = None,
+                 logger: Union[None, str, logging.Logger] = None) -> None:
         """Construct a SMPLData instance with pre-set values. If any of gender,
         full_pose, transl, betas is provided, it will override the item in
         source_dict.
 
         Args:
-            source_dict (dict, optional):
+            src_dict (dict, optional):
                 A dict with items in HumanData fashion.
                 Defaults to None.
             gender (Literal["female", "male", "neutral"], optional):
@@ -78,31 +62,27 @@ class SMPLData(dict):
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
-
-        Returns:
-            SMPLData:
-                A SMPLData instance.
         """
-        if source_dict is None:
-            ret_instance = cls()
+        if src_dict is not None:
+            super().__init__(src_dict)
         else:
-            ret_instance = cls(source_dict)
-        ret_instance.logger = get_logger(logger)
-        ret_instance.set_gender(gender)
+            super().__init__()
+        self.body_joints_num = self.__class__.DEFAULT_BODY_JOINTS_NUM
+        self.logger = get_logger(logger)
+        self.set_gender(gender)
         if full_pose is None:
-            full_pose_dim = cls.BODY_POSE_LEN + 1
+            full_pose_dim = self.__class__.BODY_POSE_LEN + 1
             full_pose = np.zeros(shape=(1, full_pose_dim, 3))
-        ret_instance.set_fullpose(full_pose)
+        self.set_fullpose(full_pose)
         if transl is None:
             transl = np.zeros(shape=(full_pose.shape[0], 3))
-        ret_instance.set_transl(transl)
+        self.set_transl(transl)
         if betas is None:
             betas = np.zeros(shape=(full_pose.shape[0], 10))
-        ret_instance.set_betas(betas)
-        return ret_instance
+        self.set_betas(betas)
 
     @classmethod
-    def fromfile(cls, npz_path: str) -> _SMPLData:
+    def fromfile(cls, npz_path: str) -> 'SMPLData':
         """Construct a body model data structure from an npz file.
 
         Args:

@@ -1,4 +1,4 @@
-image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-ffmpeg4-pytorch3d-mmpose
+image: registry.sensetime.com/zoetrope/pytorch@sha256:bf03e30bd4a1033680d696115f89e8fb26ec2fdafec31f17bc517ad4ee1c2c71
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -14,6 +14,7 @@ before_script:
   - python --version
   - pip --version
   - nvcc --version
+  - cmake --version
   - python -c "import torch; print(torch.__version__)"
   - export http_proxy=http://172.16.1.135:3128/
   - export https_proxy=http://172.16.1.135:3128/
@@ -34,12 +35,20 @@ test:
   script:
     - nvidia-smi
     - echo "Start building..."
-    - sh script/download_compiled_xrprimer.sh
-    - cd xrprimer/python/
-    - pip install -e .
+    - echo "--- install xrprimer --- "
+    - cd xrprimer
+    - pip install conan
+    - conan remote add xrlab http://conan.kestrel.sensetime.com/artifactory/api/conan/xrlab
+    - cmake -S. -Bbuild && cmake --build build -j4
+    - cd python && pip install -e .
     - python -c "import xrprimer; print(xrprimer.__version__)"
     - cd ../../
     - pip install -e .
+    - echo "--- xrprimer installed --- "
+    - echo "--- install mmhuman3d --- "
+    - git clone https://github.com/open-mmlab/mmhuman3d.git
+    - cd mmhuman3d && pip install -e . && cd ..
+    - echo "--- mmhuman3d installed --- "
     - unset http_proxy
     - unset https_proxy
     - unset HTTP_PROXY

@@ -26,7 +26,7 @@ def test_new():
     smpl_data = SMPLData({'frame_num': 20})
     assert smpl_data['frame_num'] == 20
     # new with specific value
-    smpl_data = SMPLData.new(
+    smpl_data = SMPLData(
         gender='neutral',
         full_pose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
@@ -35,8 +35,8 @@ def test_new():
     assert smpl_data['betas'][0, 0] == 0
     # new with source dict
     src_dict = {'frame_num': 2, 'betas': np.ones(shape=(2, 10))}
-    smpl_data = SMPLData.new(
-        source_dict=src_dict,
+    smpl_data = SMPLData(
+        src_dict=src_dict,
         gender='neutral',
         full_pose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
@@ -113,7 +113,7 @@ def test_dict_io():
         device_name = 'cuda:0'
     else:
         device_name = 'cpu'
-    smpl_data = SMPLData.new(
+    smpl_data = SMPLData(
         gender='neutral',
         full_pose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
@@ -151,7 +151,7 @@ def test_dict_io():
 
 
 def test_file_io():
-    smpl_data = SMPLData.new(
+    smpl_data = SMPLData(
         gender='neutral',
         full_pose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
