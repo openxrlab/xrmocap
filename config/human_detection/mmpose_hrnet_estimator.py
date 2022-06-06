@@ -6,4 +6,3 @@ mmpose_kwargs = dict(
     'coco_wholebody_384x288_dark_plus.py',
     device='cuda')
 bbox_thr = 0.95
-batch_size = 1
