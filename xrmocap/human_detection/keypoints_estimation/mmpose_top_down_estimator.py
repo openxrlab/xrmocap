@@ -25,7 +25,6 @@ class MMposeTopDownEstimator:
 
     def __init__(self,
                  mmpose_kwargs: dict,
-                 batch_size: int = 1,
                  bbox_thr: float = 0.0,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Init a detector from mmdetection.
@@ -35,10 +34,6 @@ class MMposeTopDownEstimator:
                 A dict contains args of mmpose.apis.init_detector.
                 Necessary keys: config, checkpoint
                 Optional keys: device
-            batch_size (int, optional):
-                Batch size for inference. If mmpose of a low version doesn't
-                support batch_size > 1, set it to 1 to avoid errors.
-                Defaults to 1.
             bbox_thr (float, optional):
                 Threshold of a bbox. Those have lower scores will be ignored.
                 Defaults to 0.0.
@@ -48,20 +43,17 @@ class MMposeTopDownEstimator:
         """
         # build the pose model from a config file and a checkpoint file
         self.pose_model = init_pose_model(**mmpose_kwargs)
-        self.batch_size = batch_size
+        # mmpose inference api takes one image per call
+        self.batch_size = 1
         self.bbox_thr = bbox_thr
         self.logger = get_logger(logger)
         if not has_mmpose:
             self.logger.error(import_exception)
             raise ModuleNotFoundError(
                 'Please install mmpose to run detection.')
-        if digit_version(mmpose_version) <= digit_version('0.9.0') and\
-                self.batch_size > 1:
-            self.batch_size = 1
-            self.logger.warning(
-                f'mmpose {mmpose_version} does not support' +
-                ' batch inference.' +
-                ' MMposeTopDownEstimator.batch_size is set to 1.')
+        self.use_old_api = False
+        if digit_version(mmpose_version) <= digit_version('0.13.0'):
+            self.use_old_api = True
 
     def get_keypoints_convention_name(self) -> str:
         """Get data_source from dataset type in config file of the pose model.
@@ -117,26 +109,28 @@ class MMposeTopDownEstimator:
         for start_index in tqdm(
                 range(0, frame_num, self.batch_size), disable=disable_tqdm):
             end_index = min(frame_num, start_index + self.batch_size)
-            img_batch = image_array[start_index:end_index]
+            # mmpose takes only one frame
+            img_arr = image_array[start_index]
             person_results = []
             for frame_index in range(start_index, end_index, 1):
                 bboxes_in_frame = []
                 for bbox in bbox_list[frame_index]:
                     bboxes_in_frame.append({'bbox': bbox})
-                person_results.append(bboxes_in_frame)
-            # mmpose 0.9.0 cannot accept batch, squeeze the frame dim
-            if len(person_results) == 1:
-                person_results = person_results[0]
-                img_batch = img_batch[0]
+                person_results = bboxes_in_frame
+            if not self.use_old_api:
+                img_input = dict(imgs_or_paths=img_arr)
+            else:
+                img_input = dict(img_or_path=img_arr)
+
             pose_results, returned_outputs = inference_top_down_pose_model(
                 model=self.pose_model,
-                img_or_path=img_batch,
                 person_results=person_results,
                 bbox_thr=self.bbox_thr,
                 format='xyxy',
                 dataset=self.pose_model.cfg.data['test']['type'],
                 return_heatmap=return_heatmap,
-                outputs=None)
+                outputs=None,
+                **img_input)
             frame_pose_results = [
                 person_dict['keypoints'] for person_dict in pose_results
             ]
