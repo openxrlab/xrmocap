@@ -49,16 +49,16 @@ class SMPLData(dict):
                 Should be one among ["female", "male", "neutral"].
                 Defaults to 'neutral'.
             full_pose (Union[np.ndarray, torch.Tensor, None], optional):
-                A tensor or ndarray for fullpose, in shape [frame_num, 24, 3].
+                A tensor or ndarray for fullpose, in shape [n_frame, 24, 3].
                 Defaults to None, zero-tensor will be created.
             transl (Union[np.ndarray, torch.Tensor, None], optional):
-                A tensor or ndarray for translation, in shape [frame_num, 3].
+                A tensor or ndarray for translation, in shape [n_frame, 3].
                 Defaults to None, zero-tensor will be created.
             betas (Union[np.ndarray, torch.Tensor, None], optional):
                 A tensor or ndarray for translation,
-                in shape [frame_num, betas_dim].
+                in shape [n_frame, betas_dim].
                 Defaults to None,
-                zero-tensor in shape [frame_num, 10] will be created.
+                zero-tensor in shape [n_frame, 10] will be created.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -67,7 +67,7 @@ class SMPLData(dict):
             super().__init__(src_dict)
         else:
             super().__init__()
-        self.body_joints_num = self.__class__.DEFAULT_BODY_JOINTS_NUM
+        self.n_body_joints = self.__class__.DEFAULT_BODY_JOINTS_NUM
         self.logger = get_logger(logger)
         self.set_gender(gender)
         if full_pose is None:

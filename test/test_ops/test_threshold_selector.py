@@ -1,8 +1,7 @@
 import mmcv
 import numpy as np
 
-from xrmocap.ops.triangulation.point_selection.builder import \
-    build_point_selector  # prevent linting conflicts
+from xrmocap.ops.triangulation.builder import build_point_selector
 
 
 def test_manual_threshold_selector():

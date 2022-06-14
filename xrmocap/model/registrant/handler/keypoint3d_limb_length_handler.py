@@ -27,12 +27,12 @@ class Keypoint3dLimbLenInput(BaseInput):
 
         Args:
             keypoints3d (torch.Tensor):
-                3D keypoints in shape (batch_size, keypoint_num, 3).
+                3D keypoints in shape (batch_size, n_keypoints, 3).
             keypoints3d_convention (torch.Tensor):
                 Convention name of the 3D keypoints.
                 Defaults to 'human_data'.
             keypoints3d_conf (torch.Tensor, optional):
-                3D keypoints confidence in shape (batch_size, keypoint_num).
+                3D keypoints confidence in shape (batch_size, n_keypoints).
                 Defaults to None, which will be regarded as torch.ones().
             handler_key (str, optional):
                 Key of this input-handler pair. This input will

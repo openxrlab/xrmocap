@@ -31,7 +31,7 @@ class Limbs():
         Args:
             connections (Union[np.ndarray, torch.Tensor]):
                 A tensor or ndarray for connections,
-                in shape [conn_num, 2],
+                in shape [n_conn, 2],
                 conn[:, 0] are start point indice and
                 conn[:, 1] are end point indice.
             connection_names (Union[List[str], None], optional):
@@ -51,7 +51,7 @@ class Limbs():
                 Defaults to None.
             points (Union[np.ndarray, torch.Tensor, None], optional):
                 A tensor or ndarray for points,
-                in shape [point_num, point_dim].
+                in shape [n_point, point_dim].
                 Defaults to None.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
@@ -78,7 +78,7 @@ class Limbs():
         Args:
             conn (Union[np.ndarray, torch.Tensor]):
                 A tensor or ndarray for connections,
-                in shape [conn_num, 2],
+                in shape [n_conn, 2],
                 conn[:, 0] are start point indice and
                 conn[:, 1] are end point indice.
             conn_names (List[str], optional):
@@ -103,7 +103,7 @@ class Limbs():
         # shape: connection_number, 2
         if connections.shape[-1] != 2 or len(connections.shape) != 2:
             self.logger.error('Shape of connections should be' +
-                              ' [conn_num, 2].\n' +
+                              ' [n_conn, 2].\n' +
                               f'connections.shape: {connections.shape}.')
             raise ValueError
         self.connections = connections
@@ -172,13 +172,13 @@ class Limbs():
         Args:
             points (Union[np.ndarray, torch.Tensor]):
                 A tensor or ndarray for points,
-                in shape [point_num, point_dim].
+                in shape [n_point, point_dim].
 
         Raises:
             TypeError:
                 Type of points is not correct.
             ValueError:
-                Shape of points should be [point_num, point_dim].
+                Shape of points should be [n_point, point_dim].
         """
         if isinstance(points, torch.Tensor):
             points = points.detach().cpu().numpy()
@@ -189,7 +189,7 @@ class Limbs():
         # shape: connection_number, 2
         if len(points.shape) != 2:
             self.logger.error('Shape of points should be' +
-                              ' [point_num, point_dim].\n' +
+                              ' [n_point, point_dim].\n' +
                               f'points.shape: {points.shape}.')
             raise ValueError
         self.points = points

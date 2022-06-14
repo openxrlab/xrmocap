@@ -65,14 +65,14 @@ class AutoThresholdSelector(BaseSelector):
         Args:
             points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
-                [view_number, ..., 3]. Confidence of points is in
-                [view_number, ..., 2:3].
-                [...] could be [keypoint_num],
-                [frame_num, keypoint_num],
-                [frame_num, person_num, keypoint_num], etc.
+                [n_view, ..., 3]. Confidence of points is in
+                [n_view, ..., 2:3].
+                [...] could be [n_keypoints],
+                [n_frame, n_keypoints],
+                [n_frame, n_person, n_keypoints], etc.
             init_points_mask (Union[np.ndarray, list, tuple], optional):
                 An ndarray or a nested list of mask, in shape
-                [view_number, ..., 1].
+                [n_view, ..., 1].
                 If points_mask[index] == 1, points[index] is valid
                 for triangulation, else it is ignored.
                 If points_mask[index] == np.nan, the whole pair will
@@ -82,7 +82,7 @@ class AutoThresholdSelector(BaseSelector):
         Returns:
             np.ndarray:
                 An ndarray or a nested list of mask, in shape
-                [view_number, ..., 1].
+                [n_view, ..., 1].
         """
         points, init_points_mask = prepare_triangulate_input(
             camera_number=len(points),
@@ -91,11 +91,11 @@ class AutoThresholdSelector(BaseSelector):
             logger=self.logger)
         # backup shape
         init_points_mask_shape = init_points_mask.shape
-        view_number = init_points_mask_shape[0]
+        n_view = init_points_mask_shape[0]
         # points with confidence
         points2d_conf = points[..., 2:3].copy()
-        points2d_conf = points2d_conf.reshape(view_number, -1)
-        init_points_mask = init_points_mask.reshape(view_number, -1)
+        points2d_conf = points2d_conf.reshape(n_view, -1)
+        init_points_mask = init_points_mask.reshape(n_view, -1)
         # check if there's potential to search
         view_count = np.sum(init_points_mask, axis=0)
         # np.nan will be ignored, only figure matters
@@ -105,6 +105,7 @@ class AutoThresholdSelector(BaseSelector):
                 'There\'s no potential to search a higher threshold' +
                 ' according to init_points_mask.')
             potential = False
+            return init_points_mask.reshape(*init_points_mask_shape)
         threshold = self.start
         while potential and threshold >= 0:
             pair_fail = False

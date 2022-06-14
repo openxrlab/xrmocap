@@ -23,16 +23,16 @@ def test_convert_keypoints():
     kps_np = np.zeros(shape=(2, 3, 25, 3))
     mask_np = np.ones(shape=(2, 3, 25))
     convention = 'openpose_25'
-    kps = Keypoints(kps=kps_np, mask=mask_np, convention=convention)
-    assert isinstance(kps.get_keypoints(), np.ndarray)
-    hd_kps = convert_keypoints(keypoints=kps, dst='human_data')
-    assert isinstance(hd_kps.get_keypoints(), np.ndarray)
-    single_mask = hd_kps.get_mask()[0, 0]
+    keypoints = Keypoints(kps=kps_np, mask=mask_np, convention=convention)
+    assert isinstance(keypoints.get_keypoints(), np.ndarray)
+    hd_keypoints = convert_keypoints(keypoints=keypoints, dst='human_data')
+    assert isinstance(hd_keypoints.get_keypoints(), np.ndarray)
+    single_mask = hd_keypoints.get_mask()[0, 0]
     assert single_mask.sum() == mask_np.shape[-1]
     # test convert torch
-    kps = kps.to_tensor()
-    assert isinstance(kps.get_keypoints(), torch.Tensor)
-    hd_kps = convert_keypoints(keypoints=kps, dst='human_data')
-    assert isinstance(hd_kps.get_keypoints(), torch.Tensor)
-    single_mask = hd_kps.get_mask()[0, 0]
+    keypoints = keypoints.to_tensor()
+    assert isinstance(keypoints.get_keypoints(), torch.Tensor)
+    hd_keypoints = convert_keypoints(keypoints=keypoints, dst='human_data')
+    assert isinstance(hd_keypoints.get_keypoints(), torch.Tensor)
+    single_mask = hd_keypoints.get_mask()[0, 0]
     assert single_mask.sum() == mask_np.shape[-1]

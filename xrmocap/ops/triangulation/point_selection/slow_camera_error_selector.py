@@ -2,10 +2,9 @@ import logging
 import numpy as np
 from typing import Union
 
-from xrmocap.ops.triangulation.point_selection.camera_error_selector import \
-    CameraErrorSelector  # prevent linting conflicts
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from .camera_error_selector import CameraErrorSelector
 
 
 class SlowCameraErrorSelector(CameraErrorSelector):
@@ -40,24 +39,24 @@ class SlowCameraErrorSelector(CameraErrorSelector):
             verbose=verbose,
             logger=logger)
 
-    def get_camera_indices(
+    def get_camera_inidexes(
             self,
             points: Union[np.ndarray, list, tuple],
             init_points_mask: Union[np.ndarray, list, tuple] = None) -> list:
-        """Get a list of camera indices. This selector will loop triangulate
+        """Get a list of camera inidexes. This selector will loop triangulate
         points, disable the one camera with largest reprojection error, and
         loop again until there are self.target_camera_number left.
 
         Args:
             points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
-                [view_number, ..., 2+n], n >= 0.
-                [...] could be [keypoint_num],
-                [frame_num, keypoint_num],
-                [frame_num, person_num, keypoint_num], etc.
+                [n_view, ..., 2+n], n >= 0.
+                [...] could be [n_keypoints],
+                [n_frame, n_keypoints],
+                [n_frame, n_person, n_keypoints], etc.
             init_points_mask (Union[np.ndarray, list, tuple], optional):
                 An ndarray or a nested list of mask, in shape
-                [view_number, ..., 1].
+                [n_view, ..., 1].
                 If points_mask[index] == 1, points[index] is valid
                 for triangulation, else it is ignored.
                 If points_mask[index] == np.nan, the whole pair will
@@ -66,7 +65,7 @@ class SlowCameraErrorSelector(CameraErrorSelector):
 
         Returns:
             list:
-                A list of sorted camera indices,
+                A list of sorted camera inidexes,
                 length == self.target_camera_number.
         """
         points, init_points_mask = prepare_triangulate_input(
@@ -76,17 +75,17 @@ class SlowCameraErrorSelector(CameraErrorSelector):
             logger=self.logger)
         # backup shape
         init_points_mask_shape = init_points_mask.shape
-        view_number = init_points_mask_shape[0]
+        n_view = init_points_mask_shape[0]
         # check if there's potential to search
         potential = True
-        if view_number == 2:
+        if n_view == 2:
             self.logger.warning(
                 'There\'s no potential to search a sub-triangulator' +
-                ' according to view_number.')
+                ' according to n_view.')
             potential = False
         points_mask = init_points_mask.copy()
-        mean_errors = np.zeros(shape=(view_number))
-        remain_cameras = [x for x in range(view_number)]
+        mean_errors = np.zeros(shape=(n_view))
+        remain_cameras = [x for x in range(n_view)]
         while potential and \
                 len(remain_cameras) > self.target_camera_number:
             # try to remove one camera and record mean error
@@ -106,8 +105,8 @@ class SlowCameraErrorSelector(CameraErrorSelector):
                 # get mean error ignoring nan
                 mean_errors[removed_camera_index] = np.nanmean(
                     abs_error.reshape(-1))
-            max_indices = np.where(mean_errors == np.nanmax(mean_errors))[0]
-            for camera_id in max_indices:
+            max_inidexes = np.where(mean_errors == np.nanmax(mean_errors))[0]
+            for camera_id in max_inidexes:
                 remain_cameras.pop(remain_cameras.index(camera_id))
                 mean_errors[camera_id] = np.nan
                 if len(remain_cameras) == self.target_camera_number:

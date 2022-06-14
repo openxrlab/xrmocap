@@ -24,7 +24,6 @@ class AniposelibTriangulator(BaseTriangulator):
 
     def __init__(self,
                  camera_parameters: list,
-                 camera_convention: str = 'opencv',
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Triangulator for points triangulation, based on aniposelib.
 
@@ -32,18 +31,11 @@ class AniposelibTriangulator(BaseTriangulator):
             camera_parameters (list):
                 A list of Pinhole/FisheyeCameraParameter, or a list
                 of paths to dumped Pinhole/FisheyeCameraParameters.
-            camera_convention (str, optional):
-                Expected convention name of cameras.
-                If camera_parameters do not match expectation,
-                convert them to the correct convention.
-                Defaults to 'opencv'.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
-        super().__init__(
-            camera_parameters=camera_parameters,
-            camera_convention=camera_convention)
+        super().__init__(camera_parameters=camera_parameters)
         self.logger = get_logger(logger)
         if not has_aniposelib:
             self.logger.error(import_exception)
@@ -59,16 +51,16 @@ class AniposelibTriangulator(BaseTriangulator):
         Args:
             points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
-                [view_number, ..., 2+n], n >= 0.
-                [...] could be [keypoint_num],
-                [frame_num, keypoint_num],
-                [frame_num, person_num, keypoint_num], etc.
+                [n_view, ..., 2+n], n >= 0.
+                [...] could be [n_keypoints],
+                [n_frame, n_keypoints],
+                [n_frame, n_person, n_keypoints], etc.
                 If length of the last dim is greater
                 than 2, the redundant data will be
                 dropped.
             points_mask (Union[np.ndarray, list, tuple], optional):
                 An ndarray or a nested list of mask, in shape
-                [view_number, ..., 1].
+                [n_view, ..., 1].
                 If points_mask[index] == 1, points[index] is valid
                 for triangulation, else it is ignored.
                 If points_mask[index] == np.nan, the whole pair will
@@ -90,12 +82,12 @@ class AniposelibTriangulator(BaseTriangulator):
         points2d = points[..., :2].copy()
         # backup shape for output
         input_points2d_shape = points2d.shape
-        view_number = input_points2d_shape[0]
-        points2d = points2d.reshape(view_number, -1, 2)
-        points_mask = points_mask.reshape(view_number, -1, 1)
+        n_view = input_points2d_shape[0]
+        points2d = points2d.reshape(n_view, -1, 2)
+        points_mask = points_mask.reshape(n_view, -1, 1)
         # ignore points according to mask
-        ignored_indices = np.where(points_mask != 1)
-        points2d[ignored_indices[0], ignored_indices[1], :] = np.nan
+        ignored_inidexes = np.where(points_mask != 1)
+        points2d[ignored_inidexes[0], ignored_inidexes[1], :] = np.nan
         points3d = camera_group.triangulate(points2d)
         output_points3d_shape = np.array(input_points2d_shape[1:])
         output_points3d_shape[-1] = 3
@@ -143,10 +135,10 @@ class AniposelibTriangulator(BaseTriangulator):
         Args:
             points2d (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
-                [view_number, ..., 2+n], n >= 0.
-                [...] could be [keypoint_num],
-                [frame_num, keypoint_num],
-                [frame_num, person_num, keypoint_num], etc.
+                [n_view, ..., 2+n], n >= 0.
+                [...] could be [n_keypoints],
+                [n_frame, n_keypoints],
+                [n_frame, n_person, n_keypoints], etc.
                 Data in points2d[..., 2:] will be ignored.
             points3d (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points3d, in shape
@@ -154,7 +146,7 @@ class AniposelibTriangulator(BaseTriangulator):
                 Data in points3d[..., 3:] will be ignored.
             points_mask (Union[np.ndarray, list, tuple], optional):
                 An ndarray or a nested list of mask, in shape
-                [view_number, ..., 1].
+                [n_view, ..., 1].
                 If points_mask[index] == 1, points[index] is valid
                 for triangulation, else it is ignored.
                 If points_mask[index] == np.nan, the whole pair will
@@ -164,7 +156,7 @@ class AniposelibTriangulator(BaseTriangulator):
         Returns:
             np.ndarray:
                 An ndarray of error, in shape
-                [view_number, ..., 2].
+                [n_view, ..., 2].
         """
         points2d, points_mask = prepare_triangulate_input(
             camera_number=len(self.camera_parameters),
@@ -175,13 +167,13 @@ class AniposelibTriangulator(BaseTriangulator):
         input_points2d_shape = points2d.shape
         # todo: check points3d
         camera_group = self.__prepare_aniposelib_camera__()
-        view_number = points_mask.shape[0]
-        points2d = points2d[..., :2].copy().reshape(view_number, -1, 2)
+        n_view = points_mask.shape[0]
+        points2d = points2d[..., :2].copy().reshape(n_view, -1, 2)
         points3d = points3d[..., :3].copy().reshape(-1, 3)
         # ignore points according to mask
-        ignored_indices = np.where(points_mask != 1)
-        points2d[ignored_indices[0], ignored_indices[1], :] = np.nan
-        points3d[ignored_indices[1], :] = np.nan
+        ignored_inidexes = np.where(points_mask != 1)
+        points2d[ignored_inidexes[0], ignored_inidexes[1], :] = np.nan
+        points3d[ignored_inidexes[1], :] = np.nan
         errors = camera_group.reprojection_error(
             points3d, points2d, mean=False)
         output_errors_shape = np.array(input_points2d_shape)

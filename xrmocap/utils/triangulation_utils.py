@@ -6,26 +6,26 @@ from typing import Tuple, Union
 from xrmocap.utils.log_utils import get_logger
 
 
-def __init_valid_views_dict__(concerned_view_num: int = 3) -> dict:
+def __init_valid_views_dict__(concerned_n_view: int = 3) -> dict:
     """Create a dict for valid view number statistics。
 
     Args:
-        concerned_view_num (int, optional):
+        concerned_n_view (int, optional):
             If a point's valid view number is no greater than
-            concerned_view_num, it will be counted.
+            concerned_n_view, it will be counted.
             Defaults to 3.
 
     Returns:
         dict
     """
     valid_views_dict = {}
-    for view_num in range(concerned_view_num):
-        valid_views_dict[view_num] = 0.0
+    for n_view in range(concerned_n_view):
+        valid_views_dict[n_view] = 0.0
     return valid_views_dict
 
 
 def get_valid_views_stats(points_mask: np.ndarray,
-                          concerned_view_num: int = 3,
+                          concerned_n_view: int = 3,
                           return_rate: bool = True) -> Tuple[dict, str]:
     """Ignoring masked keypoints, define a pair containing all views about a
     single keypoint, in one frame. Count how many valid views in each pair, and
@@ -34,10 +34,10 @@ def get_valid_views_stats(points_mask: np.ndarray,
     Args:
         points_mask (np.ndarray):
             An ndarray of mask, in shape
-            [view_number, point_number, 1].
-        concerned_view_num (int, optional):
+            [n_view, n_point, 1].
+        concerned_n_view (int, optional):
             If a point's valid view number is no greater than
-            concerned_view_num, it will be counted.
+            concerned_n_view, it will be counted.
             Defaults to 3.
         return_rate (bool, optional):
             Whether to return invalid rate.
@@ -55,7 +55,7 @@ def get_valid_views_stats(points_mask: np.ndarray,
     """
     # init valid count
     valid_stats_dict = __init_valid_views_dict__(
-        concerned_view_num=concerned_view_num)
+        concerned_n_view=concerned_n_view)
     total_pairs = points_mask.shape[1]
     for point_index in range(total_pairs):
         pair_data = points_mask[:, point_index, 0]
@@ -66,10 +66,10 @@ def get_valid_views_stats(points_mask: np.ndarray,
             continue
         valid_mask = (pair_data == 1.0)
         # check how many valid views in one data pair
-        valid_num = int(np.sum(valid_mask, axis=0))
+        n_valid = int(np.sum(valid_mask, axis=0))
         # if critical, count it
-        if valid_num in valid_stats_dict.keys():
-            valid_stats_dict[valid_num] += 1.0
+        if n_valid in valid_stats_dict.keys():
+            valid_stats_dict[n_valid] += 1.0
     # get ratio if required
     if return_rate and total_pairs > 0.0:
         for key in valid_stats_dict.keys():
@@ -97,16 +97,16 @@ def prepare_triangulate_input(
             Number of cameras.
         points (Union[np.ndarray, list, tuple]):
                 An ndarray or a nested list of points2d, in shape
-                [view_number, ..., 2+n], n >= 0.
-                [...] could be [keypoint_num],
-                [frame_num, keypoint_num],
-                [frame_num, person_num, keypoint_num], etc.
+                [n_view, ..., 2+n], n >= 0.
+                [...] could be [n_keypoints],
+                [n_frame, n_keypoints],
+                [n_frame, n_person, n_keypoints], etc.
                 If length of the last dim is greater
                 than 2, the redundant data will be
                 concatenated to output, not modified.
         points_mask (Union[np.ndarray, list, tuple], optional):
             An ndarray or a nested list of mask, in shape
-            [view_number, ..., 1].
+            [n_view, ..., 1].
             If points_mask[index] == 1, points[index] is valid
             for triangulation, else it is ignored.
             If points_mask[index] == np.nan, the whole pair will
@@ -121,7 +121,7 @@ def prepare_triangulate_input(
         TypeError: Type of points_mask is not in (np.ndarray, list, tuple).
         ValueError: View number of input does not match camera_number.
         ValueError: points.shape[-1] must not be fewer than 2.
-        ValueError: points_mask must be [view_number, ..., 1] like points.
+        ValueError: points_mask must be [n_view, ..., 1] like points.
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
@@ -161,7 +161,7 @@ def prepare_triangulate_input(
     # check points_mask shape
     if points.shape[:-1] != points_mask.shape[:-1] or\
             points_mask.shape[-1] != 1:
-        logger.error('points_mask must be [view_number, ..., 1] like points.' +
+        logger.error('points_mask must be [n_view, ..., 1] like points.' +
                      f'points_mask.shape: {points_mask.shape}' +
                      f'points.shape: {points.shape}')
         raise ValueError
@@ -178,10 +178,10 @@ def parse_keypoints_mask(
     Args:
         keypoints (Union[np.ndarray, list, tuple]):
             An ndarray or a nested list of points2d, in shape
-            [view_number, ..., keypoints_number, 2+n].
-            [...] could be [keypoint_num],
-            [frame_num, keypoint_num],
-            [frame_num, person_num, keypoint_num], etc.
+            [n_view, ..., n_keypoints, 2+n].
+            [...] could be [n_keypoints],
+            [n_frame, n_keypoints],
+            [n_frame, n_person, n_keypoints], etc.
             It offers a shape reference for the returned mask.
         keypoints_mask (Union[np.ndarray, list, tuple], optional):
             keypoints_mask in HumanData,
@@ -211,9 +211,9 @@ def parse_keypoints_mask(
                      f'keypoints.shape: {keypoints.shape}' +
                      f'keypoints_mask.shape: {keypoints_mask.shape}')
         raise ValueError
-    nan_indices = np.where(keypoints_mask == 0)
+    nan_inidexes = np.where(keypoints_mask == 0)
     triangulate_mask = triangulate_mask.reshape(-1, init_points_mask_shape[-2],
                                                 init_points_mask_shape[-1])
-    triangulate_mask[:, nan_indices[0], :] = np.nan
+    triangulate_mask[:, nan_inidexes[0], :] = np.nan
     triangulate_mask = triangulate_mask.reshape(*init_points_mask_shape)
     return triangulate_mask

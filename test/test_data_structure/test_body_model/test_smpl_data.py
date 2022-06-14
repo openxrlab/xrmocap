@@ -23,8 +23,8 @@ def test_new():
     assert hasattr(smpl_data, 'logger')
     assert smpl_data.logger is not None
     # new from dict
-    smpl_data = SMPLData({'frame_num': 20})
-    assert smpl_data['frame_num'] == 20
+    smpl_data = SMPLData({'n_frame': 20})
+    assert smpl_data['n_frame'] == 20
     # new with specific value
     smpl_data = SMPLData(
         gender='neutral',
@@ -34,7 +34,7 @@ def test_new():
         logger='root')
     assert smpl_data['betas'][0, 0] == 0
     # new with source dict
-    src_dict = {'frame_num': 2, 'betas': np.ones(shape=(2, 10))}
+    src_dict = {'n_frame': 2, 'betas': np.ones(shape=(2, 10))}
     smpl_data = SMPLData(
         src_dict=src_dict,
         gender='neutral',
@@ -105,7 +105,7 @@ def test_setitem():
     smpl_data['fullpose'] = np.zeros(shape=[2, 24, 3])
     smpl_data['gender'] = 'neutral'
     # set arbitrary key
-    smpl_data['frame_number'] = 1000
+    smpl_data['n_frame'] = 1000
 
 
 def test_dict_io():
@@ -118,18 +118,18 @@ def test_dict_io():
         full_pose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(10)))
-    smpl_data['frame_num'] = 2
+    smpl_data['n_frame'] = 2
     assert smpl_data['betas'].shape == (1, 10)
     # test default to dict
     param_dict = smpl_data.to_param_dict(repeat_betas=False)
     assert param_dict['global_orient'].shape == (2, 3)
     assert param_dict['betas'].shape == (1, 10)
-    assert 'frame_num' not in param_dict
+    assert 'n_frame' not in param_dict
     # test repeat betas
     param_dict = smpl_data.to_param_dict(repeat_betas=True)
     assert param_dict['global_orient'].shape == (2, 3)
     assert param_dict['betas'].shape == (2, 10)
-    assert 'frame_num' not in param_dict
+    assert 'n_frame' not in param_dict
     # test to tensor
     tensor_dict = smpl_data.to_tensor_dict(
         repeat_betas=True, device=device_name)
@@ -156,14 +156,14 @@ def test_file_io():
         full_pose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(10)))
-    smpl_data['frame_num'] = 2
+    smpl_data['n_frame'] = 2
     # test correctly dump
     npz_path = os.path.join(output_dir, 'dumped_smpl_data.npz')
     smpl_data.dump(npz_path)
     assert os.path.exists(npz_path)
     # test correctly load
     smpl_data_new = SMPLData.fromfile(npz_path)
-    assert smpl_data_new['frame_num'] == 2
+    assert smpl_data_new['n_frame'] == 2
     assert smpl_data_new['full_pose'].shape == (2, 24, 3)
     # test wrong filename
     pkl_path = os.path.join(output_dir, 'dumped_smpl_data.pkl')

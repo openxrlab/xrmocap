@@ -651,7 +651,7 @@ class SMPLify(object):
         return param
 
     def __set_keypoint_idxs__(self) -> None:
-        """Set keypoint indices to 1) body parts to be assigned different
+        """Set keypoint inidexes to 1) body parts to be assigned different
         weights 2) be ignored for keypoint loss computation.
 
         Returns:
@@ -659,7 +659,7 @@ class SMPLify(object):
         """
         convention = self.body_model.keypoint_convention
 
-        # obtain ignore keypoint indices
+        # obtain ignore keypoint inidexes
         if self.ignore_keypoints is not None:
             self.ignore_keypoint_idxs = []
             for keypoint_name in self.ignore_keypoints:
@@ -668,7 +668,7 @@ class SMPLify(object):
                 if keypoint_idx != -1:
                     self.ignore_keypoint_idxs.append(keypoint_idx)
 
-        # obtain body part keypoint indices
+        # obtain body part keypoint inidexes
         shoulder_keypoint_idxs = get_keypoint_idxs_by_part(
             'shoulder', convention=convention)
         hip_keypoint_idxs = get_keypoint_idxs_by_part(

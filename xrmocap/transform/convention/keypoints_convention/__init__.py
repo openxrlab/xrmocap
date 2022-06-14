@@ -45,7 +45,7 @@ def convert_keypoints(
     """
     src = keypoints.get_convention()
     src_arr = keypoints.get_keypoints()
-    frame_n, person_n, kps_n, dim = src_arr.shape
+    n_frame, n_person, kps_n, dim = src_arr.shape
     flat_arr = src_arr.reshape(-1, kps_n, dim)
     flat_mask = keypoints.get_mask().reshape(-1, kps_n)
 
@@ -79,27 +79,27 @@ def convert_keypoints(
             else:
                 raise ValueError
 
-    dst_kps_n = get_keypoint_num(
+    dst_n_kps = get_keypoint_num(
         convention=dst, keypoints_factory=keypoints_factory)
     dst_idxs, src_idxs, _ = \
         get_mapping(src, dst, approximate, keypoints_factory)
     # multi frame multi person kps
     dst_arr = new_array_func(
-        shape=(frame_n * person_n, dst_kps_n, dim),
+        shape=(n_frame * n_person, dst_n_kps, dim),
         value=0,
         ref_data=src_arr,
         if_uint8=False)
     # multi frame multi person mask
     dst_mask = new_array_func(
-        shape=(frame_n * person_n, dst_kps_n),
+        shape=(n_frame * n_person, dst_n_kps),
         value=0,
         ref_data=src_arr,
         if_uint8=True)
     # mapping from source
     dst_mask[:, dst_idxs] = flat_mask[:, src_idxs]
     dst_arr[:, dst_idxs, :] = flat_arr[:, src_idxs, :]
-    multi_mask = dst_mask.reshape(frame_n, person_n, dst_kps_n)
-    multi_arr = dst_arr.reshape(frame_n, person_n, dst_kps_n, dim)
+    multi_mask = dst_mask.reshape(n_frame, n_person, dst_n_kps)
+    multi_arr = dst_arr.reshape(n_frame, n_person, dst_n_kps, dim)
     ret_kps = Keypoints(
         dtype=keypoints.dtype,
         kps=multi_arr,
@@ -141,8 +141,8 @@ def get_mapping_dict(src: str,
 
     Returns:
         dict:
-            A mapping dict whose keys are src indices
-            and values are dst indices.
+            A mapping dict whose keys are src inidexes
+            and values are dst inidexes.
     """
     mapping_back = get_mapping(
         src=src,

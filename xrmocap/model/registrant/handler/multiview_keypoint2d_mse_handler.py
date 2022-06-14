@@ -30,15 +30,15 @@ class MultiviewKeypoint2dMSEInput(BaseInput):
 
         Args:
             cameras (pytorch3d.renderer.cameras):
-                Pytorch 3d cameras, len(cameras) = batch_size * view_num.
+                Pytorch 3d cameras, len(cameras) = batch_size * n_view.
             keypoints2d (torch.Tensor):
-                2D keypoints in shape (batch_size, view_num, keypoint_num, 2).
+                2D keypoints in shape (batch_size, n_view, n_keypoints, 2).
             keypoints2d_convention (torch.Tensor):
                 Convention name of the 2D keypoints.
                 Defaults to 'human_data'.
             keypoints2d_conf (torch.Tensor, optional):
                 2D keypoints confidence in shape
-                (batch_size, view_num, keypoint_num).
+                (batch_size, n_view, n_keypoints).
                 Defaults to None, which will be regarded as torch.ones().
             handler_key (str, optional):
                 Key of this input-handler pair. This input will
