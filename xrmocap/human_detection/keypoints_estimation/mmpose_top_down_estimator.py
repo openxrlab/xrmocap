@@ -76,12 +76,12 @@ class MMposeTopDownEstimator:
 
         Args:
             image_array (Union[np.ndarray, list]):
-                BGR image ndarray in shape [frame_num, height, width, 3],
+                BGR image ndarray in shape [n_frame, height, width, 3],
                 or a list of image ndarrays in shape [height, width, 3] while
-                len(list) == frame_num.
+                len(list) == n_frame.
             bbox_list (Union[tuple, list]):
                 A list of human bboxes.
-                Shape of the nested lists is (frame_num, human_num, 5).
+                Shape of the nested lists is (n_frame, n_human, 5).
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
@@ -95,20 +95,20 @@ class MMposeTopDownEstimator:
                 keypoints_list (list):
                     A list of human keypoints.
                     Shape of the nested lists is
-                    (frame_num, human_num, keypoints_num, 3).
+                    (n_frame, n_human, n_keypoints, 3).
                     Each keypoint is an array of (x, y, confidence).
                 heatmap_list (list):
-                    A list of keypoint heatmaps. len(heatmap_list) == frame_num
+                    A list of keypoint heatmaps. len(heatmap_list) == n_frame
                     and the shape of heatmap_list[f] is
-                    (human_num, keypoints_num, width, height).
+                    (n_human, n_keypoints, width, height).
         """
         ret_pose_list = []
         ret_heatmap_list = []
         ret_bbox_list = []
-        frame_num = len(image_array)
+        n_frame = len(image_array)
         for start_index in tqdm(
-                range(0, frame_num, self.batch_size), disable=disable_tqdm):
-            end_index = min(frame_num, start_index + self.batch_size)
+                range(0, n_frame, self.batch_size), disable=disable_tqdm):
+            end_index = min(n_frame, start_index + self.batch_size)
             # mmpose takes only one frame
             img_arr = image_array[start_index]
             person_results = []
@@ -164,7 +164,7 @@ class MMposeTopDownEstimator:
                 A list of frames' absolute paths.
             bbox_list (Union[tuple, list]):
                 A list of human bboxes.
-                Shape of the nested lists is (frame_num, human_num, 5).
+                Shape of the nested lists is (n_frame, n_human, 5).
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
@@ -178,12 +178,12 @@ class MMposeTopDownEstimator:
                 keypoints_list (list):
                     A list of human keypoints.
                     Shape of the nested lists is
-                    (frame_num, human_num, keypoints_num, 3).
+                    (n_frame, n_human, n_keypoints, 3).
                     Each keypoint is an array of (x, y, confidence).
                 heatmap_list (list):
-                    A list of keypoint heatmaps. len(heatmap_list) == frame_num
+                    A list of keypoint heatmaps. len(heatmap_list) == n_frame
                     and the shape of heatmap_list[f] is
-                    (human_num, keypoints_num, width, height).
+                    (n_human, n_keypoints, width, height).
         """
         image_array_list = []
         for frame_abs_path in frame_path_list:
@@ -210,7 +210,7 @@ class MMposeTopDownEstimator:
                 Path to the video to be detected.
             bbox_list (Union[tuple, list]):
                 A list of human bboxes.
-                Shape of the nested lists is (frame_num, human_num, 5).
+                Shape of the nested lists is (n_frame, n_human, 5).
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
@@ -224,12 +224,12 @@ class MMposeTopDownEstimator:
                 keypoints_list (list):
                     A list of human keypoints.
                     Shape of the nested lists is
-                    (frame_num, human_num, keypoints_num, 3).
+                    (n_frame, n_human, n_keypoints, 3).
                     Each keypoint is an array of (x, y, confidence).
                 heatmap_list (list):
-                    A list of keypoint heatmaps. len(heatmap_list) == frame_num
+                    A list of keypoint heatmaps. len(heatmap_list) == n_frame
                     and the shape of heatmap_list[f] is
-                    (human_num, keypoints_num, width, height).
+                    (n_human, n_keypoints, width, height).
         """
         image_array = video_to_array(input_path=video_path, logger=self.logger)
         ret_pose_list, ret_heatmap_list, ret_boox_list = self.infer_array(
@@ -248,22 +248,35 @@ class MMposeTopDownEstimator:
                 A list of human keypoints, returned by
                 infer methods.
                 Shape of the nested lists is
-                (frame_num, human_num, keypoints_num, 3).
+                (n_frame, n_human, n_keypoints, 3).
 
         Returns:
             Keypoints:
                 An instance of Keypoints with mask and
                 convention, data type is numpy.
         """
-        # shape: (frame_num, human_num, keypoints_num, 3)
-        kps2d_arr = np.asarray(kps2d_list)
-        mask_arr = np.ones_like(kps2d_arr[..., 0])
-        kps2d = Keypoints(
+        # shape: (n_frame, n_human, n_keypoints, 3)
+        n_frame = len(kps2d_list)
+        n_human = max([len(human_list) for human_list in kps2d_list])
+        for human_list in kps2d_list:
+            if len(human_list) > 0:
+                n_keypoints = len(human_list[0])
+                break
+        kps2d_arr = np.zeros(shape=(n_frame, n_human, n_keypoints, 3))
+        mask_arr = np.ones_like(kps2d_arr[..., 0], dtype=np.uint8)
+        for f_idx in range(n_frame):
+            if len(kps2d_list[f_idx]) <= 0:
+                mask_arr[f_idx, ...] = 0
+                continue
+            for h_idx in range(n_human):
+                mask_arr[f_idx, h_idx, ...] = 1
+                kps2d_arr[f_idx, h_idx, ...] = kps2d_list[f_idx][h_idx]
+        keypoints2d = Keypoints(
             kps=kps2d_arr,
             mask=mask_arr,
             convention=self.get_keypoints_convention_name(),
             logger=self.logger)
-        return kps2d
+        return keypoints2d
 
 
 def __translate_data_source__(mmpose_dataset_name):

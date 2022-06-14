@@ -12,7 +12,7 @@ from xrmocap.transform.convention.keypoints_convention import (
 
 
 def get_limbs_from_keypoints(
-    kps: Keypoints,
+    keypoints: Keypoints,
     frame_idx: Union[int, None] = None,
     person_idx: Union[int, None] = None,
     keypoints_factory: Union[dict, None] = None,
@@ -38,44 +38,45 @@ def get_limbs_from_keypoints(
     Returns:
         Limbs: an instance of class Limbs.
     """
-    logger = kps.logger
+    logger = keypoints.logger
     if keypoints_factory is None:
         keypoints_factory = get_keypoints_factory()
     limbs_source = human_data.HUMAN_DATA_LIMBS_INDEX
-    kps_np = kps.to_numpy()
+    keypoints_np = keypoints.to_numpy()
     # if both frame_idx and person_idx are set
     # take the frame and person
     if frame_idx is not None and person_idx is not None:
         frame_idx = int(frame_idx)
         person_idx = int(person_idx)
-        selected_mask = kps.get_mask()[frame_idx, person_idx, :]
-        selected_kps = kps_np.get_keypoints()[frame_idx, person_idx, ...]
+        selected_mask = keypoints.get_mask()[frame_idx, person_idx, :]
+        selected_keypoints = keypoints_np.get_keypoints()[frame_idx,
+                                                          person_idx, ...]
     # if any of [frame_idx, person_idx] not configured
     # use or result of masks
     else:
         if frame_idx is not None or person_idx is not None:
             logger.warning('Either frame_idx or person_idx has not' +
                            ' been set properly, limbs.points will not be set.')
-        kps_n = kps_np.get_keypoints_number()
-        flat_mask = kps_np.get_mask().reshape(-1, kps_n)
+        n_keypoints = keypoints_np.get_keypoints_number()
+        flat_mask = keypoints_np.get_mask().reshape(-1, n_keypoints)
         or_mask = np.sign(np.sum(flat_mask, axis=0))
         selected_mask = or_mask
-        selected_kps = kps_np.get_keypoints()[0, 0, ...]
-    one_frame_kps = Keypoints(
+        selected_keypoints = keypoints_np.get_keypoints()[0, 0, ...]
+    one_frame_keypoints = Keypoints(
         dtype='numpy',
-        kps=selected_kps,
+        kps=selected_keypoints,
         mask=selected_mask,
-        convention=kps_np.get_convention(),
-        logger=kps.logger)
-    human_data_kps = convert_keypoints(
-        keypoints=one_frame_kps,
+        convention=keypoints_np.get_convention(),
+        logger=keypoints.logger)
+    human_data_keypoints = convert_keypoints(
+        keypoints=one_frame_keypoints,
         dst='human_data',
         keypoints_factory=keypoints_factory)
     mapping_back = get_mapping_dict(
         src='human_data',
-        dst=kps.get_convention(),
+        dst=keypoints.get_convention(),
         keypoints_factory=keypoints_factory)
-    mask = human_data_kps.get_mask()[0, 0, :]
+    mask = human_data_keypoints.get_mask()[0, 0, :]
     connecntions = []
     parts = []
     part_names = []
@@ -95,13 +96,13 @@ def get_limbs_from_keypoints(
             parts.append(part_record)
             part_names.append(part_name)
     points = None if person_idx is None or frame_idx is None else\
-        one_frame_kps.get_keypoints()[frame_idx, person_idx, ...]
+        one_frame_keypoints.get_keypoints()[frame_idx, person_idx, ...]
     ret_limbs = Limbs(
         connections=np.asarray(connecntions),
         parts=parts,
         part_names=part_names,
         points=points,
-        logger=kps.logger)
+        logger=keypoints.logger)
     return ret_limbs
 
 

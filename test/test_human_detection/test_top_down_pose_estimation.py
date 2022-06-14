@@ -61,11 +61,11 @@ def test_mmdet_detector():
         bbox_list=single_person_bbox,
         disable_tqdm=False,
         return_heatmap=False)
-    assert len(pose_list) == len(frame_list)  # frame_num
-    assert len(pose_list[0]) == len(single_person_bbox[0])  # person_num
-    assert len(pose_list[0][0]) == 133  # keypoints_num
-    kps2d = mmpose_estimator.get_keypoints_from_result(pose_list)
-    kps2d.dump(os.path.join(output_dir, 'kps2d.npz'))
+    assert len(pose_list) == len(frame_list)  # n_frame
+    assert len(pose_list[0]) == len(single_person_bbox[0])  # n_person
+    assert len(pose_list[0][0]) == 133  # n_keypoints
+    keypoints2d = mmpose_estimator.get_keypoints_from_result(pose_list)
+    keypoints2d.dump(os.path.join(output_dir, 'keypoints2d.npz'))
     # test infer video
     video_path = os.path.join(output_dir, 'rgb_video.mp4')
     pose_list, _, _ = mmpose_estimator.infer_video(
@@ -93,6 +93,6 @@ def test_mmdet_detector():
         bbox_list=multi_person_bbox,
         disable_tqdm=False,
         return_heatmap=True)
-    assert len(heatmap_list) == len(heatmap_list)  # frame_num
-    assert len(heatmap_list[0]) == len(pose_list[0])  # person_num
-    assert len(heatmap_list[0][0]) == 133  # keypoints_num
+    assert len(heatmap_list) == len(heatmap_list)  # n_frame
+    assert len(heatmap_list[0]) == len(pose_list[0])  # n_person
+    assert len(heatmap_list[0][0]) == 133  # n_keypoints

@@ -48,15 +48,15 @@ class Keypoints(dict):
                 Defaults to 'auto'.
             kps (Union[np.ndarray, torch.Tensor, None], optional):
                 A tensor or ndarray for keypoints,
-                kps2d in shape [frame_num, person_num, kps_num, 3],
-                kps3d in shape [frame_num, person_num, kps_num, 4].
-                Shape [kps_num, 3 or 4] is also accepted, unsqueezed
+                kps2d in shape [n_frame, n_person, n_kps, 3],
+                kps3d in shape [n_frame, n_person, n_kps, 4].
+                Shape [n_kps, 3 or 4] is also accepted, unsqueezed
                 automatically. Defaults to None.
             mask (Union[np.ndarray, torch.Tensor, None], optional):
                 A tensor or ndarray for keypoint mask,
-                in shape [frame_num, person_num, kps_num],
+                in shape [n_frame, n_person, n_kps],
                 in dtype uint8.
-                Shape [kps_num, ] is also accepted, unsqueezed
+                Shape [n_kps, ] is also accepted, unsqueezed
                 automatically. Defaults to None.
             convention (str, optional):
                 Convention name of the keypoints,
@@ -87,8 +87,8 @@ class Keypoints(dict):
 
         if mask is None and 'mask' not in self and\
                 'keypoints' in self:
-            default_kps_n = self.get_keypoints_number()
-            mask = np.ones(shape=(default_kps_n, ))
+            default_n_kps = self.get_keypoints_number()
+            mask = np.ones(shape=(default_n_kps, ))
         if mask is not None:
             self.set_mask(mask)
 
@@ -114,9 +114,9 @@ class Keypoints(dict):
         Args:
             kps (Union[np.ndarray, torch.Tensor]):
                 A tensor or ndarray for keypoints,
-                kps2d in shape [frame_num, person_num, kps_num, 3],
-                kps3d in shape [frame_num, person_num, kps_num, 4].
-                Shape [kps_num, 3 or 4] is also accepted, unsqueezed
+                kps2d in shape [n_frame, n_person, n_kps, 3],
+                kps3d in shape [n_frame, n_person, n_kps, 4].
+                Shape [n_kps, 3 or 4] is also accepted, unsqueezed
                 automatically.
 
         Raises:
@@ -139,7 +139,7 @@ class Keypoints(dict):
                                           keypoints.shape[1])
         if len(keypoints.shape) != 4:
             self.logger.error('Shape of keypoints should be' +
-                              ' [frame_num, person_num, kp_num, dim+1].\n' +
+                              ' [n_frame, n_person, n_kps, dim+1].\n' +
                               f'kps.shape: {kps.shape}.')
             raise ValueError
         super().__setitem__('keypoints', keypoints)
@@ -168,9 +168,9 @@ class Keypoints(dict):
         Args:
             mask (Union[np.ndarray, torch.Tensor]):
                 A tensor or ndarray for keypoint mask,
-                in shape [frame_num, person_num, kps_num],
+                in shape [n_frame, n_person, n_kps],
                 in dtype uint8.
-                Shape [kps_num, ] is also accepted, unsqueezed
+                Shape [n_kps, ] is also accepted, unsqueezed
                 automatically.
 
         Raises:
@@ -202,7 +202,7 @@ class Keypoints(dict):
         if len(mask.shape) != 3 or \
                 mask.shape != keypoints_shape[:3]:
             self.logger.error('Shape of mask should be' +
-                              ' [frame_num, person_num, kp_num].\n' +
+                              ' [n_frame, n_person, n_kps].\n' +
                               f'mask.shape: {mask.shape}.' +
                               f'keypoints.shape: {keypoints_shape}.')
             raise ValueError
@@ -359,6 +359,22 @@ class Keypoints(dict):
                     value = value.item()
                 self.__setitem__(key, value)
 
+    def clone(self) -> 'Keypoints':
+        """Clone a Keypoints instance as self.
+
+        Returns:
+            Keypoints:
+                A deep copied instance of Keypoints,
+                with the same dtype and value as self.
+        """
+        ret_kps = self.__class__(
+            dtype=self.dtype,
+            kps=__copy_array_tensor__(self.get_keypoints()),
+            mask=__copy_array_tensor__(self.get_mask()),
+            convention=self.get_convention(),
+            logger=self.logger)
+        return ret_kps
+
 
 def __get_array_type_str__(array, logger) -> Literal['torch', 'numpy']:
     if isinstance(array, torch.Tensor):
@@ -389,3 +405,12 @@ def __get_array_in_type__(array: Union[torch.Tensor, np.ndarray],
             logger.error('Type of array is not correct.\n' +
                          f'Type: {type(array)}.')
     return array
+
+
+def __copy_array_tensor__(
+        data: Union[np.ndarray,
+                    torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+    if isinstance(data, np.ndarray):
+        return data.copy()
+    else:
+        return data.clone()

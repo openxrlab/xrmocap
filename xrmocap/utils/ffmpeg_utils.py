@@ -154,7 +154,7 @@ def video_to_array(
             optional): resolution(height, width) of output.
             Defaults to None.
         start (int, optional): start frame index. Inclusive.
-             If < 0, will be converted to frame_index range in [0, frame_num].
+             If < 0, will be converted to frame_index range in [0, n_frame].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
             Could be positive int or negative int or None.
@@ -249,7 +249,7 @@ def images_to_array_opencv(
         img_format (str, optional): format of images to be read.
             Defaults to '%06d.png'.
         start (int, optional): start frame index. Inclusive.
-             If < 0, will be converted to frame_index range in [0, frame_num].
+             If < 0, will be converted to frame_index range in [0, n_frame].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
             Could be positive int or negative int or None.
@@ -312,7 +312,7 @@ def images_to_array(
         img_format (str, optional): format of images to be read.
             Defaults to '%06d.png'.
         start (int, optional): start frame index. Inclusive.
-             If < 0, will be converted to frame_index range in [0, frame_num].
+             If < 0, will be converted to frame_index range in [0, n_frame].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
             Could be positive int or negative int or None.

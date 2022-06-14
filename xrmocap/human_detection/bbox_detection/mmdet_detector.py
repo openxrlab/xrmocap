@@ -56,9 +56,9 @@ class MMdetDetector:
 
         Args:
             image_array (Union[np.ndarray, list]):
-                BGR image ndarray in shape [frame_num, height, width, 3],
+                BGR image ndarray in shape [n_frame, height, width, 3],
                 or a list of image ndarrays in shape [height, width, 3] while
-                len(list) == frame_num.
+                len(list) == n_frame.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
                 Defaults to False.
@@ -70,15 +70,15 @@ class MMdetDetector:
         Returns:
             list:
                 List of bboxes. Shape of the nested lists is
-                (frame_num, human_num, 5)
+                (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
         """
         ret_list = []
         bbox_results = []
-        frame_num = len(image_array)
+        n_frame = len(image_array)
         for start_index in tqdm(
-                range(0, frame_num, self.batch_size), disable=disable_tqdm):
-            end_index = min(frame_num, start_index + self.batch_size)
+                range(0, n_frame, self.batch_size), disable=disable_tqdm):
+            end_index = min(n_frame, start_index + self.batch_size)
             img_batch = image_array[start_index:end_index]
             # mmdet 2.16.0 cannot accept batch in ndarray, only list
             if isinstance(img_batch, np.ndarray):
@@ -112,7 +112,7 @@ class MMdetDetector:
         Returns:
             list:
                 List of bboxes. Shape of the nested lists is
-                (frame_num, human_num, 5)
+                (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
         """
         image_array_list = []
@@ -145,7 +145,7 @@ class MMdetDetector:
         Returns:
             list:
                 List of bboxes. Shape of the nested lists is
-                (frame_num, human_num, 5)
+                (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
         """
         image_array = video_to_array(input_path=video_path, logger=self.logger)
@@ -166,7 +166,7 @@ def process_mmdet_results(mmdet_results: list,
             Result of mmdet.apis.inference_detector
             when the input is a batch.
             Shape of the nested lists is
-            (frame_num, category_num, human_num, 5).
+            (n_frame, n_category, n_human, 5).
         cat_id (int, optional):
             Category ID. This function will only select
             the selected category, and drop the others.
@@ -182,7 +182,7 @@ def process_mmdet_results(mmdet_results: list,
         list:
             A list of detected bounding boxes.
             Shape of the nested lists is
-            (frame_num, human_num, 5)
+            (n_frame, n_human, 5)
             and each bbox is (x, y, x, y, score).
     """
     ret_list = []

@@ -1,11 +1,14 @@
+# yapf: disable
 import mmcv
 import numpy as np
 import os
 
-from xrmocap.ops.triangulation.builder import build_triangulator
-from xrmocap.ops.triangulation.point_selection.builder import \
-    build_point_selector  # prevent linting conflicts
+from xrmocap.ops.triangulation.builder import (
+    build_point_selector, build_triangulator,
+)
 from xrprimer.data_structure.camera import FisheyeCameraParameter  # noqa:E501
+
+# yapf: enable
 
 
 def test_camera_error_selector():
@@ -35,9 +38,9 @@ def test_camera_error_selector():
     camera_selector['target_camera_number'] = \
         len(triangulator.camera_parameters) - 1
     camera_selector = build_point_selector(camera_selector)
-    # test camera indices
-    camera_indices = camera_selector.get_camera_indices(points=keypoints2d)
-    assert len(camera_indices) == len(triangulator.camera_parameters) - 1
+    # test camera inidexes
+    camera_inidexes = camera_selector.get_camera_inidexes(points=keypoints2d)
+    assert len(camera_inidexes) == len(triangulator.camera_parameters) - 1
     # test camera mask
     init_mask = np.ones_like(keypoints2d[..., 0:1])
     keypoints2d_backup = keypoints2d.copy()
@@ -75,9 +78,9 @@ def test_slow_camera_error_selector():
     camera_selector['target_camera_number'] = \
         len(triangulator.camera_parameters) - 1
     camera_selector = build_point_selector(camera_selector)
-    # test camera indices
-    camera_indices = camera_selector.get_camera_indices(points=keypoints2d)
-    assert len(camera_indices) == len(triangulator.camera_parameters) - 1
+    # test camera inidexes
+    camera_inidexes = camera_selector.get_camera_inidexes(points=keypoints2d)
+    assert len(camera_inidexes) == len(triangulator.camera_parameters) - 1
     # test camera mask
     init_mask = np.ones_like(keypoints2d[..., 0:1])
     keypoints2d_backup = keypoints2d.copy()

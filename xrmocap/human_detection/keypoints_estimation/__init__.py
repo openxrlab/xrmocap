@@ -1,1 +1,5 @@
-from .mmpose_top_down_estimator import MMposeTopDownEstimator  # noqa:F401
+from .mmpose_top_down_estimator import MMposeTopDownEstimator
+
+__all__ = [
+    'MMposeTopDownEstimator',
+]
