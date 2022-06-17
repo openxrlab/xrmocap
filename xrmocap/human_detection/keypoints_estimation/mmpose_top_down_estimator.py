@@ -269,8 +269,11 @@ class MMposeTopDownEstimator:
                 mask_arr[f_idx, ...] = 0
                 continue
             for h_idx in range(n_human):
-                mask_arr[f_idx, h_idx, ...] = 1
-                kps2d_arr[f_idx, h_idx, ...] = kps2d_list[f_idx][h_idx]
+                if h_idx < len(kps2d_list[f_idx]):
+                    mask_arr[f_idx, h_idx, ...] = 1
+                    kps2d_arr[f_idx, h_idx, :, :] = kps2d_list[f_idx][h_idx]
+                else:
+                    mask_arr[f_idx, h_idx, ...] = 0
         keypoints2d = Keypoints(
             kps=kps2d_arr,
             mask=mask_arr,
