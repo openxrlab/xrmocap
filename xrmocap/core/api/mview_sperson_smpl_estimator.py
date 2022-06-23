@@ -238,13 +238,13 @@ class MultiViewSinglePersonSMPLEstimator(BaseAPI):
                 image_array=view_img_arr,
                 disable_tqdm=(not self.verbose),
                 multi_person=False)
-            keypoints2d_list, _, _ = self.kps2d_estimator.infer_array(
+            kps2d_list, _, _ = self.kps2d_estimator.infer_array(
                 image_array=view_img_arr,
                 bbox_list=bbox_list,
                 disable_tqdm=(not self.verbose),
             )
             keypoints2d = self.kps2d_estimator.get_keypoints_from_result(
-                keypoints2d_list)
+                kps2d_list)
             ret_list.append(keypoints2d)
         return ret_list
 
@@ -266,7 +266,21 @@ class MultiViewSinglePersonSMPLEstimator(BaseAPI):
         # prepare input np.ndarray
         kps_arr_list = []
         mask_list = []
+        default_keypoints2d = None
         for keypoints2d in keypoints2d_list:
+            if keypoints2d is not None:
+                default_keypoints2d = keypoints2d.clone()
+                default_keypoints2d.set_keypoints(
+                    np.zeros_like(default_keypoints2d.get_keypoints()))
+                default_keypoints2d.set_mask(
+                    np.zeros_like(default_keypoints2d.get_mask()))
+                break
+        if default_keypoints2d is None:
+            self.logger.error('No one has been detected in any view.')
+            raise AttributeError
+        for keypoints2d in keypoints2d_list:
+            if keypoints2d is None:
+                keypoints2d = default_keypoints2d
             if keypoints2d.dtype != 'numpy':
                 keypoints2d = keypoints2d.to_numpy()
             kps_arr_list.append(keypoints2d.get_keypoints()[:, 0, ...])
@@ -275,12 +289,12 @@ class MultiViewSinglePersonSMPLEstimator(BaseAPI):
         mview_mask = np.asarray(mask_list)
         mview_mask = np.expand_dims(mview_mask, -1)
         # select camera
-        cam_inidexes = self.select_camera(cam_param, mview_kps2d_arr,
-                                          mview_mask)
+        cam_indexes = self.select_camera(cam_param, mview_kps2d_arr,
+                                         mview_mask)
         self.triangulator.set_cameras(cam_param)
-        selected_triangulator = self.triangulator[cam_inidexes]
-        mview_kps2d_arr = mview_kps2d_arr[np.asarray(cam_inidexes), ...]
-        triangulate_mask = mview_mask[np.asarray(cam_inidexes), ...]
+        selected_triangulator = self.triangulator[cam_indexes]
+        mview_kps2d_arr = mview_kps2d_arr[np.asarray(cam_indexes), ...]
+        triangulate_mask = mview_mask[np.asarray(cam_indexes), ...]
         # cascade point selectors
         self.logger.info('Selecting points.')
         if self.final_selectors is not None:
@@ -364,7 +378,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseAPI):
                 in shape [n_view, n_frame, n_kps, 1].
 
         Returns:
-            List[int]: A list of camera inidexes.
+            List[int]: A list of camera indexes.
         """
         if self.cam_selector is not None:
             self.logger.info('Selecting cameras.')
@@ -376,12 +390,12 @@ class MultiViewSinglePersonSMPLEstimator(BaseAPI):
                 pre_mask = points_mask.copy()
             self.triangulator.set_cameras(cam_param)
             self.cam_selector.triangulator = self.triangulator
-            selected_camera_inidexes = self.cam_selector.get_camera_inidexes(
+            selected_camera_indexes = self.cam_selector.get_camera_indexes(
                 points=points, init_points_mask=pre_mask)
-            self.logger.info(f'Selected cameras: {selected_camera_inidexes}')
+            self.logger.info(f'Selected cameras: {selected_camera_indexes}')
         else:
             self.logger.warning(
                 'The estimator api instance has no cam_selector,' +
                 ' all the cameras will be returned.')
-            selected_camera_inidexes = [idx for idx in range(len(cam_param))]
-        return selected_camera_inidexes
+            selected_camera_indexes = [idx for idx in range(len(cam_param))]
+        return selected_camera_indexes

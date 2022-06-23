@@ -85,7 +85,7 @@ class CameraErrorSelector(BaseSelector):
             points=points,
             points_mask=init_points_mask,
             logger=self.logger)
-        selected_cameras = self.get_camera_inidexes(
+        selected_cameras = self.get_camera_indexes(
             points=points, init_points_mask=init_points_mask)
         points2d_mask = init_points_mask.copy()
         for view_index in range(points2d_mask.shape[0]):
@@ -101,11 +101,11 @@ class CameraErrorSelector(BaseSelector):
         points2d_mask = points2d_mask.reshape(*init_points_mask_shape)
         return points2d_mask
 
-    def get_camera_inidexes(
+    def get_camera_indexes(
             self,
             points: Union[np.ndarray, list, tuple],
             init_points_mask: Union[np.ndarray, list, tuple] = None) -> list:
-        """Get a list of camera inidexes. This selector will loop triangulate
+        """Get a list of camera indexes. This selector will loop triangulate
         points, disable the one camera with largest reprojection error, and
         loop again until there are self.target_camera_number left.
 
@@ -127,7 +127,7 @@ class CameraErrorSelector(BaseSelector):
 
         Returns:
             list:
-                A list of sorted camera inidexes,
+                A list of sorted camera indexes,
                 length == self.target_camera_number.
         """
         points, init_points_mask = prepare_triangulate_input(
@@ -155,9 +155,8 @@ class CameraErrorSelector(BaseSelector):
             mean_errors = np.nanmean(
                 abs_error.reshape(n_view, -1), axis=1, keepdims=False)
             # get mean error ignoring nan
-            min_error_inidexes = np.argpartition(
+            min_error_indexes = np.argpartition(
                 mean_errors,
                 self.target_camera_number)[:self.target_camera_number]
-            remain_cameras = sorted(
-                remain_cameras[min_error_inidexes].tolist())
+            remain_cameras = sorted(remain_cameras[min_error_indexes].tolist())
         return remain_cameras

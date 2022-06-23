@@ -2,12 +2,7 @@
 
 ## Installation
 
- - Compile the pictorial function for acceleration
-```
-sh script/download_test_data.sh
-cd xrmocap/keypoints3d_estimation/lib/
-python setup.py build_ext --inplace
-```
+Please refer to [Installation.md](./docs/Installation.md).
 
 ## Prepare models and datasets
 

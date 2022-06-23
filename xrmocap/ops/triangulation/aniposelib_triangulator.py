@@ -86,8 +86,8 @@ class AniposelibTriangulator(BaseTriangulator):
         points2d = points2d.reshape(n_view, -1, 2)
         points_mask = points_mask.reshape(n_view, -1, 1)
         # ignore points according to mask
-        ignored_inidexes = np.where(points_mask != 1)
-        points2d[ignored_inidexes[0], ignored_inidexes[1], :] = np.nan
+        ignored_indexes = np.where(points_mask != 1)
+        points2d[ignored_indexes[0], ignored_indexes[1], :] = np.nan
         points3d = camera_group.triangulate(points2d)
         output_points3d_shape = np.array(input_points2d_shape[1:])
         output_points3d_shape[-1] = 3
@@ -171,9 +171,9 @@ class AniposelibTriangulator(BaseTriangulator):
         points2d = points2d[..., :2].copy().reshape(n_view, -1, 2)
         points3d = points3d[..., :3].copy().reshape(-1, 3)
         # ignore points according to mask
-        ignored_inidexes = np.where(points_mask != 1)
-        points2d[ignored_inidexes[0], ignored_inidexes[1], :] = np.nan
-        points3d[ignored_inidexes[1], :] = np.nan
+        ignored_indexes = np.where(points_mask != 1)
+        points2d[ignored_indexes[0], ignored_indexes[1], :] = np.nan
+        points3d[ignored_indexes[1], :] = np.nan
         errors = camera_group.reprojection_error(
             points3d, points2d, mean=False)
         output_errors_shape = np.array(input_points2d_shape)

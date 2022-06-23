@@ -141,8 +141,8 @@ def get_mapping_dict(src: str,
 
     Returns:
         dict:
-            A mapping dict whose keys are src inidexes
-            and values are dst inidexes.
+            A mapping dict whose keys are src indexes
+            and values are dst indexes.
     """
     mapping_back = get_mapping(
         src=src,
