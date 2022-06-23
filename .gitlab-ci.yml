@@ -46,8 +46,7 @@ test:
     - pip install -e .
     - echo "--- xrprimer installed --- "
     - echo "--- install mmhuman3d --- "
-    - git clone https://github.com/open-mmlab/mmhuman3d.git
-    - cd mmhuman3d && pip install -e . && cd ..
+    - pip install git+https://github.com/open-mmlab/mmhuman3d.git
     - echo "--- mmhuman3d installed --- "
     - unset http_proxy
     - unset https_proxy

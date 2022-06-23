@@ -237,7 +237,6 @@ def images_to_array_opencv(
         img_format: str = '%06d.png',
         start: int = 0,
         end: int = None,
-        remove_raw_files: bool = False,
         logger: Union[None, str, logging.Logger] = None) -> np.ndarray:
     """
     Read a folder of images as an array of (f * h * w * 3).
@@ -255,8 +254,9 @@ def images_to_array_opencv(
             Could be positive int or negative int or None.
             If None, all frames from start till the last frame are included.
             Defaults to None.
-        remove_raw_files (bool, optional): whether remove raw images.
-            Defaults to False.
+        logger (Union[None, str, logging.Logger], optional):
+            Logger for logging. If None, root logger will be selected.
+            Defaults to None.
     Raises:
         FileNotFoundError: check the input path.
 
@@ -274,7 +274,7 @@ def images_to_array_opencv(
         frame_names = sorted(os.listdir(input_folder))
         for name in frame_names:
             abs_path = os.path.join(input_folder, name)
-            if check_path_suffix(abs_path, ['jpg', 'jpeg', 'png']):
+            if check_path_suffix(abs_path, ['.jpg', '.jpeg', '.png']):
                 frame_list.append(abs_path)
     else:
         frame_list = sorted(glob.glob(os.path.join(input_folder, img_format)))

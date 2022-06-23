@@ -39,11 +39,11 @@ class SlowCameraErrorSelector(CameraErrorSelector):
             verbose=verbose,
             logger=logger)
 
-    def get_camera_inidexes(
+    def get_camera_indexes(
             self,
             points: Union[np.ndarray, list, tuple],
             init_points_mask: Union[np.ndarray, list, tuple] = None) -> list:
-        """Get a list of camera inidexes. This selector will loop triangulate
+        """Get a list of camera indexes. This selector will loop triangulate
         points, disable the one camera with largest reprojection error, and
         loop again until there are self.target_camera_number left.
 
@@ -65,7 +65,7 @@ class SlowCameraErrorSelector(CameraErrorSelector):
 
         Returns:
             list:
-                A list of sorted camera inidexes,
+                A list of sorted camera indexes,
                 length == self.target_camera_number.
         """
         points, init_points_mask = prepare_triangulate_input(
@@ -105,8 +105,8 @@ class SlowCameraErrorSelector(CameraErrorSelector):
                 # get mean error ignoring nan
                 mean_errors[removed_camera_index] = np.nanmean(
                     abs_error.reshape(-1))
-            max_inidexes = np.where(mean_errors == np.nanmax(mean_errors))[0]
-            for camera_id in max_inidexes:
+            max_indexes = np.where(mean_errors == np.nanmax(mean_errors))[0]
+            for camera_id in max_indexes:
                 remain_cameras.pop(remain_cameras.index(camera_id))
                 mean_errors[camera_id] = np.nan
                 if len(remain_cameras) == self.target_camera_number:

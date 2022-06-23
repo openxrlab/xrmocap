@@ -38,9 +38,9 @@ def test_camera_error_selector():
     camera_selector['target_camera_number'] = \
         len(triangulator.camera_parameters) - 1
     camera_selector = build_point_selector(camera_selector)
-    # test camera inidexes
-    camera_inidexes = camera_selector.get_camera_inidexes(points=keypoints2d)
-    assert len(camera_inidexes) == len(triangulator.camera_parameters) - 1
+    # test camera indexes
+    camera_indexes = camera_selector.get_camera_indexes(points=keypoints2d)
+    assert len(camera_indexes) == len(triangulator.camera_parameters) - 1
     # test camera mask
     init_mask = np.ones_like(keypoints2d[..., 0:1])
     keypoints2d_backup = keypoints2d.copy()
@@ -78,9 +78,9 @@ def test_slow_camera_error_selector():
     camera_selector['target_camera_number'] = \
         len(triangulator.camera_parameters) - 1
     camera_selector = build_point_selector(camera_selector)
-    # test camera inidexes
-    camera_inidexes = camera_selector.get_camera_inidexes(points=keypoints2d)
-    assert len(camera_inidexes) == len(triangulator.camera_parameters) - 1
+    # test camera indexes
+    camera_indexes = camera_selector.get_camera_indexes(points=keypoints2d)
+    assert len(camera_indexes) == len(triangulator.camera_parameters) - 1
     # test camera mask
     init_mask = np.ones_like(keypoints2d[..., 0:1])
     keypoints2d_backup = keypoints2d.copy()

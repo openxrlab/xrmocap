@@ -211,9 +211,9 @@ def parse_keypoints_mask(
                      f'keypoints.shape: {keypoints.shape}' +
                      f'keypoints_mask.shape: {keypoints_mask.shape}')
         raise ValueError
-    nan_inidexes = np.where(keypoints_mask == 0)
+    nan_indexes = np.where(keypoints_mask == 0)
     triangulate_mask = triangulate_mask.reshape(-1, init_points_mask_shape[-2],
                                                 init_points_mask_shape[-1])
-    triangulate_mask[:, nan_inidexes[0], :] = np.nan
+    triangulate_mask[:, nan_indexes[0], :] = np.nan
     triangulate_mask = triangulate_mask.reshape(*init_points_mask_shape)
     return triangulate_mask

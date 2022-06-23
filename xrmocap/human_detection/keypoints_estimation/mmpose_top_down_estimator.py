@@ -240,7 +240,8 @@ class MMposeTopDownEstimator:
             return_bbox=return_bbox)
         return ret_pose_list, ret_heatmap_list, ret_boox_list
 
-    def get_keypoints_from_result(self, kps2d_list: List[list]) -> Keypoints:
+    def get_keypoints_from_result(
+            self, kps2d_list: List[list]) -> Union[Keypoints, None]:
         """Convert returned keypoints2d into an instance of class Keypoints.
 
         Args:
@@ -251,34 +252,44 @@ class MMposeTopDownEstimator:
                 (n_frame, n_human, n_keypoints, 3).
 
         Returns:
-            Keypoints:
+            Union[Keypoints, None]:
                 An instance of Keypoints with mask and
                 convention, data type is numpy.
+                If no one has been detected in any frame,
+                a None will be returned.
         """
         # shape: (n_frame, n_human, n_keypoints, 3)
         n_frame = len(kps2d_list)
-        n_human = max([len(human_list) for human_list in kps2d_list])
+        human_count_list = [len(human_list) for human_list in kps2d_list]
+        if len(human_count_list) > 0:
+            n_human = max(human_count_list)
+        else:
+            n_human = 0
         for human_list in kps2d_list:
             if len(human_list) > 0:
                 n_keypoints = len(human_list[0])
                 break
-        kps2d_arr = np.zeros(shape=(n_frame, n_human, n_keypoints, 3))
-        mask_arr = np.ones_like(kps2d_arr[..., 0], dtype=np.uint8)
-        for f_idx in range(n_frame):
-            if len(kps2d_list[f_idx]) <= 0:
-                mask_arr[f_idx, ...] = 0
-                continue
-            for h_idx in range(n_human):
-                if h_idx < len(kps2d_list[f_idx]):
-                    mask_arr[f_idx, h_idx, ...] = 1
-                    kps2d_arr[f_idx, h_idx, :, :] = kps2d_list[f_idx][h_idx]
-                else:
-                    mask_arr[f_idx, h_idx, ...] = 0
-        keypoints2d = Keypoints(
-            kps=kps2d_arr,
-            mask=mask_arr,
-            convention=self.get_keypoints_convention_name(),
-            logger=self.logger)
+        if n_human > 0:
+            kps2d_arr = np.zeros(shape=(n_frame, n_human, n_keypoints, 3))
+            mask_arr = np.ones_like(kps2d_arr[..., 0], dtype=np.uint8)
+            for f_idx in range(n_frame):
+                if len(kps2d_list[f_idx]) <= 0:
+                    mask_arr[f_idx, ...] = 0
+                    continue
+                for h_idx in range(n_human):
+                    if h_idx < len(kps2d_list[f_idx]):
+                        mask_arr[f_idx, h_idx, ...] = 1
+                        kps2d_arr[f_idx,
+                                  h_idx, :, :] = kps2d_list[f_idx][h_idx]
+                    else:
+                        mask_arr[f_idx, h_idx, ...] = 0
+            keypoints2d = Keypoints(
+                kps=kps2d_arr,
+                mask=mask_arr,
+                convention=self.get_keypoints_convention_name(),
+                logger=self.logger)
+        else:
+            keypoints2d = None
         return keypoints2d
 
 

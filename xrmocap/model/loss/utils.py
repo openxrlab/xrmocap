@@ -99,7 +99,7 @@ def weighted_loss(loss_func):
 
 
 def convert_to_one_hot(targets: torch.Tensor, classes) -> torch.Tensor:
-    """This function converts target class inidexes to one-hot vectors, given
+    """This function converts target class indexes to one-hot vectors, given
     the number of classes.
 
     Args:
