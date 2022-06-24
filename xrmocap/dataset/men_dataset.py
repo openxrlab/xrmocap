@@ -1,3 +1,5 @@
+import cv2
+import json
 import numpy as np
 import os.path as osp
 import sys
@@ -7,8 +9,9 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms as T
 
-from xrprimer.data_structure.camera import \
-    FisheyeCameraParameter  # PinholeCamera with distortion
+from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
+from xrprimer.data_structure.camera.fisheye_camera import \
+    FisheyeCameraParameter  # FisheyeCamera with distortion
 
 # Config project if not exist
 project_path = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
@@ -19,7 +22,11 @@ if project_path not in sys.path:
 class MemDataset(Dataset):
     """Datasets in memory to boost performance of whole pipeline."""
 
-    def __init__(self, info_dict, cam_param_list=None, template_name='Shelf'):
+    def __init__(self,
+                 info_dict,
+                 cam_param_list=None,
+                 template_name='Shelf',
+                 homo_folder=None):
         self.args = dict(height=256, width=128)
         self.normalizer = T.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -42,19 +49,20 @@ class MemDataset(Dataset):
             cnt = 0
             this_dim = [0]
             for cam_id in self.cam_names:
-                num_person = len(self.info_dict[cam_id][img_id])
-                cnt += num_person
+                n_person = len(self.info_dict[cam_id][img_id])
+                cnt += n_person
                 this_dim.append(cnt)
             self.dimGroup[int(img_id)] = torch.Tensor(this_dim).long()
 
         # handle camera parameter
-        num_cam = len(cam_param_list)
+        n_cameras = len(cam_param_list)
         camera_parameter = {
-            'P': np.zeros((num_cam, 3, 4)),
-            'K': np.zeros((num_cam, 3, 3)),
-            'RT': np.zeros((num_cam, 3, 4))
+            'P': np.zeros((n_cameras, 3, 4)),
+            'K': np.zeros((n_cameras, 3, 3)),
+            'RT': np.zeros((n_cameras, 3, 4)),
+            'H': np.zeros((n_cameras, 3, 3))
         }
-        distCoeff = np.zeros((num_cam, 5))
+        distCoeff = np.zeros((n_cameras, 5))
         for i, input_cam_param in enumerate(cam_param_list):
             if issubclass(input_cam_param.__class__, FisheyeCameraParameter):
                 cam_param = input_cam_param.clone()
@@ -68,6 +76,17 @@ class MemDataset(Dataset):
             # compute projection matrix
             proj_mat = camera_parameter['K'][i] @ camera_parameter['RT'][i]
             camera_parameter['P'][i] = proj_mat
+            if homo_folder is not None:
+                try:
+                    homo = json.load(
+                        open(osp.join(homo_folder,
+                                      f'cam{i}.json')))['homography']['data']
+                except FileNotFoundError:
+                    raise FileNotFoundError
+            else:
+                homo = np.zeros((3, 3))
+            camera_parameter['H'][i] = np.array(homo).reshape(3, 3)
+
             distCoeff[i] = [
                 cam_param.k1, cam_param.k2, cam_param.p1, cam_param.p2,
                 cam_param.k3
@@ -75,8 +94,36 @@ class MemDataset(Dataset):
         self.P = camera_parameter['P'].astype(np.float32)
         self.K = camera_parameter['K'].astype(np.float32)
         self.RT = camera_parameter['RT'].astype(np.float32)
+        self.H = camera_parameter['H'].astype(np.float32)
         self.distCoeff = distCoeff.astype(np.float32)
 
+        if homo_folder is not None:
+            # calculate the projection for active frames
+            for camera_id in self.info_dict.keys():
+                for img_id in [
+                        i for i in self.info_dict[self.cam_names[0]].keys()
+                        if i != 'image_data' and i != 'image_path'
+                ]:
+                    if img_id not in self.info_dict[camera_id]:
+                        continue
+                    if len(self.info_dict[camera_id][img_id]) == 0:
+                        continue
+                    # use left feet toe to calculate H matrix,
+                    index = get_keypoint_idx(
+                        name='left_ankle', convention='coco')
+                    feet = np.asarray([
+                        info['pose2d'][index]
+                        for info in self.info_dict[camera_id][img_id]
+                    ])[:, :2]
+                    points = feet.astype(np.float32).reshape(-1, 1, 2)
+                    proj = cv2.perspectiveTransform(points, self.H[camera_id])
+                    proj = np.where(proj == 0, np.nan, proj)
+                    for human_idx in range(
+                            len(self.info_dict[camera_id][img_id])):
+                        self.info_dict[camera_id][img_id][human_idx][
+                            'h_proj'] = proj[human_idx]
+
+        # calculate the fundamental matrix for geometry affinity
         self.skew_op = lambda x: torch.tensor([[0, -x[2], x[
             1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
 
@@ -140,6 +187,35 @@ class MemDataset(Dataset):
         else:
             return 0
 
+    def get_tracking_data(self, img_id, n_kps2d):
+        """Get data in multi view at the same time (current frame)
+
+        :param img_id:
+        :return: H projected points, keypoints, trackid, camera group, img_id
+        """
+        max_proposal = 0
+        for cam_id in self.cam_names:
+            proposal = len(self.info_dict[cam_id][img_id])
+            if proposal > max_proposal:
+                max_proposal = proposal
+
+        homo_points = np.full((len(self.cam_names), max_proposal + 1, 2),
+                              np.nan)
+        mview_kps2d = np.full(
+            (len(self.cam_names), max_proposal + 1, n_kps2d, 2), np.nan)
+        track_id = np.full((len(self.cam_names), max_proposal + 1), np.nan)
+
+        for cam_id in self.cam_names:
+            for person_id in range(len(self.info_dict[cam_id][img_id])):
+                homo_points[cam_id, person_id] = self.info_dict[cam_id][
+                    img_id][person_id]['h_proj']
+                mview_kps2d[cam_id, person_id] = self.info_dict[cam_id][
+                    img_id][person_id]['pose2d'][:, :2]
+                track_id[cam_id, person_id] = self.info_dict[cam_id][img_id][
+                    person_id]['id']
+
+        return homo_points, mview_kps2d, track_id, img_id
+
     def get_unary(self, person, sub_imgid2cam, candidates, img_id):
 
         def get2Dfrom3D(x, P):
@@ -151,9 +227,9 @@ class MemDataset(Dataset):
             return x2d
 
         # get the unary of 3D candidates
-        kps2d_num = len(candidates)
-        point_num = len(candidates[0])
-        unary = np.ones((kps2d_num, point_num))
+        n_kps2d = len(candidates)
+        n_point = len(candidates[0])
+        unary = np.ones((n_kps2d, n_point))
         info_list = list()  # This also occur in multi estimater
         for cam_id in self.cam_names:
             info_list += self.info_dict[cam_id][img_id]
@@ -162,10 +238,10 @@ class MemDataset(Dataset):
         for pid in person:
             use_heatmap = 'heatmap_data' in info_list[pid]
             Pi = self.P[sub_imgid2cam[pid]]
-            if kps2d_num == 19 or not use_heatmap:  # omni
+            if n_kps2d == 19 or not use_heatmap:  # omni
                 kps_2d = info_list[pid]['pose2d']
                 kps_conf = info_list[pid]['conf']
-            elif kps2d_num == 17 and use_heatmap:  # coco
+            elif n_kps2d == 17 and use_heatmap:  # coco
                 heatmap = info_list[pid]['heatmap_data']
                 crop = np.array(info_list[pid]['heatmap_bbox'])
             else:
@@ -174,11 +250,11 @@ class MemDataset(Dataset):
             points_3d_homo = np.vstack(
                 [points_3d,
                  np.ones(points_3d.shape[-1]).reshape(1, -1)])
-            points_2d_homo = (Pi @ points_3d_homo).T.reshape(kps2d_num, -1, 3)
+            points_2d_homo = (Pi @ points_3d_homo).T.reshape(n_kps2d, -1, 3)
             points_2d = points_2d_homo[..., :2] / (
-                points_2d_homo[..., 2].reshape(kps2d_num, -1, 1) + 10e-6)
+                points_2d_homo[..., 2].reshape(n_kps2d, -1, 1) + 10e-6)
 
-            if kps2d_num == 19 or not use_heatmap:
+            if n_kps2d == 19 or not use_heatmap:
                 for kps2d_id, kpj_2d in enumerate(kps_2d):
                     for j, point3d in enumerate(candidates[kps2d_id]):
                         point_2d = points_2d[kps2d_id, j]
@@ -195,7 +271,7 @@ class MemDataset(Dataset):
                             import pdb
                             pdb.set_trace()
                         unary[kps2d_id, j] = unary[kps2d_id, j] * unary_i
-            elif kps2d_num == 17 and use_heatmap:
+            elif n_kps2d == 17 and use_heatmap:
                 for kps2d_id, heatmap_j in enumerate(heatmap):
                     for j, point3d in enumerate(candidates[kps2d_id]):
                         point_2d = points_2d[kps2d_id, j]

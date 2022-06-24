@@ -50,3 +50,8 @@ def test_get_limbs_from_keypoints():
     cv2.imwrite(
         filename=os.path.join(output_dir, 'limbs_from_keypoints.jpg'),
         img=canvas)
+    # test get connection names
+    limbs = get_limbs_from_keypoints(
+        keypoints=keypoints2d, frame_idx=0, person_idx=0, fill_limb_names=True)
+    conn_dict = limbs.get_connections_by_names()
+    assert len(conn_dict) > 0

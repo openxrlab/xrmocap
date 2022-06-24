@@ -23,20 +23,20 @@ def pairwise_affinity(query_features):
 
 def reranking(query_features, k1=20, k2=6, lamda_value=0.3):
     feat = torch.cat((query_features, query_features))
-    query_num, all_num = query_features.size(0), feat.size(0)
-    feat = feat.view(all_num, -1)
+    n_query, n_all = query_features.size(0), feat.size(0)
+    feat = feat.view(n_all, -1)
 
-    dist = torch.pow(feat, 2).sum(dim=1, keepdim=True).expand(all_num, all_num)
+    dist = torch.pow(feat, 2).sum(dim=1, keepdim=True).expand(n_all, n_all)
     dist = dist + dist.t()
     dist.addmm_(1, -2, feat, feat.t())
 
     original_dist = dist.numpy()
-    all_num = original_dist.shape[0]
+    n_all = original_dist.shape[0]
     original_dist = np.transpose(original_dist / np.max(original_dist, axis=0))
     V = np.zeros_like(original_dist).astype(np.float16)
     initial_rank = np.argsort(original_dist).astype(np.int32)
 
-    for i in range(all_num):
+    for i in range(n_all):
         # k-reciprocal neighbors
         forward_k_neigh_index = initial_rank[i, :k1 + 1]
         backward_k_neigh_index = initial_rank[forward_k_neigh_index, :k1 + 1]
@@ -63,21 +63,21 @@ def reranking(query_features, k1=20, k2=6, lamda_value=0.3):
         k_reciprocal_expansion_index = np.unique(k_reciprocal_expansion_index)
         weight = np.exp(-original_dist[i, k_reciprocal_expansion_index])
         V[i, k_reciprocal_expansion_index] = weight / np.sum(weight)
-    original_dist = original_dist[:query_num, ]
+    original_dist = original_dist[:n_query, ]
     if k2 != 1:
         V_query_expansion = np.zeros_like(V, dtype=np.float16)
-        for i in range(all_num):
+        for i in range(n_all):
             V_query_expansion[i, :] = \
                 np.mean(V[initial_rank[i, :k2], :], axis=0)
         V = V_query_expansion
     invIndex = []
-    for i in range(all_num):
+    for i in range(n_all):
         invIndex.append(np.where(V[:, i] != 0)[0])
 
     jaccard_dist = np.zeros_like(original_dist, dtype=np.float16)
 
-    for i in range(query_num):
-        temp_min = np.zeros(shape=[1, all_num], dtype=np.float16)
+    for i in range(n_query):
+        temp_min = np.zeros(shape=[1, n_all], dtype=np.float16)
         indNonZero = np.where(V[i, :] != 0)[0]
         indImages = []
         indImages = [invIndex[ind] for ind in indNonZero]
@@ -87,7 +87,7 @@ def reranking(query_features, k1=20, k2=6, lamda_value=0.3):
         jaccard_dist[i] = 1 - temp_min / (2 - temp_min)
 
     final_dist = jaccard_dist * (1 - lamda_value) + original_dist * lamda_value
-    final_dist = final_dist[:query_num, query_num:]
+    final_dist = final_dist[:n_query, n_query:]
     return final_dist
 
 

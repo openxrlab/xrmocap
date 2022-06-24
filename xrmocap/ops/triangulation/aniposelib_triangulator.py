@@ -124,11 +124,12 @@ class AniposelibTriangulator(BaseTriangulator):
         camera_group = aniposelib.cameras.CameraGroup(aniposelib_camera_list)
         return camera_group
 
-    def get_reprojection_error(
-            self,
-            points2d: Union[np.ndarray, list, tuple],
-            points3d: Union[np.ndarray, list, tuple],
-            points_mask: Union[np.ndarray, list, tuple] = None) -> np.ndarray:
+    def get_reprojection_error(self,
+                               points2d: Union[np.ndarray, list, tuple],
+                               points3d: Union[np.ndarray, list, tuple],
+                               points_mask: Union[np.ndarray, list,
+                                                  tuple] = None,
+                               mean=False) -> np.ndarray:
         """Get reprojection error between reprojected points2d and input
         points2d. Not tested yet.
 
@@ -174,9 +175,30 @@ class AniposelibTriangulator(BaseTriangulator):
         ignored_indexes = np.where(points_mask != 1)
         points2d[ignored_indexes[0], ignored_indexes[1], :] = np.nan
         points3d[ignored_indexes[1], :] = np.nan
-        errors = camera_group.reprojection_error(
-            points3d, points2d, mean=False)
-        output_errors_shape = np.array(input_points2d_shape)
-        output_errors_shape[-1] = 2
-        errors = errors.reshape(*output_errors_shape)
-        return errors
+        errors = camera_group.reprojection_error(points3d, points2d, mean=mean)
+        if mean:
+            return errors
+        else:
+            output_errors_shape = np.array(input_points2d_shape)
+            output_errors_shape[-1] = 2
+            errors = errors.reshape(*output_errors_shape)
+            return errors
+
+    def project(self, points3d: Union[np.ndarray, list, tuple]) -> np.ndarray:
+        """Project 3d points to 2d points. Not tested yet.
+
+        Args:
+            points3d (Union[np.ndarray, list, tuple]):
+                An ndarray or a nested list of points3d, in shape
+                [..., 3+n], n >= 0.
+                Data in points3d[..., 3:] will be ignored.
+
+        Returns:
+            np.ndarray:
+                an [n_view, ..., 2] array of 2D points
+        """
+        points3d = points3d[..., :3].copy().reshape(-1, 3)
+        camera_group = self.__prepare_aniposelib_camera__()
+        projected_points2d = camera_group.project(points3d)
+
+        return projected_points2d

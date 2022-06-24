@@ -18,22 +18,34 @@ if project_path not in sys.path:
 
 
 def match_SVT(S: torch.Tensor,
-              dimGroup: torch.Tensor,
+              dim_group: torch.Tensor,
               logger: Union[None, str, logging.Logger] = None,
               alpha=0.1,
               _lambda=50,
               dual_stochastic=True,
+              p_select: int = 1,
+              tol=5e-4,
+              max_iter=500,
+              verbose=False,
+              eigenvalues=False,
+              mu=64,
               **kwargs) -> torch.Tensor:
     """Multi-way matching with cycle consistency.
 
     Args:
         S (torch.Tensor): Affinity matrix
-        dimGroup (torch.Tensor): The cumulative number of people from
+        dim_group (torch.Tensor): The cumulative number of people from
                                  different perspectives.
         logger (Union[None, str, logging.Logger], optional): Defaults to None.
         alpha (float, optional): Defaults to 0.1.
         _lambda (int, optional): Defaults to 50.
         dual_stochastic (bool, optional): Defaults to True.
+        p_select (int, optional): Defaults to 1.
+        tol (float, optional): Defaults to 5e-4.
+        max_iter (int, optional): Defaults to 500.
+        verbose (bool, optional): Defaults to False.
+        eigenvalues (bool, optional): Defaults to False.
+        mu (int, optional): Defaults to 64.
 
     Returns:
         match_mat (torch.Tensor): Match matrix in shape (N, N), N = n1+n2+...,
@@ -46,17 +58,11 @@ def match_SVT(S: torch.Tensor,
             are matched. bin_match in shape(N, M), M is defined as the maximum
             number of people captured by two or more cameras simultaneously.
     """
-    pSelect = kwargs.get('pselect', 1)
-    tol = kwargs.get('tol', 5e-4)
-    maxIter = kwargs.get('maxIter', 500)
-    verbose = kwargs.get('verbose', False)
-    eigenvalues = kwargs.get('eigenvalues', False)
-    mu = kwargs.get('mu', 64)
     logger = get_logger(logger)
     if verbose:
         logger.info(
-            'Run SVT-Matching: alpha = %.2f, pSelect = %.2f _lambda = %.2f \n'
-            % (alpha, pSelect, _lambda))
+            'SVT-Matching: alpha = %.2f, p_select = %.2f, _lambda = %.2f \n' %
+            (alpha, p_select, _lambda))
     info = dict()
     N = S.shape[0]
     S[torch.arange(N), torch.arange(N)] = 0
@@ -65,7 +71,7 @@ def match_SVT(S: torch.Tensor,
     Y = torch.zeros_like(S)
     W = alpha - S
     t0 = time.time()
-    for iter_ in range(maxIter):
+    for iter_ in range(max_iter):
 
         X0 = X
         # update Q with SVT
@@ -76,20 +82,21 @@ def match_SVT(S: torch.Tensor,
         # update X
         X = Q - (W + Y) / mu
         # project X
-        for i in range(len(dimGroup) - 1):
-            ind1, ind2 = dimGroup[i], dimGroup[i + 1]
+        for i in range(len(dim_group) - 1):
+            ind1, ind2 = dim_group[i], dim_group[i + 1]
             X[ind1:ind2, ind1:ind2] = 0
-        if pSelect == 1:
+        if p_select == 1:
             X[torch.arange(N), torch.arange(N)] = 1
         X[X < 0] = 0
         X[X > 1] = 1
 
         if dual_stochastic:
             # Projection for double stochastic constraint
-            for i in range(len(dimGroup) - 1):
-                row_begin, row_end = int(dimGroup[i]), int(dimGroup[i + 1])
-                for j in range(len(dimGroup) - 1):
-                    col_begin, col_end = int(dimGroup[j]), int(dimGroup[j + 1])
+            for i in range(len(dim_group) - 1):
+                row_begin, row_end = int(dim_group[i]), int(dim_group[i + 1])
+                for j in range(len(dim_group) - 1):
+                    col_begin = int(dim_group[j])
+                    col_end = int(dim_group[j + 1])
                     if row_end > row_begin and col_end > col_begin:
                         X[row_begin:row_end, col_begin:col_end] = myproj2dpam(
                             X[row_begin:row_end, col_begin:col_end], 1e-2)

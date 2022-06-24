@@ -1,5 +1,6 @@
 import argparse
 import csv
+import mmcv
 import numpy as np
 import os
 import os.path as osp
@@ -10,6 +11,8 @@ from copy import deepcopy
 from prettytable import PrettyTable
 from typing import Tuple
 
+from xrmocap.data_structure.keypoints import Keypoints
+from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from xrmocap.utils.geometry import compute_similarity_transform
 
 project_root = os.path.abspath(
@@ -141,10 +144,11 @@ def check_bone_is_correct(model_start_point: np.ndarray,
     return ((start_difference + end_difference) / 2) <= alpha * bone_lenth
 
 
-def align_by_root(keypoints):
-    """Align keypoints (in shelf order) to their root (nose)"""
-    root = keypoints[-1:, :]
-    return keypoints - root
+def align_by_nose(kps):
+    """Align keypoints (in coco order) to their root (nose)"""
+    index = get_keypoint_idx(name='nose', convention='coco')
+    root = kps[index, :]
+    return kps - root
 
 
 def compute_mpjpe(pred: np.ndarray, gt: np.ndarray, align=False):
@@ -161,8 +165,8 @@ def compute_mpjpe(pred: np.ndarray, gt: np.ndarray, align=False):
         MPJPE of the input keypoints
     """
     if align:
-        pred = align_by_root(pred)
-        gt = align_by_root(gt)
+        pred = align_by_nose(pred)
+        gt = align_by_nose(gt)
     mpjpe = np.sqrt(np.sum(np.square(pred - gt), axis=-1))
     return mpjpe
 
@@ -381,72 +385,75 @@ def evaluate_mpjpe(kps3d,
 
 
 if __name__ == '__main__':
-    # np.seterr(divide='ignore', invalid='ignore')
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', nargs='+', dest='datasets', required=True)
-    parser.add_argument('--exp_name', default='')
-    parser.add_argument('--input_path', '-i', default='data')
-    parser.add_argument('--result_path', '-r', default='data')
-    parser.add_argument('--start_frame', '-s', type=int, default=300)
-    parser.add_argument('--end_frame', '-e', type=int, default=600)
+    parser = argparse.ArgumentParser(
+        description='Evaluate multi-view keypoints2d to keypoints3d')
+    parser.add_argument(
+        '--config',
+        default='./config/kps3d_estimation/eval_kps3d_estimation.py')
     args = parser.parse_args()
 
-    for _, dataset_name in enumerate(args.datasets):
+    cfg = mmcv.Config.fromfile(args.config)
+
+    for _, dataset_name in enumerate(cfg.dataset):
+        keypoints = Keypoints()
         data_name = dataset_name.split('_')[0]
         if data_name == 'shelf':
-            gt_path = osp.join(args.input_path, data_name)
-            test_range = range(args.start_frame, args.end_frame)
-            keypoints = np.load(
-                osp.join(
-                    args.result_path, data_name,
-                    f'{args.start_frame}_{args.end_frame-1}_human.pickle'),
-                allow_pickle=True)
-            save_dir = osp.join(args.result_path, data_name, args.exp_name)
+            gt_path = osp.join(cfg.input_path, data_name)
+            test_range = range(cfg.start_frame, cfg.end_frame)
+            kps3d_path = osp.join(
+                cfg.result_path, data_name,
+                f'{cfg.start_frame}_{cfg.end_frame-1}_'
+                'tracking_v1.npz')
+            keypoints.load(kps3d_path)
+            kps = keypoints.get_keypoints()[..., :3]
+            save_dir = osp.join(cfg.result_path, data_name, cfg.exp_name)
             os.makedirs(save_dir, exist_ok=True)
 
         elif data_name == 'campus':
-            gt_path = osp.join(args.input_path, data_name)
-            test_range = [i for i in range(args.start_frame, args.end_frame)
+            gt_path = osp.join(cfg.input_path, data_name)
+            test_range = [i for i in range(cfg.start_frame, cfg.end_frame)
                           ] + [i for i in range(650, 750)]
-            # test_range = [i for i in range(650, 750)]
-            keypoints1 = np.load(
-                osp.join(
-                    args.result_path, data_name,
-                    f'{args.start_frame}_{args.end_frame-1}_human.pickle'),
-                allow_pickle=True)
-            keypoints2 = np.load(
-                osp.join(args.result_path, data_name, '650_749_human.pickle'),
-                allow_pickle=True)
-            if keypoints1.shape[1] != keypoints2.shape[1]:
-                cnt = abs(keypoints1.shape[1] - keypoints2.shape[1])
-                if keypoints1.shape[1] < keypoints2.shape[1]:
-                    zeros = np.zeros(
-                        (keypoints1.shape[0], 1, keypoints1.shape[2],
-                         keypoints1.shape[3])).repeat(
-                             cnt, axis=1)
-                    keypoints1 = np.concatenate([keypoints1, zeros], axis=1)
+            kps3d_path1 = osp.join(
+                cfg.result_path, data_name,
+                f'{cfg.start_frame}_{cfg.end_frame-1}_tracking_v1.npz')
+            keypoints.load(kps3d_path1)
+            kps1 = keypoints.get_keypoints()[..., :3]
+
+            kps3d_path2 = osp.join(cfg.result_path, data_name,
+                                   '650_749_tracking_v1.npz')
+            keypoints = Keypoints()
+            keypoints.load(kps3d_path2)
+            kps2 = keypoints.get_keypoints()[..., :3]
+
+            if kps1.shape[1] != kps2.shape[1]:
+                cnt = abs(kps1.shape[1] - kps2.shape[1])
+                if kps1.shape[1] < kps2.shape[1]:
+                    zeros = np.zeros((kps1.shape[0], 1, kps1.shape[2],
+                                      kps1.shape[3])).repeat(
+                                          cnt, axis=1)
+                    kps1 = np.concatenate([kps1, zeros], axis=1)
                 else:
-                    zeros = np.zeros(
-                        (keypoints2.shape[0], 1, keypoints2.shape[2],
-                         keypoints2.shape[3])).repeat(
-                             cnt, axis=1)
-                    keypoints2 = np.concatenate([keypoints2, zeros], axis=1)
-            keypoints = np.concatenate([keypoints1, keypoints2], axis=0)
-            save_dir = osp.join(args.result_path, data_name, args.exp_name)
+                    zeros = np.zeros((kps2.shape[0], 1, kps2.shape[2],
+                                      kps2.shape[3])).repeat(
+                                          cnt, axis=1)
+                    kps2 = np.concatenate([kps2, zeros], axis=1)
+            kps = np.concatenate([kps1, kps2], axis=0)
+            save_dir = osp.join(cfg.result_path, data_name, cfg.exp_name)
             os.makedirs(save_dir, exist_ok=True)
 
         elif data_name == 'panoptic':
             name = dataset_name.split('_')[1]
-            gt_path = os.path.join(args.input_path, 'panoptic',
+            gt_path = os.path.join(cfg.input_path, 'panoptic',
                                    f'panoptic_{name}')
-            test_range = range(args.start_frame, args.end_frame)
-            keypoints = np.load(
-                osp.join(
-                    args.result_path, f'panoptic_{name}',
-                    f'{args.start_frame}_{args.end_frame-1}_human.pickle'),
-                allow_pickle=True)
-            save_dir = osp.join(args.result_path, f'panoptic_{name}',
-                                args.exp_name)
+            test_range = range(cfg.start_frame, cfg.end_frame)
+            kps3d_path = osp.join(
+                cfg.result_path, f'panoptic_{name}',
+                f'{cfg.start_frame}_{cfg.end_frame-1}_human.npz')
+            keypoints.load(kps3d_path)
+            kps = keypoints.get_keypoints()[..., :3]
+
+            save_dir = osp.join(cfg.result_path, f'panoptic_{name}',
+                                cfg.exp_name)
             os.makedirs(save_dir, exist_ok=True)
 
         else:
@@ -456,19 +463,14 @@ if __name__ == '__main__':
             actorsGT = scio.loadmat(osp.join(gt_path, 'actorsGT.mat'))
             gt3d = actorsGT['actor3D'][0]
             gt3d = gt3d[:3]
-            evaluate(
-                keypoints, gt3d, test_range, dataset_name, dump_dir=save_dir)
-            # other metrics
-            evaluate_mpjpe(
-                keypoints, gt3d, test_range, dataset_name=dataset_name)
+            evaluate(kps, gt3d, test_range, dataset_name, dump_dir=save_dir)
+            evaluate_mpjpe(kps, gt3d, test_range, dataset_name=dataset_name)
         elif data_name == 'panoptic':
             actorsGT = scio.loadmat(osp.join(gt_path, 'actorsGT.mat'))
             gt3d = actorsGT['actor3D'][0]
             gt3d = gt3d[:4]
-            evaluate(
-                keypoints, gt3d, test_range, dataset_name, dump_dir=save_dir)
-            evaluate_mpjpe(
-                keypoints, gt3d, test_range, dataset_name=dataset_name)
+            evaluate(kps, gt3d, test_range, dataset_name, dump_dir=save_dir)
+            evaluate_mpjpe(kps, gt3d, test_range, dataset_name=dataset_name)
 
         else:
             NotImplementedError
