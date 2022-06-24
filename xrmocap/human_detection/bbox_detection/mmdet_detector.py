@@ -51,7 +51,8 @@ class MMdetDetector:
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
                     disable_tqdm: bool = False,
-                    multi_person: bool = False) -> list:
+                    multi_person: bool = False,
+                    use_htc: bool = False) -> list:
         """Infer frames already in memory(ndarray type).
 
         Args:
@@ -65,6 +66,9 @@ class MMdetDetector:
             multi_person (bool, optional):
                 Whether to allow multi-person detection. If False,
                 only the biggest bbox will be returned.
+                Defaults to False.
+            use_htc (bool, optional):
+                Whether to allow Hybrid task cascade for instance segmentation.
                 Defaults to False.
 
         Returns:
@@ -87,7 +91,10 @@ class MMdetDetector:
                     list_batch.append(img)
                 img_batch = list_batch
             mmdet_results = inference_detector(self.det_model, img_batch)
-            bbox_results += mmdet_results
+            if use_htc:
+                bbox_results += [i[0] for i in mmdet_results]
+            else:
+                bbox_results += mmdet_results
         ret_list = process_mmdet_results(
             bbox_results, multi_person=multi_person)
         return ret_list
@@ -95,7 +102,8 @@ class MMdetDetector:
     def infer_frames(self,
                      frame_path_list: list,
                      disable_tqdm=False,
-                     multi_person=False) -> list:
+                     multi_person=False,
+                     use_htc=False) -> list:
         """Infer frames from file.
 
         Args:
@@ -107,6 +115,9 @@ class MMdetDetector:
             multi_person (bool, optional):
                 Whether to allow multi-person detection, which is
                 slower than single-person.
+                Defaults to False.
+            use_htc (bool, optional):
+                Whether to allow Hybrid task cascade for instance segmentation.
                 Defaults to False.
 
         Returns:
@@ -122,13 +133,15 @@ class MMdetDetector:
         ret_list = self.infer_array(
             image_array=image_array_list,
             disable_tqdm=disable_tqdm,
-            multi_person=multi_person)
+            multi_person=multi_person,
+            use_htc=use_htc)
         return ret_list
 
     def infer_video(self,
                     video_path: str,
                     disable_tqdm=False,
-                    multi_person=False) -> list:
+                    multi_person=False,
+                    use_htc=False) -> list:
         """Infer frames from a video file.
 
         Args:
@@ -141,6 +154,9 @@ class MMdetDetector:
                 Whether to allow multi-person detection, which is
                 slower than single-person.
                 Defaults to False.
+            use_htc (bool, optional):
+                Whether to allow Hybrid task cascade for instance segmentation.
+                Defaults to False.
 
         Returns:
             list:
@@ -152,7 +168,8 @@ class MMdetDetector:
         ret_list = self.infer_array(
             image_array=image_array,
             disable_tqdm=disable_tqdm,
-            multi_person=multi_person)
+            multi_person=multi_person,
+            use_htc=use_htc)
         return ret_list
 
 

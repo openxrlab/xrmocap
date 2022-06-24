@@ -5,7 +5,8 @@ from typing import Tuple, Union
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.data_structure.limbs import Limbs
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_keypoints_factory, get_mapping_dict, human_data,
+    convert_keypoints, get_keypoint_idx, get_keypoint_names,
+    get_keypoints_factory, get_mapping_dict, human_data,
 )
 
 # yapf: enable
@@ -13,6 +14,7 @@ from xrmocap.transform.convention.keypoints_convention import (
 
 def get_limbs_from_keypoints(
     keypoints: Keypoints,
+    fill_limb_names: bool = False,
     frame_idx: Union[int, None] = None,
     person_idx: Union[int, None] = None,
     keypoints_factory: Union[dict, None] = None,
@@ -23,6 +25,10 @@ def get_limbs_from_keypoints(
     Args:
         keypoints (Keypoints):
             An instance of Keypoints class.
+        fill_limb_names (bool, optional):
+            Whether to fill connection names. If True,
+            names will be get from HUMAN_DATA_LIMB_NAMES.
+            Defaults to False.
         frame_idx (Union[int, None], optional):
             If given, limbs.points will be
             set to keypoints[frame_idx, person_idx, :, :].
@@ -80,6 +86,8 @@ def get_limbs_from_keypoints(
     connecntions = []
     parts = []
     part_names = []
+    connecntion_names = []
+    human_data_kps = get_keypoint_names('human_data')
     for part_name, part_limbs in limbs_source.items():
         part_record = []
         for limb in part_limbs:
@@ -92,16 +100,25 @@ def get_limbs_from_keypoints(
                 src_end_idx = mapping_back[hd_end_idx]
                 connecntions.append([src_start_idx, src_end_idx])
                 part_record.append(len(connecntions) - 1)
+                if fill_limb_names:
+                    hd_start_name = human_data_kps[hd_start_idx]
+                    hd_end_name = human_data_kps[hd_end_idx]
+                    conn_name, _ = get_limb_name_by_keypoint_names(
+                        hd_start_name, hd_end_name)
+                    connecntion_names.append(conn_name)
         if len(part_record) > 0:
             parts.append(part_record)
             part_names.append(part_name)
     points = None if person_idx is None or frame_idx is None else\
         one_frame_keypoints.get_keypoints()[frame_idx, person_idx, ...]
+    if not (fill_limb_names and len(connecntion_names) > 0):
+        connecntion_names = None
     ret_limbs = Limbs(
         connections=np.asarray(connecntions),
         parts=parts,
         part_names=part_names,
         points=points,
+        connection_names=connecntion_names,
         logger=keypoints.logger)
     return ret_limbs
 
@@ -156,3 +173,44 @@ def search_limbs(data_source: str,
             else:
                 limbs_palette[k] = np.array(limbs_palette[k])
     return limbs_target, limbs_palette
+
+
+def get_limb_name_by_keypoint_names(keypoint_name_0: str,
+                                    keypoint_name_1: str) -> Tuple[str, bool]:
+    """Search whether the name of a limb connecting keypoint_0 and keypoint_1
+    exists in human_data.HUMAN_DATA_LIMB_NAMES. Return a name and the search
+    result. If fould, return the preset name, else return
+    f'{keypoint_name_a}_to_{keypoint_name_b}', while index(keypoint_name_a) <
+    index(keypoint_name_b).
+
+    Args:
+        keypoint_name_0 (str):
+            Name of one keypoint.
+        keypoint_name_1 (str):
+            Name of another keypoint.
+
+    Returns:
+        Tuple[str, bool]:
+            Name of the limb, and whether the name comes from
+            preset-HUMAN_DATA_LIMB_NAMES.
+    """
+    name_dict = human_data.HUMAN_DATA_LIMB_NAMES
+    if keypoint_name_0 in name_dict and\
+            keypoint_name_1 in name_dict[keypoint_name_0]:
+        fould_flag = True
+        limb_name = name_dict[keypoint_name_0][keypoint_name_1]
+    elif keypoint_name_1 in name_dict and\
+            keypoint_name_0 in name_dict[keypoint_name_1]:
+        fould_flag = True
+        limb_name = name_dict[keypoint_name_1][keypoint_name_0]
+    else:
+        fould_flag = False
+        keypoint_idx_0 = get_keypoint_idx(
+            name=keypoint_name_0, convention='human_data')
+        keypoint_idx_1 = get_keypoint_idx(
+            name=keypoint_name_1, convention='human_data')
+        if keypoint_idx_0 < keypoint_idx_1:
+            limb_name = f'{keypoint_name_0}_to_{keypoint_name_1}'
+        else:
+            limb_name = f'{keypoint_name_1}_to_{keypoint_name_0}'
+    return limb_name, fould_flag

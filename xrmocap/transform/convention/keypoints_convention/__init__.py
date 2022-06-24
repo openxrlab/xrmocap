@@ -8,11 +8,11 @@ from mmhuman3d.core.conventions.keypoints_mapping import \
     convert_kps as convert_kps_mm  # noqa:F401
 from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
     get_keypoint_idx, get_keypoint_idxs_by_part, get_keypoint_num, get_mapping,
-    human_data,
 )
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
+from . import human_data  # noqa:F401
 
 # yapf: enable
 

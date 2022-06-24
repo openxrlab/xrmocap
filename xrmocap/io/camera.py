@@ -37,17 +37,23 @@ def load_camera_parameters_from_zoemotion_dir(
 
     cam_param_list = []
     for camera_id in enable_camera_list:
+        dist_coeff_k = []
+        dist_coeff_p = []
         cam_param = FisheyeCameraParameter()
         cam_param.name = camera_id
-        cam_param.k1 = camera_param_dict[camera_id]['distCoeff'][0]
-        cam_param.k2 = camera_param_dict[camera_id]['distCoeff'][1]
-        cam_param.k3 = camera_param_dict[camera_id]['distCoeff'][4]
-        cam_param.p1 = camera_param_dict[camera_id]['distCoeff'][2]
-        cam_param.p2 = camera_param_dict[camera_id]['distCoeff'][3]
+        dist_coeff_k = [
+            camera_param_dict[camera_id]['distCoeff'][0],
+            camera_param_dict[camera_id]['distCoeff'][1],
+            camera_param_dict[camera_id]['distCoeff'][4], 0, 0, 0
+        ]
+        dist_coeff_p = [
+            camera_param_dict[camera_id]['distCoeff'][2],
+            camera_param_dict[camera_id]['distCoeff'][3]
+        ]
+        cam_param.set_distortion_coefficients(dist_coeff_k, dist_coeff_p)
         cam_param.set_KRT(
-            K=camera_param_dict[camera_id]['K'],
-            R=np.array(camera_param_dict[camera_id]['R']).reshape(3,
-                                                                  3).tolist(),
+            K=np.array(camera_param_dict[camera_id]['K']).reshape(3, 3),
+            R=np.array(camera_param_dict[camera_id]['R']).reshape(3, 3),
             T=camera_param_dict[camera_id]['T'],
             world2cam=False)
         cam_param.set_resolution(
