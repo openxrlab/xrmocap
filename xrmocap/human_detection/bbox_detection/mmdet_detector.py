@@ -15,7 +15,12 @@ try:
 except (ImportError, ModuleNotFoundError):
     has_mmdet = False
     import traceback
-    import_exception = traceback.format_exc()
+    stack_str = ''
+    for line in traceback.format_stack():
+        if 'frozen' not in line:
+            stack_str += line + '\n'
+    import_exception = traceback.format_exc() + '\n'
+    import_exception = stack_str + import_exception
 
 
 class MMdetDetector:
