@@ -6,7 +6,7 @@ import torch
 
 from xrmocap.data_structure.keypoints import Keypoints
 
-output_dir = 'test/data/output/test_data_structure/' +\
+output_dir = 'test/data/output/data_structure/' +\
     'test_keypoints'
 
 

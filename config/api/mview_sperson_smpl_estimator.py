@@ -23,7 +23,7 @@ smplify = dict(
     type='SMPLify',
     verbose=verbose,
     info_level='stage',
-    num_epochs=1,
+    n_epochs=1,
     use_one_betas_per_video=True,
     logger=logger,
     body_model=dict(
@@ -114,7 +114,7 @@ smplify = dict(
     stages=[
         # stage 0
         dict(
-            num_iter=10,
+            n_iter=10,
             ftol=1e-4,
             fit_global_orient=False,
             fit_transl=False,
@@ -130,7 +130,7 @@ smplify = dict(
             pose_prior_weight=0.0),
         # stage 1
         dict(
-            num_iter=50,
+            n_iter=50,
             ftol=1e-4,
             fit_global_orient=True,
             fit_transl=True,
@@ -148,7 +148,7 @@ smplify = dict(
             use_shoulder_hip_only=True),
         # stage 2
         dict(
-            num_iter=120,
+            n_iter=120,
             ftol=1e-4,
             fit_global_orient=True,
             fit_transl=True,

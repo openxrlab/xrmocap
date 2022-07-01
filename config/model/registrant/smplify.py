@@ -3,8 +3,11 @@ type = 'SMPLify'
 verbose = True
 info_level = 'stage'
 logger = None
-num_epochs = 1
+n_epochs = 1
 use_one_betas_per_video = True
+hooks = [
+    dict(type='SMPLifyVerboseHook'),
+]
 
 body_model = dict(
     type='SMPL',
@@ -98,7 +101,7 @@ handlers = [
 stages = [
     # stage 0
     dict(
-        num_iter=10,
+        n_iter=10,
         ftol=1e-4,
         fit_global_orient=False,
         fit_transl=False,
@@ -114,7 +117,7 @@ stages = [
         pose_prior_weight=0.0),
     # stage 1
     dict(
-        num_iter=50,
+        n_iter=50,
         ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
@@ -132,7 +135,7 @@ stages = [
         use_shoulder_hip_only=True),
     # stage 2
     dict(
-        num_iter=120,
+        n_iter=120,
         ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,

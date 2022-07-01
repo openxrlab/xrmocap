@@ -4,10 +4,10 @@ import pytest
 import shutil
 import torch
 
-from xrmocap.data_structure.body_model.smpl_data import SMPLData
+from xrmocap.data_structure.body_model import SMPLData
 
-output_dir = 'test/data/output/test_data_structure/' +\
-    'test_body_model/test_smpl_data'
+output_dir = 'test/data/output/data_structure/' +\
+    'body_model/test_smpl_data'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -28,7 +28,7 @@ def test_new():
     # new with specific value
     smpl_data = SMPLData(
         gender='neutral',
-        full_pose=np.zeros(shape=(2, 24, 3)),
+        fullpose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
         logger='root')
@@ -38,7 +38,7 @@ def test_new():
     smpl_data = SMPLData(
         src_dict=src_dict,
         gender='neutral',
-        full_pose=np.zeros(shape=(2, 24, 3)),
+        fullpose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
         logger='root')
@@ -115,7 +115,7 @@ def test_dict_io():
         device_name = 'cpu'
     smpl_data = SMPLData(
         gender='neutral',
-        full_pose=np.zeros(shape=(2, 24, 3)),
+        fullpose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(10)))
     smpl_data['n_frame'] = 2
@@ -138,11 +138,11 @@ def test_dict_io():
     # test from numpy dict
     smpl_data_new = SMPLData()
     smpl_data_new.from_param_dict(param_dict)
-    assert smpl_data_new['full_pose'].shape == (2, 24, 3)
+    assert smpl_data_new['fullpose'].shape == (2, 24, 3)
     # test from torch dict
     smpl_data_new = SMPLData()
     smpl_data_new.from_param_dict(tensor_dict)
-    assert smpl_data_new['full_pose'].shape == (2, 24, 3)
+    assert smpl_data_new['fullpose'].shape == (2, 24, 3)
     # test
     with pytest.raises(KeyError):
         param_dict.pop('global_orient')
@@ -153,7 +153,7 @@ def test_dict_io():
 def test_file_io():
     smpl_data = SMPLData(
         gender='neutral',
-        full_pose=np.zeros(shape=(2, 24, 3)),
+        fullpose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(10)))
     smpl_data['n_frame'] = 2
@@ -163,8 +163,8 @@ def test_file_io():
     assert os.path.exists(npz_path)
     # test correctly load
     smpl_data_new = SMPLData.fromfile(npz_path)
+    assert smpl_data_new.get_fullpose().shape == (2, 24, 3)
     assert smpl_data_new['n_frame'] == 2
-    assert smpl_data_new['full_pose'].shape == (2, 24, 3)
     # test wrong filename
     pkl_path = os.path.join(output_dir, 'dumped_smpl_data.pkl')
     with pytest.raises(ValueError):

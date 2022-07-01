@@ -1,10 +1,15 @@
+# yapf: disable
 import logging
 import numpy as np
 import prettytable
 import torch
 from mmcv.runner import build_optimizer
+from mmcv.runner.hooks import Hook
 from typing import List, Union
 
+from xrmocap.core.hook.smplify_hook.builder import (
+    SMPLifyBaseHook, build_smplify_hook,
+)
 from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
     get_keypoint_idx, get_keypoint_idxs_by_part,
@@ -18,20 +23,23 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
+# yapf: enable
 
 
 class SMPLify(object):
     """Re-implementation of SMPLify with extended features."""
+    OPTIM_PARAM = ['global_orient', 'transl', 'body_pose', 'betas']
 
     def __init__(self,
                  body_model: Union[dict, torch.nn.Module],
                  stages: dict,
                  optimizer: dict,
                  handlers: List[Union[dict, BaseHandler]],
-                 num_epochs: int = 1,
+                 n_epochs: int = 1,
                  use_one_betas_per_video: bool = False,
                  ignore_keypoints: List[str] = None,
                  device: Union[torch.device, str] = 'cuda',
+                 hooks: List[Union[dict, SMPLifyBaseHook]] = [],
                  verbose: bool = False,
                  info_level: Literal['stage', 'step'] = 'step',
                  logger: Union[None, str, logging.Logger] = None) -> None:
@@ -48,7 +56,7 @@ class SMPLify(object):
             handlers (List[Union[dict, BaseHandler]]):
                 A list of handlers, each element is an instance of
                 subclass of BaseHandler, or a config dict of handler.
-            num_epochs (int, optional):
+            n_epochs (int, optional):
                 Number of epochs. Defaults to 1.
             use_one_betas_per_video (bool, optional):
                 Whether to use the same beta parameters
@@ -59,6 +67,10 @@ class SMPLify(object):
                 loss computation. Defaults to None.
             device (Union[torch.device, str], optional):
                 Device in pytorch. Defaults to 'cuda'.
+            hooks (List[Union[dict, SMPLifyBaseHook]], optional):
+                A list of hooks, each element is an instance of
+                subclass of SMPLifyBaseHook, or a config dict of hook.
+                Defaults to an empty list.
             verbose (bool, optional):
                 Whether to print individual losses during registration.
                 Defaults to False.
@@ -76,10 +88,11 @@ class SMPLify(object):
         self.logger = get_logger(logger)
         self.info_level = info_level
         self.use_one_betas_per_video = use_one_betas_per_video
-        self.num_epochs = num_epochs
+        self.n_epochs = n_epochs
         self.device = device
         self.stage_config = stages
         self.optimizer = optimizer
+        self.hooks = []
 
         # initialize body model
         if isinstance(body_model, dict):
@@ -96,22 +109,83 @@ class SMPLify(object):
             else []
         self.verbose = verbose
         self.loss_handlers = []
-        for handler_arg in handlers:
-            if isinstance(handler_arg, dict):
-                handler_arg['device'] = self.device
-                handler = build_handler(handler_arg)
-            else:
-                handler = handler_arg
+        # init handlers
+        for handler in handlers:
+            if isinstance(handler, dict):
+                handler['device'] = self.device
+                handler = build_handler(handler)
             self.loss_handlers.append(handler)
-        self.__set_keypoint_idxs__()
+        # init hooks
+        for hook in hooks:
+            if isinstance(hook, dict):
+                hook = build_smplify_hook(hook)
+            self.register_hook(hook)
+        self.__set_keypoint_indexes__()
         self.__stage_kwargs_warned__ = False
+
+    def register_hook(self, hook: SMPLifyBaseHook):
+        """Register a hook into the hook list.
+
+        The hook will be inserted into a priority queue.
+
+        Args:
+            hook (SMPLifyBaseHook):
+                The hook to be registered.
+        """
+        assert isinstance(hook, Hook)
+        hook.priority = 'NORMAL'
+        self.hooks.append(hook)
+
+    def call_hook(self, fn_name: str, **kwargs):
+        """Call all hooks.
+
+        Args:
+            fn_name (str): The function name in each hook to be called, such as
+                "before_optimize".
+
+        kwargs:
+            Keyword args required by the hook.
+        """
+        for hook in self.hooks:
+            getattr(hook, fn_name)(self, **kwargs)
+
+    def __prepare_optimizable_parameters__(self, init_dict: dict,
+                                           batch_size: int) -> dict:
+        """Prepare optimizable parameters in batch for registrant. If some of
+        the parameters can be found in init_dict, use them for initialization.
+
+        Args:
+            init_dict (dict):
+                A dict of init parameters. init_dict.keys() is a
+                sub-set of self.__class__.OPTIM_PARAM.
+            batch_size (int)
+
+        Returns:
+            dict:
+                A dict of optimizable parameters, whose keys are
+                self.__class__.OPTIM_PARAM and values are
+                Tensors in batch.
+        """
+        ret_dict = {}
+        for key in self.__class__.OPTIM_PARAM:
+            if key in init_dict:
+                init_param = init_dict[key]
+            else:
+                init_param = None
+            ret_param = self.__match_init_batch_size__(
+                init_param=init_param,
+                default_param=getattr(self.body_model, key),
+                batch_size=batch_size)
+            ret_dict[key] = ret_param
+        if self.use_one_betas_per_video and 'betas' not in init_dict:
+            betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
+                self.device)
+            ret_dict['betas'] = betas
+        return ret_dict
 
     def __call__(self,
                  input_list: List[BaseInput],
-                 init_global_orient: torch.Tensor = None,
-                 init_transl: torch.Tensor = None,
-                 init_body_pose: torch.Tensor = None,
-                 init_betas: torch.Tensor = None,
+                 init_param_dict: dict = {},
                  return_verts: bool = False,
                  return_joints: bool = False,
                  return_full_pose: bool = False,
@@ -122,15 +196,10 @@ class SMPLify(object):
             input_list (List[BaseInput]):
                 Additional input for loss handlers. Each element is
                 an instance of subclass of BaseInput.
-            init_global_orient (torch.Tensor, optional):
-                Initial global_orient of shape (B, 3).
-                Defaults to None.
-            init_transl (torch.Tensor, optional):
-                Initial transl of shape (B, 3). Defaults to None.
-            init_body_pose (torch.Tensor, optional):
-                Initial body_pose of shape (B, 69). Defaults to None.
-            init_betas (torch.Tensor, optional):
-                Initial betas of shape (B, D). Defaults to None.
+            init_param_dict (dict, optional):
+                A dict of init parameters. init_dict.keys() is a
+                sub-set of self.__class__.OPTIM_PARAM.
+                Defaults to an empty dict.
             return_verts (bool, optional):
                 Whether to return vertices. Defaults to False.
             return_joints (bool, optional):
@@ -162,51 +231,32 @@ class SMPLify(object):
                                   f' {tmp_batch_size}')
                 raise ValueError
 
-        global_orient = self.__match_init_batch_size__(
-            init_global_orient, self.body_model.global_orient, batch_size)
-        transl = self.__match_init_batch_size__(init_transl,
-                                                self.body_model.transl,
-                                                batch_size)
-        body_pose = self.__match_init_batch_size__(init_body_pose,
-                                                   self.body_model.body_pose,
-                                                   batch_size)
-        if init_betas is None and self.use_one_betas_per_video:
-            betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
-                self.device)
-        else:
-            betas = self.__match_init_batch_size__(init_betas,
-                                                   self.body_model.betas,
-                                                   batch_size)
+        optim_param = self.__prepare_optimizable_parameters__(
+            init_param_dict, batch_size)
 
-        for i in range(self.num_epochs):
+        hook_kwargs = dict(input_list=input_list, optim_param=optim_param)
+        self.call_hook('before_optimize', **hook_kwargs)
+
+        for i in range(self.n_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
-                if self.verbose:
-                    self.logger.info(f'epoch {i}, stage {stage_idx}')
                 self.__optimize_stage__(
                     input_list=input_list,
-                    global_orient=global_orient,
-                    transl=transl,
-                    body_pose=body_pose,
-                    betas=betas,
+                    optim_param=optim_param,
+                    epoch_idx=i,
+                    stage_idx=stage_idx,
                     **stage_config,
                 )
 
+        hook_kwargs = dict(input_list=input_list, optim_param=optim_param)
+        self.call_hook('after_optimize', **hook_kwargs)
         # collate results
-        ret = {
-            'global_orient': global_orient,
-            'transl': transl,
-            'body_pose': body_pose,
-            'betas': betas
-        }
+        ret = optim_param
 
         if return_verts or return_joints or \
                 return_full_pose or return_losses:
             eval_ret = self.evaluate(
                 input_list=input_list,
-                global_orient=global_orient,
-                body_pose=body_pose,
-                betas=betas,
-                transl=transl,
+                optim_param=optim_param,
                 return_verts=return_verts,
                 return_full_pose=return_full_pose,
                 return_joints=return_joints,
@@ -227,22 +277,16 @@ class SMPLify(object):
         for k, v in ret.items():
             if isinstance(v, torch.Tensor):
                 ret[k] = v.detach().clone()
-
         return ret
 
     def __optimize_stage__(self,
                            input_list: List[BaseInput],
-                           betas: torch.Tensor,
-                           body_pose: torch.Tensor,
-                           global_orient: torch.Tensor,
-                           transl: torch.Tensor,
-                           fit_global_orient: bool = True,
-                           fit_transl: bool = True,
-                           fit_body_pose: bool = True,
-                           fit_betas: bool = True,
+                           optim_param: dict,
+                           epoch_idx: int = -1,
+                           stage_idx: int = -1,
                            use_shoulder_hip_only: bool = False,
                            body_weight: float = 1.0,
-                           num_iter: int = 1,
+                           n_iter: int = 1,
                            ftol: float = 1e-4,
                            **kwargs) -> None:
         """Optimize a stage of body model parameters according to
@@ -252,22 +296,18 @@ class SMPLify(object):
             input_list (List[BaseInput]):
                 Additional input for loss handlers. Each element is
                 an instance of subclass of BaseInput.
-            betas (torch.Tensor):
-                Shape (B, D).
-            body_pose (torch.Tensor):
-                Shape (B, 69).
-            global_orient (torch.Tensor):
-                Shape (B, 3).
-            transl (torch.Tensor):
-                Shape (B, 3).
-            fit_global_orient (bool, optional):
-                Whether to optimize global_orient. Defaults to True.
-            fit_transl (bool, optional):
-                Whether to optimize transl. Defaults to True.
-            fit_body_pose (bool, optional):
-                Whether to optimize body_pose. Defaults to True.
-            fit_betas (bool, optional):
-                Whether to optimize betas. Defaults to True.
+            param_dict (dict):
+                A dict of optimizable parameters, whose keys are
+                self.__class__.OPTIM_PARAM and values are
+                Tensors in batch.
+            epoch_idx (int, optional):
+                The index of this epoch. For hook and verbose only,
+                it will not influence the optimize result.
+                Defaults to -1.
+            stage_idx (int, optional):
+                The index of this stage. For hook and verbose only,
+                it will not influence the optimize result.
+                Defaults to -1.
             use_shoulder_hip_only (bool, optional):
                 Keypoints weight argument.
                 Whether to use only shoulder and hip
@@ -279,13 +319,17 @@ class SMPLify(object):
                 Weight of body keypoints. Body part segmentation
                 definition is included in the HumanData convention.
                 Defaults to 1.0.
-            num_iter (int, optional):
+            n_iter (int, optional):
                 Number of iterations. Defaults to 1.
             ftol (float, optional):
                 Defaults to 1e-4.
 
         kwargs:
-            Stage control keyword arguments, including override weights
+            Parameter fit flag and stage control keyword arguments.
+            Parameter fit args includes fit_{param_key}, while param_key
+            is in self.__class__.OPTIM_PARAM. If fit_{param_key} not found
+            in kwargs, use default value True.
+            Stage control args includes override weights
             of each loss handler.
 
         Notes:
@@ -293,31 +337,41 @@ class SMPLify(object):
             K: number of keypoints
             D: shape dimension
         """
-        parameters = OptimizableParameters()
-        parameters.add_param(
-            key='global_orient',
-            param=global_orient,
-            fit_param=fit_global_orient)
-        parameters.add_param(key='transl', param=transl, fit_param=fit_transl)
-        parameters.add_param(
-            key='body_pose', param=body_pose, fit_param=fit_body_pose)
-        parameters.add_param(key='betas', param=betas, fit_param=fit_betas)
+        stage_config = dict(
+            epoch_idx=epoch_idx,
+            stage_idx=stage_idx,
+            use_shoulder_hip_only=use_shoulder_hip_only,
+            body_weight=body_weight,
+            n_iter=n_iter,
+            ftol=ftol)
+        stage_config.update(kwargs)
+        hook_kwargs = dict(
+            input_list=input_list,
+            optim_param=optim_param,
+            stage_config=stage_config)
+        self.call_hook('before_stage', **hook_kwargs)
 
+        kwargs = kwargs.copy()
+        parameters = OptimizableParameters()
+        for key, value in optim_param.items():
+            fit_flag = kwargs.pop(f'fit_{key}', True)
+            parameters.add_param(key=key, param=value, fit_param=fit_flag)
         optimizer = build_optimizer(parameters, self.optimizer)
 
         pre_loss = None
-        for iter_idx in range(num_iter):
+        for iter_idx in range(n_iter):
 
             def closure():
                 optimizer.zero_grad()
-                betas_video = self.__expand_betas__(body_pose.shape[0], betas)
-
+                betas_video = self.__expand_betas__(
+                    batch_size=optim_param['body_pose'].shape[0],
+                    betas=optim_param['betas'])
+                expanded_param = {}
+                expanded_param.update(optim_param)
+                expanded_param['betas'] = betas_video
                 loss_dict = self.evaluate(
                     input_list=input_list,
-                    global_orient=global_orient,
-                    body_pose=body_pose,
-                    betas=betas_video,
-                    transl=transl,
+                    optim_param=expanded_param,
                     use_shoulder_hip_only=use_shoulder_hip_only,
                     body_weight=body_weight,
                     **kwargs)
@@ -337,37 +391,34 @@ class SMPLify(object):
                     break
             pre_loss = loss.item()
 
-        # log stage information
-        if self.verbose:
-            with torch.no_grad():
-                betas_video = self.__expand_betas__(body_pose.shape[0], betas)
-                losses = self.evaluate(
-                    input_list=input_list,
-                    global_orient=global_orient,
-                    body_pose=body_pose,
-                    betas=betas_video,
-                    transl=transl,
-                    use_shoulder_hip_only=use_shoulder_hip_only,
-                    body_weight=body_weight,
-                    **kwargs)
-            table = prettytable.PrettyTable()
-            table.field_names = ['Loss name', 'Loss value']
-            for key, value in losses.items():
-                if isinstance(value, float) or \
-                        isinstance(value, int) or \
-                        len(value.shape) == 0:
-                    table.add_row([key, f'{value:.6f}'])
-                else:
-                    table.add_row([key, 'Not a scalar'])
-            table = '\n' + table.get_string()
-            self.logger.info(table)
+        stage_config = dict(
+            use_shoulder_hip_only=use_shoulder_hip_only,
+            body_weight=body_weight,
+            n_iter=n_iter,
+            ftol=ftol)
+        stage_config.update(kwargs)
+
+        betas_video = self.__expand_betas__(
+            batch_size=optim_param['body_pose'].shape[0],
+            betas=optim_param['betas'])
+        expanded_param = optim_param.copy()
+        expanded_param['betas'] = betas_video
+        loss_dict = self.evaluate(
+            input_list=input_list,
+            optim_param=expanded_param,
+            use_shoulder_hip_only=use_shoulder_hip_only,
+            body_weight=body_weight,
+            **kwargs)
+        hook_kwargs = dict(
+            input_list=input_list,
+            optim_param=optim_param,
+            stage_config=stage_config,
+            loss_dict=loss_dict)
+        self.call_hook('after_stage', **hook_kwargs)
 
     def evaluate(self,
                  input_list: List[BaseInput],
-                 betas: torch.Tensor = None,
-                 body_pose: torch.Tensor = None,
-                 global_orient: torch.Tensor = None,
-                 transl: torch.Tensor = None,
+                 optim_param: dict,
                  return_verts: bool = False,
                  return_full_pose: bool = False,
                  return_joints: bool = False,
@@ -383,14 +434,10 @@ class SMPLify(object):
             input_list (List[BaseInput]):
                 Additional input for loss handlers. Each element is
                 an instance of subclass of BaseInput.
-            betas (torch.Tensor):
-                Shape (B, D).
-            body_pose (torch.Tensor):
-                Shape (B, 69).
-            global_orient (torch.Tensor):
-                Shape (B, 3).
-            transl (torch.Tensor):
-                Shape (B, 3).
+            param_dict (dict):
+                A dict of optimizable parameters, whose keys are
+                self.__class__.OPTIM_PARAM and values are
+                Tensors in batch.
             return_verts (bool, optional):
                 Whether to return vertices. Defaults to False.
             return_joints (bool, optional):
@@ -429,16 +476,16 @@ class SMPLify(object):
                 A dictionary that includes body model parameters,
                 and optional attributes such as vertices and joints.
         """
+        hook_kwargs = dict(input_list=input_list, optim_param=optim_param)
+        self.call_hook('before_evaluate', **hook_kwargs)
         ret = {}
 
-        # check if verts are essantial
-        body_model_output = self.body_model(
-            global_orient=global_orient,
-            body_pose=body_pose,
-            betas=betas,
-            transl=transl,
-            return_verts=return_verts,
-            return_full_pose=return_full_pose)
+        require_verts = self.__check_verts_requirement__(
+            input_list, **kwargs) or return_verts
+        body_model_kwargs = dict(
+            return_verts=require_verts, return_full_pose=return_full_pose)
+        body_model_kwargs.update(optim_param)
+        body_model_output = self.body_model(**body_model_kwargs)
 
         model_joints = body_model_output['joints']
         model_joints_convention = self.body_model.keypoint_convention
@@ -454,9 +501,7 @@ class SMPLify(object):
             model_joints_weights=model_joints_weights,
             model_vertices=model_vertices,
             reduction_override=reduction_override,
-            global_orient=global_orient,
-            body_pose=body_pose,
-            betas=betas,
+            optim_param=optim_param,
             **kwargs)
         ret.update(loss_dict)
 
@@ -467,6 +512,12 @@ class SMPLify(object):
         if return_joints:
             ret['joints'] = model_joints
 
+        hook_kwargs = dict(
+            input_list=input_list,
+            optim_param=optim_param,
+            loss_dict=loss_dict)
+        self.call_hook('after_evaluate', **hook_kwargs)
+
         return ret
 
     def __compute_loss__(self,
@@ -475,10 +526,7 @@ class SMPLify(object):
                          model_joints_convention: str = '',
                          model_joints_weights: torch.Tensor = None,
                          model_vertices: torch.Tensor = None,
-                         betas: torch.Tensor = None,
-                         body_pose: torch.Tensor = None,
-                         global_orient: torch.Tensor = None,
-                         transl: torch.Tensor = None,
+                         optim_param: dict = None,
                          reduction_override: Literal['mean', 'sum',
                                                      'none'] = None,
                          **kwargs) -> dict:
@@ -498,14 +546,10 @@ class SMPLify(object):
                 Defaults to None.
             model_vertices (torch.Tensor):
                 Output joints from self.body_model. Defaults to None.
-            betas (torch.Tensor):
-                Shape (B, D).
-            body_pose (torch.Tensor):
-                Shape (B, 69).
-            global_orient (torch.Tensor):
-                Shape (B, 3).
-            transl (torch.Tensor):
-                Shape (B, 3).
+            param_dict (dict):
+                A dict of optimizable parameters, whose keys are
+                self.__class__.OPTIM_PARAM and values are
+                Tensors in batch.
             reduction_override (Literal['mean', 'sum', 'none'], optional):
                 The reduction method. If given, it will
                 override the original reduction method of the loss.
@@ -523,21 +567,16 @@ class SMPLify(object):
         Returns:
             dict: A dict that contains all losses.
         """
-        if self.use_one_betas_per_video:
-            betas = betas.repeat(global_orient.shape[0], 1)
         if model_joints_weights is None and \
                 model_joints is not None:
             model_joints_weights = torch.ones_like(model_joints[0, :, 0])
         init_handler_input = {
-            'betas': betas,
-            'body_pose': body_pose,
-            'global_orient': global_orient,
-            'transl': transl,
             'model_vertices': model_vertices,
             'model_joints': model_joints,
             'model_joints_convention': model_joints_convention,
             'model_joints_weights': model_joints_weights,
         }
+        init_handler_input.update(optim_param)
         losses = {}
         # backup kwargs for pop
         kwargs = kwargs.copy()
@@ -563,7 +602,7 @@ class SMPLify(object):
             # e.g. shape prior loss
             if not handler.requires_input():
                 loss_tensor = handler(**handler_input)
-            # e.g. keypoints 3d mes loss
+            # e.g. keypoints 3d mse loss
             else:
                 for input_inst in input_list:
                     if input_inst.handler_key == handler_key:
@@ -595,32 +634,22 @@ class SMPLify(object):
             self.logger.warning(warn_msg)
             self.__stage_kwargs_warned__ = True
 
-        if self.verbose and self.info_level == 'step':
-            table = prettytable.PrettyTable()
-            table.field_names = ['Loss name', 'Loss value']
-            for key, value in losses.items():
-                if isinstance(value, float) or \
-                        isinstance(value, int) or \
-                        len(value.shape) == 0:
-                    table.add_row([key, f'{value:.6f}'])
-                else:
-                    table.add_row([key, 'Not a scalar'])
-            table = '\n' + table.get_string()
-            self.logger.info(table)
-
         return losses
 
     def __match_init_batch_size__(self, init_param: torch.Tensor,
-                                  init_param_body_model: torch.Tensor,
+                                  default_param: torch.Tensor,
                                   batch_size: int) -> torch.Tensor:
         """A helper function to ensure body model parameters have the same
         batch size as the input keypoints.
 
         Args:
-            init_param: input initial body model parameters, may be None
-            init_param_body_model: initial body model parameters from the
-                body model
-            batch_size: batch size of keypoints
+            init_param:
+                Input initial body model parameters, may be None
+            default_param:
+                Default parameters if init_param is None. Typically
+                it is from the body model.
+            batch_size:
+                Batch size of input.
 
         Returns:
             param: body model parameters with batch size aligned
@@ -629,7 +658,7 @@ class SMPLify(object):
         # param takes init values
         param = init_param.detach().clone() \
             if init_param is not None \
-            else init_param_body_model.detach().clone()
+            else default_param.detach().clone()
 
         # expand batch dimension to match batch size
         param_batch_size = param.shape[0]
@@ -644,13 +673,13 @@ class SMPLify(object):
 
         # shape check
         if param.shape[0] != batch_size or \
-                param.shape[1:] != init_param_body_model.shape[1:]:
+                param.shape[1:] != default_param.shape[1:]:
             self.logger.error(f'Shape mismatch: {param.shape} vs' +
-                              f' {init_param_body_model.shape}')
+                              f' {default_param.shape}')
             raise ValueError
         return param
 
-    def __set_keypoint_idxs__(self) -> None:
+    def __set_keypoint_indexes__(self) -> None:
         """Set keypoint indexes to 1) body parts to be assigned different
         weights 2) be ignored for keypoint loss computation.
 
@@ -696,14 +725,14 @@ class SMPLify(object):
         Returns:
             torch.Tensor: Per keypoint weight tensor of shape (K).
         """
-        num_keypoint = self.body_model.get_joint_number()
+        n_keypoints = self.body_model.get_joint_number()
 
         if use_shoulder_hip_only:
-            weight = torch.zeros([num_keypoint]).to(self.device)
+            weight = torch.zeros([n_keypoints]).to(self.device)
             weight[self.shoulder_hip_keypoint_idxs] = 1.0
             weight = weight * body_weight
         else:
-            weight = torch.ones([num_keypoint]).to(self.device)
+            weight = torch.ones([n_keypoints]).to(self.device)
             weight = weight * body_weight
 
         if hasattr(self, 'ignore_keypoint_idxs'):
@@ -741,7 +770,10 @@ class SMPLify(object):
 
     def __check_verts_requirement__(self, input_list: List[BaseInput],
                                     **kwargs) -> bool:
-        """Check whether vertices are required by loss handlers.
+        """Check whether vertices are required by loss handlers. For those
+        which doesn't need a related input, we take logical or of
+        handler.requires_verts(). For those which needs input, we only take
+        them when the input is given.
 
         Args:
             input_list (List[BaseInput]):
@@ -753,9 +785,28 @@ class SMPLify(object):
             of each loss handler.
 
         Returns:
-            bool: _description_
+            bool: Whether verts are required by any of the handlers.
         """
-        raise NotImplementedError
+        any_require_verts = False
+        kwargs = kwargs.copy()
+        for handler in self.loss_handlers:
+            handler_key = handler.handler_key
+            loss_weight_override = kwargs.pop(f'{handler_key}_weight', None)
+            if self.__skip_handler__(
+                    loss_handler=handler,
+                    loss_weight_override=loss_weight_override):
+                continue
+            # e.g. shape prior loss
+            if not handler.requires_input():
+                any_require_verts = any_require_verts or \
+                    handler.requires_verts()
+            # e.g. keypoints 3d mse loss
+            else:
+                for input_inst in input_list:
+                    if input_inst.handler_key == handler_key:
+                        any_require_verts = any_require_verts or \
+                            handler.requires_verts()
+        return any_require_verts
 
     @staticmethod
     def __compute_relative_change__(pre_v, cur_v):

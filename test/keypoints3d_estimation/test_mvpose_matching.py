@@ -6,8 +6,8 @@ import torch
 
 from xrmocap.keypoints3d_estimation.estimation import Estimation
 
-input_dir = 'test/data/test_keypoints3d_estimation/'
-output_dir = 'test/data/output/test_keypoints3d_estimation/shelf'
+input_dir = 'test/data/keypoints3d_estimation/'
+output_dir = 'test/data/output/keypoints3d_estimation/shelf'
 
 
 @pytest.fixture(scope='module', autouse=True)

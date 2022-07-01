@@ -9,8 +9,8 @@ from xrmocap.model.body_model.builder import build_body_model
 
 body_model_load_dir = 'data/body_models/smpl'
 extra_joints_regressor_path = 'data/body_models/J_regressor_extra.npy'
-input_dir = 'test/data/test_model/test_body_model/test_smpl'
-output_dir = 'test/data/output/test_model/test_body_model/test_smpl'
+input_dir = 'test/data/model/body_model/test_smpl'
+output_dir = 'test/data/output/model/body_model/test_smpl'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -33,8 +33,8 @@ def test_smpl():
     assert smpl_45['joints'].shape[1] == 45
     smpl_data = SMPLData()
     smpl_data.from_param_dict(smpl_45)
-    assert 'full_pose' in smpl_data
-    assert isinstance(smpl_data['full_pose'], np.ndarray)
+    assert 'fullpose' in smpl_data
+    assert isinstance(smpl_data['fullpose'], np.ndarray)
     npz_path = os.path.join(output_dir, 'dumped_smpl_data.npz')
     smpl_data.dump(npz_path)
     # test SMPL with extra_joints_regressor
