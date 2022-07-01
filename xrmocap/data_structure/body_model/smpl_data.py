@@ -31,24 +31,26 @@ class SMPLData(dict):
 
     def __init__(self,
                  src_dict: dict = None,
-                 gender: Literal['female', 'male', 'neutral'] = 'neutral',
-                 full_pose: Union[np.ndarray, torch.Tensor, None] = None,
+                 gender: Union[Literal['female', 'male', 'neutral'],
+                               None] = None,
+                 fullpose: Union[np.ndarray, torch.Tensor, None] = None,
                  transl: Union[np.ndarray, torch.Tensor, None] = None,
                  betas: Union[np.ndarray, torch.Tensor, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Construct a SMPLData instance with pre-set values. If any of gender,
-        full_pose, transl, betas is provided, it will override the item in
+        fullpose, transl, betas is provided, it will override the item in
         source_dict.
 
         Args:
             src_dict (dict, optional):
                 A dict with items in HumanData fashion.
                 Defaults to None.
-            gender (Literal["female", "male", "neutral"], optional):
+            gender (Union[
+                    Literal['female', 'male', 'neutral'], None], optional):
                 Gender of the body model.
                 Should be one among ["female", "male", "neutral"].
-                Defaults to 'neutral'.
-            full_pose (Union[np.ndarray, torch.Tensor, None], optional):
+                Defaults to None.
+            fullpose (Union[np.ndarray, torch.Tensor, None], optional):
                 A tensor or ndarray for fullpose, in shape [n_frame, 24, 3].
                 Defaults to None, zero-tensor will be created.
             transl (Union[np.ndarray, torch.Tensor, None], optional):
@@ -69,17 +71,23 @@ class SMPLData(dict):
             super().__init__()
         self.n_body_joints = self.__class__.DEFAULT_BODY_JOINTS_NUM
         self.logger = get_logger(logger)
-        self.set_gender(gender)
-        if full_pose is None:
-            full_pose_dim = self.__class__.BODY_POSE_LEN + 1
-            full_pose = np.zeros(shape=(1, full_pose_dim, 3))
-        self.set_fullpose(full_pose)
-        if transl is None:
-            transl = np.zeros(shape=(full_pose.shape[0], 3))
-        self.set_transl(transl)
-        if betas is None:
-            betas = np.zeros(shape=(full_pose.shape[0], 10))
-        self.set_betas(betas)
+        if gender is None and 'gender' not in self:
+            gender = 'neutral'
+        if gender is not None:
+            self.set_gender(gender)
+        if fullpose is None and 'fullpose' not in self:
+            fullpose_dim = self.__class__.get_fullpose_dim()
+            fullpose = np.zeros(shape=(1, fullpose_dim, 3))
+        if fullpose is not None:
+            self.set_fullpose(fullpose)
+        if transl is None and 'transl' not in self:
+            transl = np.zeros(shape=(self.get_batch_size(), 3))
+        if transl is not None:
+            self.set_transl(transl)
+        if betas is None and 'betas' not in self:
+            betas = np.zeros(shape=(self.get_batch_size(), 10))
+        if betas is not None:
+            self.set_betas(betas)
 
     @classmethod
     def fromfile(cls, npz_path: str) -> 'SMPLData':
@@ -96,6 +104,19 @@ class SMPLData(dict):
         ret_instance = cls()
         ret_instance.load(npz_path)
         return ret_instance
+
+    @classmethod
+    def get_fullpose_dim(cls) -> int:
+        """Get dimension of full pose.
+
+        Returns:
+            int:
+                Dim value. Full pose shall be
+                in shape (frame_n, dim, 3)
+        """
+        global_orient_dim = 1
+        ret_sum = global_orient_dim + cls.BODY_POSE_LEN
+        return ret_sum
 
     def set_gender(
             self,
@@ -122,25 +143,25 @@ class SMPLData(dict):
         """Set full pose data.
 
         Args:
-            full_pose (Union[np.ndarray, torch.Tensor]):
+            fullpose (Union[np.ndarray, torch.Tensor]):
                 Full pose in ndarray or tensor,
-                in shape [batch_size, BODY_POSE_LEN+1, 3].
+                in shape [batch_size, fullpose_dim, 3].
                 global_orient at [:, 0, :].
 
         Raises:
             TypeError: Type of fullpose is not correct.
         """
-        fullpose_dim = self.__class__.BODY_POSE_LEN + 1
+        fullpose_dim = self.__class__.get_fullpose_dim()
         if isinstance(fullpose, np.ndarray):
-            full_pose_np = fullpose.reshape(-1, fullpose_dim, 3)
+            fullpose_np = fullpose.reshape(-1, fullpose_dim, 3)
         elif isinstance(fullpose, torch.Tensor):
-            full_pose_np = fullpose.detach().cpu().numpy().reshape(
+            fullpose_np = fullpose.detach().cpu().numpy().reshape(
                 -1, fullpose_dim, 3)
         else:
             self.logger.error('Type of fullpose is not correct.\n' +
                               f'Type: {type(fullpose)}.')
             raise TypeError
-        super().__setitem__('full_pose', full_pose_np)
+        super().__setitem__('fullpose', fullpose_np)
 
     def set_transl(self, transl: Union[np.ndarray, torch.Tensor]) -> None:
         """Set translation data.
@@ -205,6 +226,76 @@ class SMPLData(dict):
         else:
             super().__setitem__(__k, __v)
 
+    def get_batch_size(self) -> int:
+        """Get batch size.
+
+        Returns:
+            int: batch size of fullpose.
+        """
+        return self.__getitem__('fullpose').shape[0]
+
+    def get_fullpose(self) -> np.ndarray:
+        """Get fullpose.
+
+        Returns:
+            ndarray: fullpose in shape [batch_size, fullpose_dim, 3].
+        """
+        fullpose = self.__getitem__('fullpose')
+        return fullpose
+
+    def get_global_orient(self) -> np.ndarray:
+        """Get global_orient.
+
+        Returns:
+            ndarray: global_orient in shape [batch_size, 3].
+        """
+        fullpose = self.get_fullpose()
+        global_orient = fullpose[:, 0].reshape(-1, 3)
+        return global_orient
+
+    def get_body_pose(self) -> np.ndarray:
+        """Get body_pose.
+
+        Returns:
+            ndarray: body_pose in shape [batch_size, BODY_POSE_LEN, 3].
+        """
+        fullpose = self.get_fullpose()
+        batch_size = self.get_batch_size()
+        start_idx = 1
+        body_pose = fullpose[:, start_idx:start_idx +
+                             self.__class__.BODY_POSE_LEN].reshape(
+                                 batch_size, -1, 3)
+        return body_pose
+
+    def get_transl(self) -> np.ndarray:
+        """Get translation.
+
+        Returns:
+            ndarray: translation in shape [batch_size, 3].
+        """
+        return self.__getitem__('transl').reshape(-1, 3)
+
+    def get_betas(self, repeat_betas: bool = True) -> np.ndarray:
+        """Get betas.
+
+        Args:
+            repeat_betas (bool, optional):
+                Whether to repeat betas when its first dim doesn't match
+                batch_size. Defaults to True.
+
+        Returns:
+            ndarray:
+                betas in shape [batch_size, betas_dims] or
+                [1, betas_dims].
+        """
+        batch_size = self.get_batch_size()
+        betas = self.__getitem__('betas')
+        if repeat_betas and\
+                betas.shape[0] == 1 and\
+                betas.shape[0] != batch_size:
+            betas = betas.repeat(repeats=batch_size, axis=0)
+        return betas
+
     def to_param_dict(self, repeat_betas: bool = True) -> dict:
         """Split fullpose into global_orient and body_pose, return all the
         necessary parameters in one dict.
@@ -212,22 +303,17 @@ class SMPLData(dict):
         Args:
             repeat_betas (bool, optional):
                 Whether to repeat betas when its first dim doesn't match
-                batch_size. Defaults to False.
+                batch_size. Defaults to True.
 
         Returns:
             dict:
                 A dict of SMPL data, whose keys are
                 betas, body_pose, global_orient and transl.
         """
-        body_pose = self.__getitem__('full_pose')[:, 1:].reshape(-1, 3)
-        global_orient = self.__getitem__('full_pose')[:, 0].reshape(-1, 3)
-        transl = self.__getitem__('transl')
-        batch_size = global_orient.shape[0]
-        betas = self.__getitem__('betas')
-        if repeat_betas and\
-                betas.shape[0] == 1 and\
-                betas.shape[0] != batch_size:
-            betas = betas.repeat(repeats=batch_size, axis=0)
+        body_pose = self.get_body_pose().reshape(-1, 3)
+        global_orient = self.get_global_orient().reshape(-1, 3)
+        transl = self.get_transl()
+        betas = self.get_betas(repeat_betas=repeat_betas)
         dict_to_return = {
             'betas': betas,
             'body_pose': body_pose,
@@ -246,7 +332,7 @@ class SMPLData(dict):
         Args:
             repeat_betas (bool, optional):
                 Whether to repeat betas when its first dim doesn't match
-                batch_size. Defaults to False.
+                batch_size. Defaults to True.
             device (Union[torch.device, str], optional):
                 A specified device. Defaults to CPU_DEVICE. Defaults to 'cpu'.
 
@@ -319,8 +405,8 @@ class SMPLData(dict):
             def concat_func(data_list, dim):
                 return np.concatenate(data_list, axis=dim)
 
-        full_pose = concat_func([global_orient, body_pose], dim=1)
-        self.set_fullpose(full_pose)
+        fullpose = concat_func([global_orient, body_pose], dim=1)
+        self.set_fullpose(fullpose)
         if 'transl' in smpl_dict:
             self.set_transl(smpl_dict['transl'])
         if 'betas' in smpl_dict:

@@ -8,8 +8,8 @@ from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.utils.triangulation_utils import parse_keypoints_mask
 from xrprimer.data_structure.camera import FisheyeCameraParameter  # noqa:E501
 
-input_dir = 'test/data/test_ops/test_triangulation'
-output_dir = 'test/data/output/test_ops/test_triangulation'
+input_dir = 'test/data/ops/test_triangulation'
+output_dir = 'test/data/output/ops/test_triangulation'
 
 
 @pytest.fixture(scope='module', autouse=True)

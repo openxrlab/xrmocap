@@ -6,7 +6,7 @@ import pytest
 import shutil
 import torch
 
-from xrmocap.data_structure.body_model.smpl_data import SMPLData
+from xrmocap.data_structure.body_model import SMPLXDData
 from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.model.registrant.builder import build_registrant
 from xrmocap.model.registrant.handler.builder import build_handler
@@ -19,8 +19,8 @@ from xrmocap.model.registrant.handler.keypoint3d_mse_handler import (
 from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 
 # yapf: enable
-input_dir = 'test/data/test_model/test_registrant'
-output_dir = 'test/data/output/test_model/test_registrant/test_smplify'
+input_dir = 'test/data/model/registrant'
+output_dir = 'test/data/output/model/registrant/test_smplifyxd'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -32,33 +32,33 @@ def fixture():
 
 def test_build():
     # normally build
-    smplify_config = dict(
-        mmcv.Config.fromfile('config/model/registrant/smplify_test.py'))
-    smplify = build_registrant(smplify_config)
-    assert smplify is not None
+    smplifyxd_config = dict(
+        mmcv.Config.fromfile('config/model/registrant/smplifyxd_test.py'))
+    smplifyxd = build_registrant(smplifyxd_config)
+    assert smplifyxd is not None
     # build with body_model
-    body_model_smplify_config = smplify_config.copy()
-    body_model_cfg = smplify_config['body_model']
+    body_model_smplifyxd_config = smplifyxd_config.copy()
+    body_model_cfg = smplifyxd_config['body_model']
     body_model = build_body_model(body_model_cfg)
-    body_model_smplify_config['body_model'] = body_model
-    smplify = build_registrant(body_model_smplify_config)
-    assert smplify is not None
+    body_model_smplifyxd_config['body_model'] = body_model
+    smplifyxd = build_registrant(body_model_smplifyxd_config)
+    assert smplifyxd is not None
     # build with wrong type body_model
     body_model = 'smpl_body_model'
-    body_model_smplify_config['body_model'] = body_model
+    body_model_smplifyxd_config['body_model'] = body_model
     with pytest.raises(TypeError):
-        smplify = build_registrant(body_model_smplify_config)
+        smplifyxd = build_registrant(body_model_smplifyxd_config)
     # build with built handlers
-    handler_smplify_config = smplify_config.copy()
+    handler_smplifyxd_config = smplifyxd_config.copy()
     handlers = []
-    for handler_cfg in smplify_config['handlers']:
+    for handler_cfg in smplifyxd_config['handlers']:
         handlers.append(build_handler(handler_cfg))
-    handler_smplify_config['handlers'] = handlers
-    smplify = build_registrant(handler_smplify_config)
-    assert smplify is not None
+    handler_smplifyxd_config['handlers'] = handlers
+    smplifyxd = build_registrant(handler_smplifyxd_config)
+    assert smplifyxd is not None
 
 
-def test_smplify_keypoints3d():
+def test_smplifyxd_keypoints3d():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
     keypoints3d_path = os.path.join(input_dir, 'human_data_tri.npz')
@@ -66,7 +66,7 @@ def test_smplify_keypoints3d():
     keypoints3d, keypoints3d_mask = convert_kps_mm(
         keypoints=human_data['keypoints3d'][:2, :, :3],
         src='human_data',
-        dst='smpl',
+        dst='smplx',
         mask=human_data['keypoints3d_mask'])
     keypoints3d = torch.from_numpy(keypoints3d).to(
         dtype=torch.float32, device=device)
@@ -74,42 +74,41 @@ def test_smplify_keypoints3d():
         keypoints3d_mask, 0)).to(
             dtype=torch.float32, device=device).repeat(keypoints3d.shape[0], 1)
     # build and run
-    smplify_config = dict(
-        mmcv.Config.fromfile('config/model/registrant/smplify_test.py'))
-    smplify = build_registrant(smplify_config)
+    smplifyxd_config = dict(
+        mmcv.Config.fromfile('config/model/registrant/smplifyxd_test.py'))
+    smplifyxd = build_registrant(smplifyxd_config)
     kp3d_mse_input = Keypoint3dMSEInput(
         keypoints3d=keypoints3d,
         keypoints3d_conf=keypoints3d_conf,
-        keypoints3d_convention='smpl',
+        keypoints3d_convention='smplx',
         handler_key='keypoints3d_mse')
     kp3d_llen_input = Keypoint3dLimbLenInput(
         keypoints3d=keypoints3d,
         keypoints3d_conf=keypoints3d_conf,
-        keypoints3d_convention='smpl',
+        keypoints3d_convention='smplx',
         handler_key='keypoints3d_limb_len')
-    smplify_output = smplify(input_list=[kp3d_mse_input, kp3d_llen_input])
+    smplifyxd_output = smplifyxd(input_list=[kp3d_mse_input, kp3d_llen_input])
 
-    smpl_data = SMPLData()
-    for k, v in smplify_output.items():
+    smplxd_data = SMPLXDData()
+    for k, v in smplifyxd_output.items():
         if isinstance(v, torch.Tensor):
             np_v = v.detach().cpu().numpy()
             assert not np.any(np.isnan(np_v)), f'{k} fails.'
-    smpl_data.from_param_dict(smplify_output)
-    result_path = os.path.join(output_dir, 'smpl_result.npz')
-    smpl_data.dump(result_path)
+    smplxd_data.from_param_dict(smplifyxd_output)
+    assert len(smplxd_data.get_displacement().shape) == 2
+    result_path = os.path.join(output_dir, 'smplxd_result.npz')
+    smplxd_data.dump(result_path)
     # test not use_one_betas_per_video and return values
-    m_betas_config = smplify_config.copy()
+    m_betas_config = smplifyxd_config.copy()
     m_betas_config['use_one_betas_per_video'] = False
-    smplify_config = dict(
-        mmcv.Config.fromfile('config/model/registrant/smplify_test.py'))
-    smplify = build_registrant(smplify_config)
-    smplify_output = smplify(
+    smplifyxd = build_registrant(m_betas_config)
+    smplifyxd_output = smplifyxd(
         input_list=[kp3d_mse_input, kp3d_llen_input],
         return_verts=True,
         return_joints=True,
         return_full_pose=True,
         return_losses=True)
-    assert 'vertices' in smplify_output
-    assert 'full_pose' in smplify_output
-    assert 'joints' in smplify_output
-    assert 'total_loss' in smplify_output
+    assert 'vertices' in smplifyxd_output
+    assert 'full_pose' in smplifyxd_output
+    assert 'joints' in smplifyxd_output
+    assert 'total_loss' in smplifyxd_output

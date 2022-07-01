@@ -13,12 +13,12 @@ from xrprimer.data_structure.camera import FisheyeCameraParameter  # noqa:E501
 
 def test_camera_error_selector():
     keypoints2d = np.load(
-        os.path.join('test/data/test_ops/test_triangulation',
+        os.path.join('test/data/ops/test_triangulation',
                      'keypoints2d.npz'))['keypoints2d']
     view_n, frame_n, keypoint_n, _ = keypoints2d.shape
     cam_param_list = []
     for kinect_index in range(view_n):
-        cam_param_path = os.path.join('test/data/test_ops/test_triangulation',
+        cam_param_path = os.path.join('test/data/ops/test_triangulation',
                                       f'cam_{kinect_index:02d}.json')
         cam_param = FisheyeCameraParameter()
         cam_param.load(cam_param_path)
@@ -53,12 +53,12 @@ def test_camera_error_selector():
 
 def test_slow_camera_error_selector():
     keypoints2d = np.load(
-        os.path.join('test/data/test_ops/test_triangulation',
+        os.path.join('test/data/ops/test_triangulation',
                      'keypoints2d.npz'))['keypoints2d']
     view_n, frame_n, keypoint_n, _ = keypoints2d.shape
     cam_param_list = []
     for kinect_index in range(view_n):
-        cam_param_path = os.path.join('test/data/test_ops/test_triangulation',
+        cam_param_path = os.path.join('test/data/ops/test_triangulation',
                                       f'cam_{kinect_index:02d}.json')
         cam_param = FisheyeCameraParameter()
         cam_param.load(cam_param_path)

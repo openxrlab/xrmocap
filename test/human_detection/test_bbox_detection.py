@@ -15,8 +15,8 @@ from xrmocap.utils.ffmpeg_utils import (
 
 # yapf: enable
 
-input_dir = 'test/data/test_human_detection/test_bbox_detection'
-output_dir = 'test/data/output/test_human_detection/test_bbox_detection'
+input_dir = 'test/data/human_detection/test_bbox_detection'
+output_dir = 'test/data/output/human_detection/test_bbox_detection'
 
 
 @pytest.fixture(scope='module', autouse=True)

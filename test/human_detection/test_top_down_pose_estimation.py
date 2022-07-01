@@ -11,8 +11,8 @@ from xrmocap.human_detection.builder import build_detector
 from xrmocap.transform.image.color import bgr2rgb
 from xrmocap.utils.ffmpeg_utils import array_to_images, array_to_video
 
-input_dir = 'test/data/test_human_detection/test_top_down_pose_estimation'
-output_dir = 'test/data/output/test_human_detection/' +\
+input_dir = 'test/data/human_detection/test_top_down_pose_estimation'
+output_dir = 'test/data/output/human_detection/' +\
     'test_top_down_pose_estimation'
 
 

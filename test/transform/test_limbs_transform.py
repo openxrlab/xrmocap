@@ -7,8 +7,8 @@ import shutil
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.limbs import get_limbs_from_keypoints
 
-input_dir = 'test/data/test_transform/test_limbs'
-output_dir = 'test/data/output/test_transform/test_limbs'
+input_dir = 'test/data/transform/test_limbs'
+output_dir = 'test/data/output/transform/test_limbs'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -20,7 +20,7 @@ def fixture():
 
 def test_get_limbs_from_keypoints():
     kps2d_arr = np.load(
-        os.path.join('test/data/test_ops/test_triangulation',
+        os.path.join('test/data/ops/test_triangulation',
                      'keypoints2d.npz'))['keypoints2d']
     # test get from numpy
     keypoints2d = Keypoints(kps=kps2d_arr, convention='coco_wholebody')

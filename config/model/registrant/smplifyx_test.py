@@ -1,7 +1,7 @@
-type = 'SMPLify'
+type = 'SMPLifyX'
 
 verbose = True
-info_level = 'step'
+info_level = 'stage'
 logger = None
 n_epochs = 2
 use_one_betas_per_video = True
@@ -10,12 +10,14 @@ hooks = [
 ]
 
 body_model = dict(
-    type='SMPL',
+    type='SMPLX',
     gender='neutral',
     num_betas=10,
-    keypoint_convention='smpl_45',
-    model_path='data/body_models/smpl',
+    use_face_contour=True,
+    keypoint_convention='smplx',
+    model_path='data/body_models/smplx',
     batch_size=1,
+    use_pca=False,
     logger=logger)
 
 optimizer = dict(
@@ -72,16 +74,6 @@ handlers = [
             loss_func='L2'),
         logger=logger),
     dict(
-        handler_key='pose_prior',
-        type='BodyPosePriorHandler',
-        prior_loss=dict(
-            type='MaxMixturePriorLoss',
-            prior_folder='data',
-            num_gaussians=8,
-            loss_weight=4.78**2,
-            reduction='sum'),
-        logger=logger),
-    dict(
         handler_key='pose_reg',
         type='BodyPosePriorHandler',
         prior_loss=dict(
@@ -107,22 +99,33 @@ stages = [
         fit_transl=False,
         fit_body_pose=False,
         fit_betas=True,
+        fit_left_hand_pose=False,
+        fit_right_hand_pose=False,
+        fit_jaw_pose=False,
+        fit_leye_pose=False,
+        fit_reye_pose=False,
+        fit_expression=False,
         keypoints3d_mse_weight=0.0,
         keypoints2d_mse_weight=0.0,
         keypoints3d_limb_len_weight=1.0,
         shape_prior_weight=5e-3,
         joint_prior_weight=0.0,
         smooth_joint_weight=0.0,
-        pose_reg_weight=0.0,
-        pose_prior_weight=0.0),
+        pose_reg_weight=0.0),
     # stage 1
     dict(
-        n_iter=10,
+        n_iter=20,
         ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=False,
         fit_betas=False,
+        fit_left_hand_pose=False,
+        fit_right_hand_pose=False,
+        fit_jaw_pose=False,
+        fit_leye_pose=False,
+        fit_reye_pose=False,
+        fit_expression=False,
         keypoints3d_mse_weight=1.0,
         keypoints2d_mse_weight=1.0,
         keypoints3d_limb_len_weight=0.0,
@@ -130,26 +133,29 @@ stages = [
         joint_prior_weight=0.0,
         smooth_joint_weight=0.0,
         pose_reg_weight=0.0,
-        pose_prior_weight=0.0,
         body_weight=5.0,
         use_shoulder_hip_only=True),
     # stage 2
     dict(
-        n_iter=10,
+        n_iter=120,
         ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=True,
         fit_betas=False,
+        fit_left_hand_pose=True,
+        fit_right_hand_pose=True,
+        fit_jaw_pose=True,
+        fit_leye_pose=True,
+        fit_reye_pose=True,
+        fit_expression=False,
         keypoints3d_mse_weight=10.0,
-        keypoints3d_mse_reduction='sum',
-        keypoints2d_mse_weight=1.0,
+        keypoints2d_mse_weight=0.0,
         keypoints3d_limb_len_weight=0.0,
         shape_prior_weight=0.0,
-        joint_prior_weight=1e-4,
+        joint_prior_weight=0.0,
         smooth_joint_weight=1.0,
         pose_reg_weight=0.001,
-        pose_prior_weight=1e-4,
         body_weight=1.0,
         use_shoulder_hip_only=False),
 ]

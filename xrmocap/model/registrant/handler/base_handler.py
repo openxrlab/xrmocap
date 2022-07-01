@@ -69,6 +69,14 @@ class BaseHandler:
         """
         return True
 
+    def requires_verts(self) -> bool:
+        """Whether this handler requires body_model vertices.
+
+        Returns:
+            bool: Whether this handler requires body_model vertices.
+        """
+        return False
+
     def get_loss_weight(self) -> float:
         """Get the weight value of this loss handler.
 
