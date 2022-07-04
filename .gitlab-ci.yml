@@ -36,24 +36,18 @@ test:
     - nvidia-smi
     - echo "Start building..."
     - echo "--- install xrprimer --- "
-    - cd xrprimer
-    - pip install conan
-    - conan remote add xrlab http://conan.kestrel.sensetime.com/artifactory/api/conan/xrlab
-    - cmake -S. -Bbuild && cmake --build build -j4
-    - cd python && pip install -e .
+    - pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
     - python -c "import xrprimer; print(xrprimer.__version__)"
-    - cd ../../
-    - pip install -e .
     - echo "--- xrprimer installed --- "
     - echo "--- install mmhuman3d --- "
     - pip install git+https://github.com/open-mmlab/mmhuman3d.git
     - echo "--- mmhuman3d installed --- "
+    - pip install -e .
     - unset http_proxy
     - unset https_proxy
     - unset HTTP_PROXY
     - unset HTTPS_PROXY
     - sh script/download_test_data.sh
-    - mkdir -p xrmocap/keypoints3d_estimation/lib
     - cd xrmocap/keypoints3d_estimation/lib
     - python setup.py build_ext --inplace
     - cd ../../../

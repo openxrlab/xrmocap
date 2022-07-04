@@ -101,7 +101,7 @@ handlers = [
 stages = [
     # stage 0
     dict(
-        n_iter=10,
+        n_iter=2,
         ftol=1e-4,
         fit_global_orient=False,
         fit_transl=False,
@@ -117,7 +117,7 @@ stages = [
         pose_prior_weight=0.0),
     # stage 1
     dict(
-        n_iter=10,
+        n_iter=2,
         ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
@@ -135,7 +135,7 @@ stages = [
         use_shoulder_hip_only=True),
     # stage 2
     dict(
-        n_iter=10,
+        n_iter=2,
         ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
