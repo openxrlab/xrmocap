@@ -1,4 +1,4 @@
-image: registry.sensetime.com/zoetrope/pytorch@sha256:fa23a6b9ed9b5d90f2ec9ea34e99987e8b44d8ae80acd2149df6fe5b97a4e488
+image: registry.sensetime.com/zoetrope/pytorch@sha256:e73c42178b67026e956f1d42347d753143950ae5da3213d31f71519583478ff2
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive

@@ -146,3 +146,5 @@ logs/
 *DS_Store*
 # git
 *.orig
+# xrprimer
+xrprimer/
