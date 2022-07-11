@@ -33,11 +33,9 @@ def fixture():
         image_array=image_array, output_path=video_path, disable_log=True)
 
 
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_mmdet_detector():
-    if torch.cuda.is_available():
-        device_name = 'cuda:0'
-    else:
-        device_name = 'cpu'
     single_person_bbox = np.load(
         os.path.join(input_dir, 'single_person.npz'), allow_pickle=True)
     # shape(4, 1, 5) to list
@@ -45,14 +43,12 @@ def test_mmdet_detector():
     estimator_config = dict(
         mmcv.Config.fromfile(
             'config/human_detection/mmpose_hrnet_estimator.py'))
-    estimator_config['mmpose_kwargs']['device'] = device_name
+    estimator_config['mmpose_kwargs']['device'] = 'cuda:0'
     # test init
     mmpose_estimator = build_detector(estimator_config)
     # test convention
     assert mmpose_estimator.get_keypoints_convention_name() ==\
         'coco_wholebody'
-    if device_name == 'cpu':
-        return 0
     # test infer frames
     image_dir = os.path.join(output_dir, 'rgb_frames')
     frame_list = glob.glob(os.path.join(image_dir, '*.png'))
@@ -74,12 +70,44 @@ def test_mmdet_detector():
         disable_tqdm=False,
         return_heatmap=False)
     assert len(pose_list) > 0
-    # todo: test infer batch if version supports
     # test infer multi_person
     frame_list = [os.path.join(input_dir, 'multi_person.png')]
     multi_person_bbox = np.load(
         os.path.join(input_dir, 'multi_person.npz'), allow_pickle=True)
     multi_person_bbox = multi_person_bbox['mmdet_result'].tolist()
+    sframe_7person_bbox = multi_person_bbox
+    pose_list, _, _ = mmpose_estimator.infer_frames(
+        frame_path_list=frame_list,
+        bbox_list=sframe_7person_bbox,
+        disable_tqdm=False,
+        return_heatmap=False)
+    assert len(pose_list) == len(frame_list)
+    assert len(pose_list[0]) > 1
+    # test infer changing multi_person
+    frame_list = [
+        os.path.join(input_dir, 'multi_person.png'),
+    ] * 3
+    sframe_2person_bbox = [[
+        sframe_7person_bbox[0][0], sframe_7person_bbox[0][1]
+    ]]
+    multi_person_bbox = [[]] + sframe_7person_bbox + sframe_2person_bbox
+    pose_list, _, _ = mmpose_estimator.infer_frames(
+        frame_path_list=frame_list,
+        bbox_list=multi_person_bbox,
+        disable_tqdm=False,
+        return_heatmap=False)
+    # test infer tracking multi_person
+    frame_list = [
+        os.path.join(input_dir, 'multi_person.png'),
+    ] * 3
+    sframe_2person_bbox = [
+        [sframe_7person_bbox[0][0], sframe_7person_bbox[0][1]] + [
+            None,
+        ] * 5
+    ]
+    multi_person_bbox = [[
+        None,
+    ] * 7] + sframe_7person_bbox + sframe_2person_bbox
     pose_list, _, _ = mmpose_estimator.infer_frames(
         frame_path_list=frame_list,
         bbox_list=multi_person_bbox,
@@ -87,10 +115,15 @@ def test_mmdet_detector():
         return_heatmap=False)
     assert len(pose_list) == len(frame_list)
     assert len(pose_list[0]) > 1
+    keypoints2d = mmpose_estimator.get_keypoints_from_result(pose_list)
+    assert keypoints2d.get_frame_number() == 3
+    assert keypoints2d.get_person_number() == 7
+    assert keypoints2d.get_keypoints_number() == 133
     # test return heatmap
+    frame_list = [os.path.join(input_dir, 'multi_person.png')]
     _, heatmap_list, _ = mmpose_estimator.infer_frames(
         frame_path_list=frame_list,
-        bbox_list=multi_person_bbox,
+        bbox_list=sframe_7person_bbox,
         disable_tqdm=False,
         return_heatmap=True)
     assert len(heatmap_list) == len(heatmap_list)  # n_frame

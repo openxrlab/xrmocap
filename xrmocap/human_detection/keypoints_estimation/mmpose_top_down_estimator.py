@@ -31,7 +31,7 @@ class MMposeTopDownEstimator:
                  mmpose_kwargs: dict,
                  bbox_thr: float = 0.0,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Init a detector from mmdetection.
+        """Init a detector from mmpose.
 
         Args:
             mmpose_kwargs (dict):
@@ -119,7 +119,8 @@ class MMposeTopDownEstimator:
             for frame_index in range(start_index, end_index, 1):
                 bboxes_in_frame = []
                 for bbox in bbox_list[frame_index]:
-                    bboxes_in_frame.append({'bbox': bbox})
+                    if bbox is not None:
+                        bboxes_in_frame.append({'bbox': bbox})
                 person_results = bboxes_in_frame
             if not self.use_old_api:
                 img_input = dict(imgs_or_paths=img_arr)
@@ -135,24 +136,29 @@ class MMposeTopDownEstimator:
                 return_heatmap=return_heatmap,
                 outputs=None,
                 **img_input)
-            frame_pose_results = [
-                person_dict['keypoints'] for person_dict in pose_results
-            ]
-            frame_pose_results = [frame_pose_results]
-            ret_pose_list += frame_pose_results
-            # returned_outputs[0]['heatmap'].shape 1, 133, 96, 72
-            if return_heatmap:
-                frame_heatmap_results = [
-                    frame_outputs['heatmap']
-                    for frame_outputs in returned_outputs
-                ]
-                ret_heatmap_list += frame_heatmap_results
+            frame_pose_results = []
+            frame_heatmap_results = []
+            absent_count = 0
+            for person_idx, bbox in enumerate(bbox_list[frame_index]):
+                if bbox is not None and bbox[4] > self.bbox_thr:
+                    frame_pose_results.append(
+                        pose_results[person_idx - absent_count]['keypoints'])
+                    if return_heatmap:
+                        # returned_outputs[0]['heatmap'].shape:
+                        # 1, 133, 96, 72
+                        frame_heatmap_results.append(
+                            returned_outputs[0]['heatmap'][person_idx -
+                                                           absent_count])
+                        ret_heatmap_list += [frame_heatmap_results]
+                else:
+                    absent_count += 1
+                    frame_pose_results.append(None)
+                    if return_heatmap:
+                        frame_heatmap_results.append(None)
+                        ret_heatmap_list += [frame_heatmap_results]
+            ret_pose_list += [frame_pose_results]
             if return_bbox:
-                frame_bbox_results = [
-                    person_dict['bbox'] for person_dict in pose_results
-                ]
-                frame_bbox_results = [frame_bbox_results]
-                ret_bbox_list += frame_bbox_results
+                ret_bbox_list = bbox_list
         return ret_pose_list, ret_heatmap_list, ret_bbox_list
 
     def infer_frames(self,
@@ -269,9 +275,13 @@ class MMposeTopDownEstimator:
             n_human = max(human_count_list)
         else:
             n_human = 0
-        for human_list in kps2d_list:
-            if len(human_list) > 0:
-                n_keypoints = len(human_list[0])
+        n_keypoints = 0
+        for frame_list in kps2d_list:
+            for human_list in frame_list:
+                if human_list is not None:
+                    n_keypoints = len(human_list)
+                    break
+            if n_keypoints > 0:
                 break
         if n_human > 0:
             kps2d_arr = np.zeros(shape=(n_frame, n_human, n_keypoints, 3))
@@ -281,7 +291,8 @@ class MMposeTopDownEstimator:
                     mask_arr[f_idx, ...] = 0
                     continue
                 for h_idx in range(n_human):
-                    if h_idx < len(kps2d_list[f_idx]):
+                    if h_idx < len(kps2d_list[f_idx]) and \
+                            kps2d_list[f_idx][h_idx] is not None:
                         mask_arr[f_idx, h_idx, ...] = 1
                         kps2d_arr[f_idx,
                                   h_idx, :, :] = kps2d_list[f_idx][h_idx]

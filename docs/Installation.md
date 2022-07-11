@@ -2,9 +2,10 @@
 
 <!-- TOC -->
 
-- [Requirements](#requirements)
-- [Prepare environment](#prepare-environment)
-- [A from-scratch setup script](#a-from-scratch-setup-script)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Prepare environment](#prepare-environment)
+  - [A from-scratch setup script](#a-from-scratch-setup-script)
 
 <!-- TOC -->
 
@@ -50,15 +51,13 @@ c. Install XRPrimer to virtual environment.
 
 ```shell
 # As a user, install the whl file:
-pip install http://10.10.30.159:8999/xrprimer-0.3.0-cp38-cp38-linux_x86_64.whl
+pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
 
 # As a developer, compile from source code:
 pip install conan
 conan remote add xrlab http://conan.kestrel.sensetime.com/artifactory/api/conan/xrlab
-cd xrprimer
-cmake -S. -Bbuild && cmake --build build -j4
-cd python && pip install -e . && cd ..
-cd ..
+cd data && git clone git@gitlab.bj.sensetime.com:openxrlab/xrprimer.git
+cd xrprimer && pip install -e . && cd ../../
 python -c "import xrprimer; print(xrprimer.__version__)"
 ```
 
@@ -71,7 +70,7 @@ pip install -e .
 
 
 
-e. Install MMDetection and MMPose (Optional).
+e. Install MMDetection MMTracking and MMPose (Optional).
 
 ```shell
 cd PATH_FOR_MMDET
@@ -84,6 +83,12 @@ cd PATH_FOR_MMPOSE
 git clone https://github.com/open-mmlab/mmpose.git
 cd mmpose
 pip install -r requirements.txt
+pip install .
+
+cd PATH_FOR_MMTRACK
+git clone https://github.com/open-mmlab/mmtracking.git
+cd mmtack
+pip install -r requirements/build.txt
 pip install .
 ```
 
@@ -125,7 +130,7 @@ conda install -y pytorch==1.7.0 torchvision==0.8.1 cudatoolkit=10.1 -c pytorch
 pip install mmcv-full==1.5.0 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.7.0/index.html
 
 # install xrprimer
-pip install http://10.10.30.159:8999/xrprimer-0.3.0-cp38-cp38-linux_x86_64.whl
+pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
 
 # install mmhuman3d, script may not be sufficient
 # see details in https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md
@@ -133,6 +138,7 @@ pip install git+https://github.com/open-mmlab/mmhuman3d.git
 
 pip install git+https://github.com/open-mmlab/mmdetection.git
 pip install git+https://github.com/open-mmlab/mmpose.git
+pip install git+https://github.com/open-mmlab/mmtracking.git
 pip install git+https://github.com/liruilong940607/aniposelib.git
 
 # install pictorial

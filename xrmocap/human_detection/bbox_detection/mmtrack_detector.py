@@ -4,16 +4,15 @@ import numpy as np
 from tqdm import tqdm
 from typing import Union
 
-from xrmocap.transform.bbox import qsort_bbox_list
 from xrmocap.utils.ffmpeg_utils import video_to_array
 from xrmocap.utils.log_utils import get_logger
 
 try:
-    from mmdet.apis import inference_detector, init_detector
-    has_mmdet = True
+    from mmtrack.apis import inference_mot, init_model
+    has_mmtrack = True
     import_exception = ''
 except (ImportError, ModuleNotFoundError):
-    has_mmdet = False
+    has_mmtrack = False
     import traceback
     stack_str = ''
     for line in traceback.format_stack():
@@ -23,35 +22,34 @@ except (ImportError, ModuleNotFoundError):
     import_exception = stack_str + import_exception
 
 
-class MMdetDetector:
+class MMtrackDetector:
 
     def __init__(self,
-                 mmdet_kwargs: dict,
-                 batch_size: int = 1,
+                 mmtrack_kwargs: dict,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Init a detector from mmdetection.
+        """Init a detector from mmtracking.
 
         Args:
-            mmdet_kwargs (dict):
-                A dict contains args of mmdet.apis.init_detector.
-                Necessary keys: config, checkpoint
-                Optional keys: device, cfg_options
-            batch_size (int, optional):
-                Batch size for inference. Defaults to 1.
+            mmtrack_kwargs (dict):
+                A dict contains args of mmtrack.apis.init_model.
+                Necessary keys: config
+                Optional keys:
+                    checkpoint, device, cfg_options,
+                    verbose_init_params.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
         self.logger = get_logger(logger)
-        if not has_mmdet:
+        if not has_mmtrack:
             self.logger.error(import_exception)
-            raise ModuleNotFoundError('Please install mmdet to run detection.')
+            raise ModuleNotFoundError(
+                'Please install mmtrack to run detection with tracking.')
         # build the detector from a config file and a checkpoint file
-        self.det_model = init_detector(**mmdet_kwargs)
-        self.batch_size = batch_size
+        self.track_model = init_model(**mmtrack_kwargs)
 
     def __del__(self):
-        del self.det_model
+        del self.track_model
 
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
@@ -77,40 +75,21 @@ class MMdetDetector:
                 List of bboxes. Shape of the nested lists is
                 (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
+                If someone is missed in one frame, there
+                will be a None.
         """
         ret_list = []
-        bbox_results = []
+
         n_frame = len(image_array)
-        for start_index in tqdm(
-                range(0, n_frame, self.batch_size), disable=disable_tqdm):
-            end_index = min(n_frame, start_index + self.batch_size)
-            img_batch = image_array[start_index:end_index]
-            # mmdet 2.16.0 cannot accept batch in ndarray, only list
-            if isinstance(img_batch, np.ndarray):
-                list_batch = []
-                for _, img in enumerate(img_batch):
-                    list_batch.append(img)
-                img_batch = list_batch
-            mmdet_results = inference_detector(self.det_model, img_batch)
-            additional_ret = True
-            for frame_result in mmdet_results:
-                if len(frame_result) != 2:
-                    additional_ret = False
-                    break
-                for bbox_result in frame_result:
-                    if isinstance(bbox_result, np.ndarray) and \
-                            bbox_result.shape == (0, 5):
-                        additional_ret = False
-                        break
-                if not additional_ret:
-                    break
-            # For models like HTC
-            if additional_ret:
-                bbox_results += [i[0] for i in mmdet_results]
-            else:
-                bbox_results += mmdet_results
-        ret_list = process_mmdet_results(
-            bbox_results, multi_person=multi_person)
+        mframe_mmtrack_results = []
+        for frame_idx in tqdm(range(n_frame), disable=disable_tqdm):
+            mmtrack_results = inference_mot(
+                self.track_model, image_array[frame_idx], frame_id=frame_idx)
+            mframe_mmtrack_results.append(mmtrack_results)
+
+        ret_list = process_mmtrack_results(
+            mframe_mmtrack_results=mframe_mmtrack_results,
+            multi_person=multi_person)
         return ret_list
 
     def infer_frames(self,
@@ -135,6 +114,8 @@ class MMdetDetector:
                 List of bboxes. Shape of the nested lists is
                 (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
+                If someone is missed in one frame, there
+                will be a None.
         """
         image_array_list = []
         for frame_abs_path in frame_path_list:
@@ -168,6 +149,8 @@ class MMdetDetector:
                 List of bboxes. Shape of the nested lists is
                 (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
+                If someone is missed in one frame, there
+                will be a None.
         """
         image_array = video_to_array(input_path=video_path, logger=self.logger)
         ret_list = self.infer_array(
@@ -177,43 +160,78 @@ class MMdetDetector:
         return ret_list
 
 
-def process_mmdet_results(mmdet_results: list,
-                          cat_id: int = 0,
-                          multi_person: bool = True) -> list:
-    """Process mmdet results, sort bboxes by area in descending order.
+def process_mmtrack_results(mframe_mmtrack_results: list,
+                            multi_person: bool = False) -> list:
+    """Process output of mmtrack, convert it to bbox list and count frame of
+    each tracked human.
 
     Args:
-        mmdet_results (list):
-            Result of mmdet.apis.inference_detector
-            when the input is a batch.
-            Shape of the nested lists is
-            (n_frame, n_category, n_human, 5).
-        cat_id (int, optional):
-            Category ID. This function will only select
-            the selected category, and drop the others.
-            Defaults to 0, ID of human category.
-        multi_person (bool, optional):
-            Whether to allow multi-person detection, which is
-            slower than single-person. If false, the function
-            only assure that the first person of each frame
-            has the biggest bbox.
-            Defaults to True.
+        mframe_mmtrack_results (list):
+            A list of mmtrack inference output.
+            multi_person (bool, optional):
+                Whether to allow multi-person detection, which is
+                slower than single-person.
+                Defaults to False.
 
     Returns:
         list:
-            A list of detected bounding boxes.
-            Shape of the nested lists is
+            List of bboxes. Shape of the nested lists is
             (n_frame, n_human, 5)
             and each bbox is (x, y, x, y, score).
+            If someone is missed in one frame, there
+            will be a None.
     """
+    # 'track_results' is changed to 'track_bboxes'
+    # in https://github.com/open-mmlab/mmtracking/pull/300
+    for mmtrack_results in mframe_mmtrack_results:
+        if len(mmtrack_results) > 0:
+            if 'track_bboxes' in mmtrack_results:
+                track_key = 'track_bboxes'
+            else:
+                track_key = 'track_results'
+            break
+    mframe_count_dict = {}
+    mframe_result_dict = {}
+    # record count of each tracked object
+    # and bboxes in each frame
+    for frame_idx, mmtrack_results in enumerate(mframe_mmtrack_results):
+        tracking_results = mmtrack_results[track_key][0]
+        sframe_result_dict = {}
+        for track in tracking_results:
+            track_id = int(track[0])
+            sframe_result_dict[track_id] = track[1:]
+            if track_id in mframe_count_dict:
+                mframe_count_dict[track_id] += 1
+            else:
+                mframe_count_dict[track_id] = 1
+        mframe_result_dict[frame_idx] = sframe_result_dict
+    max_track_id = len(mframe_count_dict)
+    # prepare the returned bbox list
     ret_list = []
-    only_max_arg = not multi_person
-    for _, frame_results in enumerate(mmdet_results):
-        cat_bboxes = frame_results[cat_id]
-        sorted_bbox = qsort_bbox_list(cat_bboxes, only_max_arg)
-
-        if only_max_arg:
-            ret_list.append(sorted_bbox[0:1])
-        else:
-            ret_list.append(sorted_bbox)
+    if multi_person:
+        for frame_idx in range(len(mframe_mmtrack_results)):
+            frame_bboxes = []
+            for track_idx in range(max_track_id):
+                if track_idx in mframe_result_dict[frame_idx]:
+                    frame_bboxes.append(
+                        mframe_result_dict[frame_idx][track_idx])
+                else:
+                    frame_bboxes.append(None)
+            ret_list.append(frame_bboxes)
+    else:
+        # get the object observed in most frames
+        longes_track_id = 0
+        for key in mframe_count_dict.keys():
+            if key > max_track_id:
+                max_track_id = key
+            if mframe_count_dict[key] > mframe_count_dict[longes_track_id]:
+                longes_track_id = key
+        for frame_idx in range(len(mframe_mmtrack_results)):
+            frame_bboxes = []
+            if longes_track_id in mframe_result_dict[frame_idx]:
+                frame_bboxes.append(
+                    mframe_result_dict[frame_idx][longes_track_id])
+            else:
+                frame_bboxes.append(None)
+            ret_list.append(frame_bboxes)
     return ret_list
