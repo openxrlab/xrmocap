@@ -7,7 +7,7 @@ import torch
 from xrmocap.data_structure.body_model import SMPLXData
 from xrmocap.model.body_model.builder import build_body_model
 
-body_model_load_dir = 'data/body_models/smplx'
+body_model_load_dir = 'xrmocap_data/body_models/smplx'
 input_dir = 'test/data/model/body_model/test_smplx'
 output_dir = 'test/data/output/model/body_model/test_smplx'
 

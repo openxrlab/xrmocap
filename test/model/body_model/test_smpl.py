@@ -7,8 +7,8 @@ import torch
 from xrmocap.data_structure.body_model.smpl_data import SMPLData
 from xrmocap.model.body_model.builder import build_body_model
 
-body_model_load_dir = 'data/body_models/smpl'
-extra_joints_regressor_path = 'data/body_models/J_regressor_extra.npy'
+body_model_load_dir = 'xrmocap_data/body_models/smpl'
+extra_joints_regressor_path = 'xrmocap_data/body_models/J_regressor_extra.npy'
 input_dir = 'test/data/model/body_model/test_smpl'
 output_dir = 'test/data/output/model/body_model/test_smpl'
 

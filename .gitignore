@@ -109,10 +109,9 @@ venv.bak/
 # custom
 test/data/
 # data folder
-data/
 xrmocap_data/
 # or data link
-data
+xrmocap_data
 weight
 # data for pytest moved to http server
 .vscode

@@ -1,0 +1,10 @@
+type = 'MviewMpersonDataVisualization'
+data_root = 'Shelf'
+output_dir = 'output'
+meta_path = 'xrmocap_meta_testset'
+predict_3d_paths = None
+bbox_thr = 0.96
+vis_percep2d = True
+kps2d_convention = None
+vis_gt3d = True
+kps3d_convention = None

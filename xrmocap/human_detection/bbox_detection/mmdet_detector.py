@@ -3,10 +3,10 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.transform.bbox import qsort_bbox_list
 from xrmocap.utils.ffmpeg_utils import video_to_array
-from xrmocap.utils.log_utils import get_logger
 
 try:
     from mmdet.apis import inference_detector, init_detector
@@ -116,7 +116,8 @@ class MMdetDetector:
     def infer_frames(self,
                      frame_path_list: list,
                      disable_tqdm: bool = False,
-                     multi_person: bool = False) -> list:
+                     multi_person: bool = False,
+                     load_batch_size: Union[None, int] = None) -> list:
         """Infer frames from file.
 
         Args:
@@ -129,6 +130,9 @@ class MMdetDetector:
                 Whether to allow multi-person detection, which is
                 slower than single-person.
                 Defaults to False.
+            load_batch_size (Union[None, int], optional):
+                How many frames are loaded at the same time.
+                Defaults to None, load all frames in frame_path_list.
 
         Returns:
             list:
@@ -136,14 +140,24 @@ class MMdetDetector:
                 (n_frame, n_human, 5)
                 and each bbox is (x, y, x, y, score).
         """
-        image_array_list = []
-        for frame_abs_path in frame_path_list:
-            img_np = cv2.imread(frame_abs_path)
-            image_array_list.append(img_np)
-        ret_list = self.infer_array(
-            image_array=image_array_list,
-            disable_tqdm=disable_tqdm,
-            multi_person=multi_person)
+        ret_list = []
+        if load_batch_size is None:
+            load_batch_size = len(frame_path_list)
+        for start_idx in range(0, len(frame_path_list), load_batch_size):
+            end_idx = min(len(frame_path_list), start_idx + load_batch_size)
+            if load_batch_size < len(frame_path_list):
+                self.logger.info(
+                    'Processing mmdet on frames' +
+                    f'({start_idx}-{end_idx})/{len(frame_path_list)}')
+            image_array_list = []
+            for frame_abs_path in frame_path_list[start_idx:end_idx]:
+                img_np = cv2.imread(frame_abs_path)
+                image_array_list.append(img_np)
+            load_batch_result = self.infer_array(
+                image_array=image_array_list,
+                disable_tqdm=disable_tqdm,
+                multi_person=multi_person)
+            ret_list += load_batch_result
         return ret_list
 
     def infer_video(self,

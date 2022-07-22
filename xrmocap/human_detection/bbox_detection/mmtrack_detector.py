@@ -3,9 +3,9 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.utils.ffmpeg_utils import video_to_array
-from xrmocap.utils.log_utils import get_logger
 
 try:
     from mmtrack.apis import inference_mot, init_model
@@ -78,8 +78,6 @@ class MMtrackDetector:
                 If someone is missed in one frame, there
                 will be a None.
         """
-        ret_list = []
-
         n_frame = len(image_array)
         mframe_mmtrack_results = []
         for frame_idx in tqdm(range(n_frame), disable=disable_tqdm):
@@ -95,7 +93,8 @@ class MMtrackDetector:
     def infer_frames(self,
                      frame_path_list: list,
                      disable_tqdm: bool = False,
-                     multi_person: bool = False) -> list:
+                     multi_person: bool = False,
+                     load_batch_size: Union[None, int] = None) -> list:
         """Infer frames from file.
 
         Args:
@@ -108,6 +107,9 @@ class MMtrackDetector:
                 Whether to allow multi-person detection, which is
                 slower than single-person.
                 Defaults to False.
+            load_batch_size (Union[None, int], optional):
+                How many frames are loaded at the same time.
+                Defaults to None, load all frames in frame_path_list.
 
         Returns:
             list:
@@ -117,13 +119,28 @@ class MMtrackDetector:
                 If someone is missed in one frame, there
                 will be a None.
         """
-        image_array_list = []
-        for frame_abs_path in frame_path_list:
-            img_np = cv2.imread(frame_abs_path)
-            image_array_list.append(img_np)
-        ret_list = self.infer_array(
-            image_array=image_array_list,
-            disable_tqdm=disable_tqdm,
+        mframe_mmtrack_results = []
+        if load_batch_size is None:
+            load_batch_size = len(frame_path_list)
+        for start_idx in range(0, len(frame_path_list), load_batch_size):
+            end_idx = min(len(frame_path_list), start_idx + load_batch_size)
+            if load_batch_size < len(frame_path_list):
+                self.logger.info(
+                    'Processing mmtrack on frames' +
+                    f'({start_idx}-{end_idx})/{len(frame_path_list)}')
+            image_array_list = []
+            for frame_abs_path in frame_path_list[start_idx:end_idx]:
+                img_np = cv2.imread(frame_abs_path)
+                image_array_list.append(img_np)
+            n_frame = len(image_array_list)
+            for sub_idx in tqdm(range(n_frame), disable=disable_tqdm):
+                mmtrack_results = inference_mot(
+                    self.track_model,
+                    image_array_list[sub_idx],
+                    frame_id=start_idx + sub_idx)
+                mframe_mmtrack_results.append(mmtrack_results)
+        ret_list = process_mmtrack_results(
+            mframe_mmtrack_results=mframe_mmtrack_results,
             multi_person=multi_person)
         return ret_list
 

@@ -2,9 +2,9 @@ import logging
 import numpy as np
 import torch
 from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.transform.convention.bbox_convention import convert_bbox
-from xrmocap.utils.log_utils import get_logger
 
 
 def compute_similarity_transform(X: np.ndarray,

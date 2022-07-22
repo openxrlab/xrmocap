@@ -3,8 +3,7 @@ import numpy as np
 import os
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from typing import Union
-
-from xrmocap.utils.log_utils import get_logger
+from xrprimer.utils.log_utils import get_logger
 
 
 def load_keypoints2d_from_zoemotion_npz(kps2d_data_dir: str,

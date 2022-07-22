@@ -9,8 +9,8 @@ from mmhuman3d.core.visualization.visualize_smpl import (
     visualize_smpl_calibration,
 )
 
-from xrmocap.core.api.builder import build_api
 from xrmocap.data_structure.smc_reader import SMCReader
+from xrmocap.estimation.builder import build_estimator
 from xrmocap.io.camera import get_color_camera_parameter_from_smc
 from xrmocap.transform.image.color import bgr2rgb
 from xrmocap.utils.log_utils import setup_logger
@@ -53,9 +53,9 @@ def main(args):
         mview_img_list.append(sv_img_array)
     mview_img_array = bgr2rgb(np.asarray(mview_img_list))
     # build and run
-    api_config = dict(mmcv.Config.fromfile(args.api_config))
-    api_config['logger'] = logger
-    mview_sp_smpl_estimator = build_api(api_config)
+    estimator_config = dict(mmcv.Config.fromfile(args.estimator_config))
+    estimator_config['logger'] = logger
+    mview_sp_smpl_estimator = build_estimator(estimator_config)
     keypoints2d_list, keypoints3d, smpl_data = mview_sp_smpl_estimator.run(
         cam_param=cam_param_list, img_arr=mview_img_array)
     for index, keypoints2d in enumerate(keypoints2d_list):
@@ -87,7 +87,7 @@ def main(args):
                 num_betas=10,
                 keypoint_src='smpl_45',
                 keypoint_dst='smpl',
-                model_path='data/body_models',
+                model_path='xrmocap_data/body_models',
                 batch_size=1)
             cam_param = get_color_camera_parameter_from_smc(
                 smc_reader=smc_reader,
@@ -126,10 +126,10 @@ def setup_parser():
         default='./default_output')
     # model args
     parser.add_argument(
-        '--api_config',
+        '--estimator_config',
         help='Config file for MultiViewSinglePersonSMPLEstimator.',
         type=str,
-        default='config/api/mview_sperson_smpl_estimator.py')
+        default='config/estimation/mview_sperson_smpl_estimator.py')
     # output args
     parser.add_argument(
         '--visualize',

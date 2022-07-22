@@ -4,9 +4,9 @@ import prettytable
 import time
 import torch
 from typing import List, Tuple, Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.matching.match_solver import proj2dpam
-from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.mvpose_utils import geometry_affinity
 from .base_matching import BaseMatching
 

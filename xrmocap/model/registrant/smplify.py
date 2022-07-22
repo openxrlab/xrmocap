@@ -6,6 +6,7 @@ import torch
 from mmcv.runner import build_optimizer
 from mmcv.runner.hooks import Hook
 from typing import List, Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.core.hook.smplify_hook.builder import (
     SMPLifyBaseHook, build_smplify_hook,
@@ -14,7 +15,6 @@ from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
     get_keypoint_idx, get_keypoint_idxs_by_part,
 )
-from xrmocap.utils.log_utils import get_logger
 from .handler.base_handler import BaseHandler, BaseInput
 from .handler.builder import build_handler
 from .optimizable_parameters import OptimizableParameters

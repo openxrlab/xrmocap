@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from collections import OrderedDict
 from typing import Tuple, Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.ops.triangulation.point_selection.camera_error_selector import (
     CameraErrorSelector,
@@ -11,7 +12,6 @@ from xrmocap.ops.triangulation.point_selection.hybrid_kps2d_selector import (
     HybridKps2dSelector,
 )
 from xrmocap.utils.geometry import compute_iou
-from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.mvpose_utils import get_distance
 from .kalman_tracker import KalmanJointTracker
 

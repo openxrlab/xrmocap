@@ -1,9 +1,9 @@
 import logging
 import prettytable
 from typing import List, TypeVar, Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.model.registrant.handler.base_handler import BaseInput
-from xrmocap.utils.log_utils import get_logger
 from .smplify_base_hook import SMPLifyBaseHook
 
 _SMPLify = TypeVar('_SMPLify')

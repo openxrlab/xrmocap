@@ -1,10 +1,9 @@
 import logging
 from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.utils.log_utils import get_logger
 
-
-class BaseAPI:
+class BaseEstimator:
 
     def __init__(self,
                  work_dir: str,

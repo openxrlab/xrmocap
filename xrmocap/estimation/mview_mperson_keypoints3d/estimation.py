@@ -7,6 +7,7 @@ import os
 from mmcv.runner import load_checkpoint
 from tqdm import tqdm
 from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.body_tracking.advance_sort_tracking import AdvanceSort
 from xrmocap.body_tracking.kalman_tracking import KalmanTracking
@@ -20,7 +21,6 @@ from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.ops.triangulation.point_selection.builder import (
     build_point_selector,
 )
-from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.mvpose_utils import visualize_match
 
 # yapf: enable

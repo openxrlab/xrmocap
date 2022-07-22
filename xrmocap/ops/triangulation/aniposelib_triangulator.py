@@ -5,8 +5,8 @@ from scipy.spatial.transform import Rotation as scipy_Rotation
 from typing import Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
 
 # yapf: enable

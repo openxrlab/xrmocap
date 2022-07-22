@@ -1,17 +1,17 @@
 # yapf: disable
 from mmcv.utils import Registry
 
-from .base_api import BaseAPI
+from .base_estimator import BaseEstimator
 from .mview_sperson_smpl_estimator import MultiViewSinglePersonSMPLEstimator
 
 # yapf: enable
 
-APIS = Registry('api')
-APIS.register_module(
+ESTIMATORS = Registry('estimator')
+ESTIMATORS.register_module(
     name='MultiViewSinglePersonSMPLEstimator',
     module=MultiViewSinglePersonSMPLEstimator)
 
 
-def build_api(cfg) -> BaseAPI:
-    """Build api."""
-    return APIS.build(cfg)
+def build_estimator(cfg) -> BaseEstimator:
+    """Build estimator."""
+    return ESTIMATORS.build(cfg)

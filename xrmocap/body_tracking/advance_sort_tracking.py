@@ -2,10 +2,10 @@
 import logging
 import numpy as np
 from typing import List, Tuple, Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.limbs import get_limbs_from_keypoints
-from xrmocap.utils.log_utils import get_logger
 from ..matching.builder import build_matching
 from .kalman_tracker import KalmanJointTracker
 

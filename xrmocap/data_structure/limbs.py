@@ -3,8 +3,7 @@ import logging
 import numpy as np
 import torch
 from typing import List, Union
-
-from xrmocap.utils.log_utils import get_logger
+from xrprimer.utils.log_utils import get_logger
 
 # yapf: enable
 
