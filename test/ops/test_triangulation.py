@@ -3,10 +3,10 @@ import numpy as np
 import os
 import pytest
 import shutil
+from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.utils.triangulation_utils import parse_keypoints_mask
-from xrprimer.data_structure.camera import FisheyeCameraParameter  # noqa:E501
 
 input_dir = 'test/data/ops/test_triangulation'
 output_dir = 'test/data/output/ops/test_triangulation'

@@ -6,7 +6,7 @@ Matching by Mining Consistent Features." arXiv preprint arXiv:1711.07641(2017).
 import torch
 
 
-def myproj2dpam(Y, tol=1e-4):
+def proj2dpam(Y, tol=1e-4):
     X0 = Y
     X = Y
     I2 = 0
@@ -52,32 +52,4 @@ def proj2pav(y):
             (sv[rho] - 1) / (rho.float() + 1))
         x += torch.max(y - theta,
                        torch.tensor(0, device=sv.device, dtype=y.dtype))
-    return x
-
-
-def proj2pavC(y):
-    """project an n-dim vector y to the simplex Dn
-       Dn = { x : x n-dim, 1 >= x >= 0, sum(x) = 1}
-       Algorithm is explained as in the linked document
-       http://arxiv.org/abs/1101.6081 or
-       http://ufdc.ufl.edu/IR00000353/
-    """
-    m = len(y)
-    bget = False
-
-    s, _ = torch.sort(y, descending=True)
-    tmpsum = 0
-
-    for ii in range(m - 1):
-        tmpsum = tmpsum + s[ii]
-        # tmax = (tmpsum - 1) / ii
-        tmax = (tmpsum - 1) / (ii + 1)  # change since index starts from 0
-        if tmax >= s[ii + 1]:
-            bget = True
-            break
-
-    if not bget:
-        tmax = (tmpsum + s[m - 1] - 1) / m
-
-    x = torch.max(y - tmax, torch.zeros_like(y))
     return x

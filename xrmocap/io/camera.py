@@ -2,11 +2,11 @@ import json
 import logging
 import numpy as np
 from typing import Tuple, Union
+from xrprimer.data_structure.camera import \
+    FisheyeCameraParameter  # Camera with distortion
 
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.utils.log_utils import get_logger
-from xrprimer.data_structure.camera import \
-    FisheyeCameraParameter  # Camera with distortion
 
 try:
     from typing import Literal

@@ -27,6 +27,7 @@ def visualize_keypoints2d(
         keypoints: Keypoints,
         output_path: str,
         img_arr: np.ndarray,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -36,6 +37,7 @@ def visualize_keypoints2d(
         keypoints: Keypoints,
         output_path: str,
         img_paths: List[str],
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -45,6 +47,7 @@ def visualize_keypoints2d(
         keypoints: Keypoints,
         output_path: str,
         video_path: str,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -53,6 +56,7 @@ def visualize_keypoints2d(
 def visualize_keypoints2d(
         keypoints: Keypoints,
         output_path: str,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -63,6 +67,7 @@ def visualize_keypoints2d(
         img_arr: Union[None, np.ndarray] = None,
         img_paths: Union[None, List[str]] = None,
         video_path: Union[None, str] = None,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     """Visualize 2d keypoints, powered by mmhuman3d.
 
@@ -79,6 +84,8 @@ def visualize_keypoints2d(
             A list of image paths. Defaults to None.
         video_path (Union[None, str], optional):
             Path to a video file. Defaults to None.
+        overwrite (bool, optional):
+            Whether replace the file at output_path. Defaults to False.
         return_array (bool, optional):
             Whether to return the visualized image array.
             Defaults to False.
@@ -121,5 +128,6 @@ def visualize_keypoints2d(
         origin_frames=video_path,
         data_source=kps_convention,
         mask=mm_kps_mask,
+        overwrite=overwrite,
         return_array=return_array)
     return vis_arr

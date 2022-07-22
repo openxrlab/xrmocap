@@ -389,7 +389,8 @@ if __name__ == '__main__':
         description='Evaluate multi-view keypoints2d to keypoints3d')
     parser.add_argument(
         '--config',
-        default='./config/kps3d_estimation/eval_kps3d_estimation.py')
+        default='./config/evaluation/mview_mperson_keypoints3d/'
+        'shelf_config/eval_keypoints3d.py')
     args = parser.parse_args()
 
     cfg = mmcv.Config.fromfile(args.config)
@@ -402,7 +403,7 @@ if __name__ == '__main__':
             test_range = range(cfg.start_frame, cfg.end_frame)
             kps3d_path = osp.join(
                 cfg.result_path, data_name,
-                f'{cfg.start_frame}_{cfg.end_frame-1}_'
+                f'{cfg.start_frame}_{cfg.end_frame}_'
                 'tracking_v1.npz')
             keypoints.load(kps3d_path)
             kps = keypoints.get_keypoints()[..., :3]
@@ -415,7 +416,7 @@ if __name__ == '__main__':
                           ] + [i for i in range(650, 750)]
             kps3d_path1 = osp.join(
                 cfg.result_path, data_name,
-                f'{cfg.start_frame}_{cfg.end_frame-1}_tracking_v1.npz')
+                f'{cfg.start_frame}_{cfg.end_frame}_tracking_v1.npz')
             keypoints.load(kps3d_path1)
             kps1 = keypoints.get_keypoints()[..., :3]
 
@@ -448,7 +449,7 @@ if __name__ == '__main__':
             test_range = range(cfg.start_frame, cfg.end_frame)
             kps3d_path = osp.join(
                 cfg.result_path, f'panoptic_{name}',
-                f'{cfg.start_frame}_{cfg.end_frame-1}_human.npz')
+                f'{cfg.start_frame}_{cfg.end_frame}_human.npz')
             keypoints.load(kps3d_path)
             kps = keypoints.get_keypoints()[..., :3]
 

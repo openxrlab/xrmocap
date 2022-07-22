@@ -2,6 +2,7 @@
 import logging
 import numpy as np
 from typing import List, Tuple, Union, overload
+from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.data_structure.body_model import SMPLData
 from xrmocap.data_structure.keypoints import Keypoints
@@ -20,7 +21,6 @@ from xrmocap.transform.keypoints3d.optim.builder import (
     BaseOptimizer, build_keypoints3d_optimizer,
 )
 from xrmocap.utils.ffmpeg_utils import video_to_array
-from xrprimer.data_structure.camera import FisheyeCameraParameter
 from .base_api import BaseAPI
 
 # yapf: enable

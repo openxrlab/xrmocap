@@ -48,9 +48,6 @@ test:
     - unset HTTP_PROXY
     - unset HTTPS_PROXY
     - sh script/download_test_data.sh
-    - cd xrmocap/keypoints3d_estimation/lib
-    - python setup.py build_ext --inplace
-    - cd ../../../
     - echo "Start testing..."
     - coverage run --source xrmocap -m pytest -s test/
     - coverage report -m

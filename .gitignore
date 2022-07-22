@@ -26,6 +26,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+xrprimer/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -109,6 +110,7 @@ venv.bak/
 test/data/
 # data folder
 data/
+xrmocap_data/
 # or data link
 data
 weight

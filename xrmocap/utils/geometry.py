@@ -1,4 +1,10 @@
+import logging
 import numpy as np
+import torch
+from typing import Union
+
+from xrmocap.transform.convention.bbox_convention import convert_bbox
+from xrmocap.utils.log_utils import get_logger
 
 
 def compute_similarity_transform(X: np.ndarray,
@@ -63,3 +69,56 @@ def compute_similarity_transform(X: np.ndarray,
 
     c = muX - b * np.dot(muY, T)
     return d, Z, T, b, c
+
+
+def compute_iou(
+    rec_1: Union[np.ndarray, torch.Tensor],
+    rec_2: Union[np.ndarray, torch.Tensor],
+    bbox_convention: str = 'xyxy',
+    logger: Union[None, str, logging.Logger] = None
+) -> Union[np.float64, torch.Tensor]:
+    """Compute iou.
+
+    Args:
+        rec_1 (Union[np.ndarray, torch.Tensor]):
+            Bbox2d data. The last dim should be
+            (x, y, x, y, score), or (x, y, w, h, score), and score is optional.
+        rec_2 (Union[np.ndarray, torch.Tensor]):
+            Bbox2d data. The last dim should be
+            (x, y, x, y, score), or (x, y, w, h, score), and score is optional.
+        bbox_convention (str, optional): Bbox type, xyxy or xywh.
+            Defaults to 'xyxy'.
+        logger (Union[None, str, logging.Logger], optional):
+            Logger for logging. If None, root logger will be selected.
+            Defaults to None.
+            (rec_1)
+        1--------1
+        1   1----1------1
+        1---1----1      1
+            1           1
+            1-----------1 (rec_2)
+    Returns:
+        Union[np.float64, torch.Tensor]: iou
+    """
+    logger = get_logger(logger)
+    assert bbox_convention == 'xywh' or bbox_convention == 'xyxy'
+    if bbox_convention == 'xywh':
+        rec_1 = convert_bbox(rec_1, src='xywh', dst='xyxy')
+        rec_2 = convert_bbox(rec_2, src='xywh', dst='xyxy')
+
+    s_rec1 = (rec_1[2] - rec_1[0]) * (rec_1[3] - rec_1[1])
+    s_rec2 = (rec_2[2] - rec_2[0]) * (rec_2[3] - rec_2[1])
+    sum_s = s_rec1 + s_rec2
+    left = max(rec_1[0], rec_2[0])
+    right = min(rec_1[2], rec_2[2])
+    bottom = max(rec_1[1], rec_2[1])
+    top = min(rec_1[3], rec_2[3])
+    if left >= right or top <= bottom:
+        if isinstance(rec_1, torch.Tensor):
+            return torch.tensor(0)
+        else:
+            return np.float64(0)
+    else:
+        inter = (right - left) * (top - bottom)
+        iou = (inter / (sum_s - inter)) * 1.0
+        return iou
