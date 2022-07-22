@@ -3,8 +3,7 @@ import os
 from enum import Enum
 from pathlib import Path
 from typing import List, Union
-
-from xrmocap.utils.log_utils import get_logger
+from xrprimer.utils.log_utils import get_logger
 
 try:
     from typing import Literal

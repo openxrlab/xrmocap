@@ -1,8 +1,7 @@
 import logging
 import numpy as np
 from typing import Tuple, Union
-
-from xrmocap.utils.log_utils import get_logger
+from xrprimer.utils.log_utils import get_logger
 
 
 class BaseMatching:

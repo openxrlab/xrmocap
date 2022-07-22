@@ -188,7 +188,7 @@ body_model = dict(
     gender='neutral',
     num_betas=10,
     keypoint_convention='smpl_45',
-    model_path='data/body_models/smpl',
+    model_path='xrmocap_data/body_models/smpl',
     batch_size=1,
     logger=logger)
 
@@ -231,7 +231,7 @@ handlers = [
         type='BodyPosePriorHandler',
         prior_loss=dict(
             type='MaxMixturePriorLoss',
-            prior_folder='data',
+            prior_folder='xrmocap_data',
             num_gaussians=8,
             loss_weight=4.78**2,
             reduction='sum'),

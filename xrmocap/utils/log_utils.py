@@ -12,14 +12,18 @@ def setup_logger(logger_name: str = 'root',
                  logger_format: str = None) -> logging.Logger:
     logger = logging.getLogger(logger_name)
     logger.setLevel(level=logger_level)
+    handlers = [logging.StreamHandler()]
     if logger_path is not None:
         handler = logging.FileHandler(logger_path)
-    else:
-        handler = logging.StreamHandler()
+        handlers.append(handler)
     if logger_format is not None:
         formatter = logging.Formatter(logger_format)
+    else:
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    for handler in handlers:
         handler.setFormatter(formatter)
-    logger.addHandler(handler)
+        logger.addHandler(handler)
     return logger
 
 

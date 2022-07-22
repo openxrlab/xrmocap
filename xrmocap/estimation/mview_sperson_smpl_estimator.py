@@ -13,20 +13,22 @@ from xrmocap.io.image import load_multiview_images
 from xrmocap.model.registrant.builder import SMPLify, build_registrant
 from xrmocap.model.registrant.handler.builder import build_handler
 from xrmocap.ops.triangulation.builder import (
-    BaseSelector, BaseTriangulator, CameraErrorSelector, build_point_selector,
-    build_triangulator,
+    BaseTriangulator, build_triangulator,
+)
+from xrmocap.ops.triangulation.point_selection.builder import (
+    BaseSelector, CameraErrorSelector, build_point_selector,
 )
 from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 from xrmocap.transform.keypoints3d.optim.builder import (
     BaseOptimizer, build_keypoints3d_optimizer,
 )
 from xrmocap.utils.ffmpeg_utils import video_to_array
-from .base_api import BaseAPI
+from .base_estimator import BaseEstimator
 
 # yapf: enable
 
 
-class MultiViewSinglePersonSMPLEstimator(BaseAPI):
+class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
 
     def __init__(self,
                  work_dir: str,

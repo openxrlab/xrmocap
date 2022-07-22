@@ -2,8 +2,7 @@ import logging
 import numpy as np
 import prettytable
 from typing import Tuple, Union
-
-from xrmocap.utils.log_utils import get_logger
+from xrprimer.utils.log_utils import get_logger
 
 
 def __init_valid_views_dict__(concerned_n_view: int = 3) -> dict:

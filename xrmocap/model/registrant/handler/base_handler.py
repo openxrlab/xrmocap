@@ -1,8 +1,7 @@
 import logging
 import torch
 from typing import Union
-
-from xrmocap.utils.log_utils import get_logger
+from xrprimer.utils.log_utils import get_logger
 
 try:
     from typing import Literal

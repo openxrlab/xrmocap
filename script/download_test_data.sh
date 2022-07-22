@@ -5,4 +5,3 @@ tar -zxvf xrmocap.tar.gz
 cd ..
 cp -r xrmocap_download/xrmocap/* ./
 rm -rf xrmocap_download
-mv xrmocap_data data

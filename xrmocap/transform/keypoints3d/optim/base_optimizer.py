@@ -1,8 +1,8 @@
 import logging
 from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.utils.log_utils import get_logger
 
 
 class BaseOptimizer:
