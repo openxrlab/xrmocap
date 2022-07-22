@@ -3,11 +3,11 @@ import logging
 import numpy as np
 from scipy.spatial.transform import Rotation as scipy_Rotation
 from typing import Union
+from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
 from xrmocap.utils.log_utils import get_logger
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
-from xrprimer.data_structure.camera import FisheyeCameraParameter
-from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
 # yapf: enable
 try:
@@ -176,10 +176,10 @@ class AniposelibTriangulator(BaseTriangulator):
         n_view = points_mask.shape[0]
         points2d = points2d[..., :2].copy().reshape(n_view, -1, 2)
         points3d = points3d[..., :3].copy().reshape(-1, 3)
+        points_mask = points_mask.copy().reshape(n_view, -1, 1)
         # ignore points according to mask
         ignored_indexes = np.where(points_mask != 1)
         points2d[ignored_indexes[0], ignored_indexes[1], :] = np.nan
-        points3d[ignored_indexes[1], :] = np.nan
         errors = camera_group.reprojection_error(points3d, points2d, mean=mean)
         if mean:
             return errors

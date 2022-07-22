@@ -1,9 +1,9 @@
 import logging
 import numpy as np
 from typing import Union
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
-from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 from .camera_error_selector import CameraErrorSelector
 
 

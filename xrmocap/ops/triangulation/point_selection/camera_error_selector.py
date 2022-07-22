@@ -2,12 +2,12 @@
 import logging
 import numpy as np
 from typing import Union
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
 from xrmocap.ops.triangulation.builder import build_triangulator
 from xrmocap.utils.triangulation_utils import (
     get_valid_views_stats, prepare_triangulate_input,
 )
-from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 from .base_selector import BaseSelector
 
 # yapf: enable
@@ -27,11 +27,9 @@ class CameraErrorSelector(BaseSelector):
             target_camera_number (int):
                 For each pair of points, how many views are
                 chosen.
-                Defaults to True.
             triangulator (Union[BaseSelector, dict]):
                 Triangulator for reprojection error calculation.
                 An instance or config dict.
-                Defaults to True.
             verbose (bool, optional):
                 Whether to log info like valid views stats.
                 Defaults to True.
@@ -151,9 +149,22 @@ class CameraErrorSelector(BaseSelector):
                 points2d=points,
                 points3d=points3d,
                 points_mask=init_points_mask)
-            abs_error = np.abs(error)
-            mean_errors = np.nanmean(
-                abs_error.reshape(n_view, -1), axis=1, keepdims=False)
+            abs_error = np.abs(error).reshape(n_view, -1)
+            mean_errors = np.zeros(shape=(n_view), dtype=abs_error.dtype)
+            invalid_view_count = 0
+            for view_idx in range(n_view):
+                if np.isnan(abs_error[view_idx]).all():
+                    mean_errors[view_idx] = 1e9  # assign a large value
+                    invalid_view_count += 1
+                else:
+                    mean_errors[view_idx] = np.nanmean(
+                        abs_error[view_idx], keepdims=False)
+            if self.target_camera_number + invalid_view_count > n_view:
+                self.logger.error(
+                    'Too many invalid views.' +
+                    ' Number of valid views is lower than' +
+                    f' target_camera_number {self.target_camera_number}.')
+                raise ValueError
             # get mean error ignoring nan
             min_error_indexes = np.argpartition(
                 mean_errors,

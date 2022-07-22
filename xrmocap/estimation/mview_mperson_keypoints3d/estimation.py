@@ -4,7 +4,6 @@ import logging
 import mmcv
 import numpy as np
 import os
-import torch
 from mmcv.runner import load_checkpoint
 from tqdm import tqdm
 from typing import Union
@@ -15,15 +14,14 @@ from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.dataset.men_dataset import MemDataset
 from xrmocap.io.camera import load_camera_parameters_from_zoemotion_dir
 from xrmocap.io.keypoints import load_keypoints2d_from_zoemotion_npz
-from xrmocap.keypoints3d_estimation.lib import pictorial
-from xrmocap.keypoints3d_estimation.match_svt import match_SVT
+from xrmocap.matching.builder import build_matching
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.ops.triangulation.builder import build_triangulator
-from xrmocap.utils.log_utils import get_logger
-from xrmocap.utils.mvpose_utils import (
-    check_bone_length, geometry_affinity, get_min_reprojection_error,
-    plot_and_encode, plot_paper_rows, show_panel_mem, visualize_match,
+from xrmocap.ops.triangulation.point_selection.builder import (
+    build_point_selector,
 )
+from xrmocap.utils.log_utils import get_logger
+from xrmocap.utils.mvpose_utils import visualize_match
 
 # yapf: enable
 
@@ -87,16 +85,11 @@ class Estimation:
         self.rerank = False
         self.use_anchor = cfg.use_anchor
         self.interval = cfg.interval
-        self.hybrid = cfg.use_hybrid
         self.kps2d_convention = cfg.kps2d_convention
         self.best_distance = cfg.best_distance
         self.cam_param_list, self.enable_camera_list = [], []
         self.n_views = 0
         self.logger = get_logger(logger)
-        # match configs of single view threshold
-        self.dual_stochastic_SVT = cfg.use_dual_stochastic_SVT
-        self.lambda_SVT = cfg.lambda_SVT
-        self.alpha_SVT = cfg.alpha_SVT
 
         self.triangulator_config = dict(
             mmcv.Config.fromfile(self.cfg.triangulator))
@@ -239,7 +232,8 @@ class Estimation:
                             f'{self.dataset_name}/img/Camera{i}/' +\
                             f'frame_{frame_index:06d}.png'
                     else:
-                        raise NotImplementedError
+                        raise NotImplementedError('The dataset is not'
+                                                  'available.')
                     img = cv2.imread(img_path)
 
                     info_dict[i][frame_index] = list()
@@ -248,7 +242,7 @@ class Estimation:
                         info_dict[i][frame_index].append(dict())
                         # n_view, n_frame, n_person, ...
                         info_dict[i][frame_index][j][
-                            'pose2d'] = mmpose_keypoint_xy[j]  # 19, 2
+                            'kps2d'] = mmpose_keypoint_xy[j]  # 19, 2
                         info_dict[i][frame_index][j]['bbox'] = mmpose_bbox[j]
                         info_dict[i][frame_index][j]['id'] = mmpose_id[j]
                         info_dict[i][frame_index][j][
@@ -276,187 +270,6 @@ class Estimation:
 
         return info_dict, n_kps2d
 
-    def match(self,
-              keypoints2d: np.ndarray,
-              img_id: int,
-              n_kps2d=17,
-              not_matched_dim_group=None,
-              not_matched_index=None):
-        """Match people id from different cameras.
-
-        Args:
-            keypoints2d (np.ndarray): Keypoints points in shape (sum, 17, 2).
-            sum = total number of people detected from all cameras.
-            img_id (int): Current frame index.
-            n_kps2d (int, optional): The number of keypoints considered
-                in triangulate.
-
-        Returns:
-            matched_list (list):
-                The id of the matched people in different cameras.
-                M = len(matched_list), and M is defined as the maximum number
-                of people captured by two or more cameras.
-            sub_imgid2cam (np.ndarray): The camera label of the captured people
-            geo_affinity_mat (torch.Tensor): Geometry affinity matrix.
-        """
-        image_tensor = list(self.dataset[img_id])[0].to(self.cfg.device)
-        Fs = self.dataset.F
-        if not_matched_dim_group is not None and not_matched_index is not None:
-            dim_group = not_matched_dim_group
-            image_tensor = image_tensor[not_matched_index]
-        else:
-            dim_group = self.dataset.dimGroup[img_id]
-        keypoints2d[np.isnan(keypoints2d)] = 1e-9
-
-        # step1. estimate matching matrix with geometry affinity
-        # or appearance affinity matrix
-        affinity_mat = self.extractor.get_affinity(
-            image_tensor, rerank=self.rerank).cpu()
-        if self.rerank:
-            affinity_mat = torch.from_numpy(affinity_mat)
-            affinity_mat = torch.max(affinity_mat, affinity_mat.t())
-            affinity_mat = 1 - affinity_mat
-        geo_affinity_mat = geometry_affinity(
-            keypoints2d, Fs.numpy(), dim_group, n_kps2d=n_kps2d)
-        geo_affinity_mat = torch.from_numpy(geo_affinity_mat)
-
-        # step2. calculate the hybrid affinity matrix
-        if self.cfg.affinity_type == 'geometry_mean':
-            self.W = torch.sqrt(affinity_mat * geo_affinity_mat)
-        elif self.cfg.affinity_type == 'circle':
-            self.W = torch.sqrt((affinity_mat**2 + geo_affinity_mat**2) / 2)
-        elif self.cfg.affinity_type == 'ReID only':
-            self.W = affinity_mat
-        else:
-            raise NotImplementedError
-        self.W[torch.isnan(self.W)] = 0
-        # step3. multi-way matching with cycle consistency
-        self.match_mat, bin_match = match_SVT(
-            self.W,
-            dim_group,
-            self.logger,
-            alpha=self.alpha_SVT,
-            _lambda=self.lambda_SVT,
-            dual_stochastic=self.dual_stochastic_SVT)
-        sub_imgid2cam = np.zeros(keypoints2d.shape[0], dtype=np.int32)
-        n_cameras = len(dim_group) - 1
-        for idx, i in enumerate(range(n_cameras)):
-            sub_imgid2cam[dim_group[i]:dim_group[i + 1]] = idx
-
-        matched_list = [[] for _ in range(bin_match.shape[1])]
-        for sub_imgid, row in enumerate(bin_match):
-            if row.sum() != 0:
-                # pid = row.double().argmax()
-                pid = np.where(row.double() > 0)[0]
-                if len(pid) == 1:
-                    for pid_ in pid:
-                        matched_list[pid_].append(sub_imgid)
-        matched_list = [np.array(i) for i in matched_list]
-
-        return matched_list, sub_imgid2cam, geo_affinity_mat, affinity_mat
-
-    def top_down_kps3d_kernel(self,
-                              geo_affinity_mat: torch.Tensor,
-                              matched_list: list,
-                              keypoints2d: np.ndarray,
-                              sub_imgid2cam: np.ndarray,
-                              convention: str = 'coco') -> list:
-        """Use top-down approach to get the 3D keypoints of people: 2D
-        keypoints -> 3D keypoints.
-
-        Args:
-            geo_affinity_mat (torch.Tensor): Geometry affinity matrix in shape
-                (N,N), N=n1+n2+..., n1 is the number of detected people in cam1
-            matched_list (list):
-                The id of the matched people in different cameras.
-            keypoints2d (np.ndarray): Keypoints points in shape (sum, 17, 2)
-            sub_imgid2cam (np.ndarray): People id to camera id.
-            convention (str): Keypoints factory.
-
-        Returns:
-            multi_kps3d (list): 3d keypoints.
-        """
-        multi_kps3d = list()
-        chosen_img = list()
-        for person in matched_list:
-            Graph = geo_affinity_mat[person][:, person].clone().numpy()
-            Graph *= (1 - np.eye(Graph.shape[0]))  # make diagonal 0
-            if len(Graph) < 2:
-                continue
-            elif len(Graph) > 2:
-                sub_imageid = get_min_reprojection_error(
-                    person, self.dataset, keypoints2d, sub_imgid2cam)
-            else:
-                sub_imageid = person
-
-            _, rank = torch.sort(
-                geo_affinity_mat[sub_imageid][:, sub_imageid].sum(dim=0))
-            sub_imageid = sub_imageid[rank[:2]]
-            cam_id_0 = sub_imgid2cam[sub_imageid[0]]
-            cam_id_1 = sub_imgid2cam[sub_imageid[1]]
-            kps2d_0 = keypoints2d[sub_imageid[0]].T
-            kps2d_1 = keypoints2d[sub_imageid[1]].T
-
-            kps2d = np.stack((kps2d_0, kps2d_1), axis=0).transpose(0, 2, 1)
-            kps3d = self.triangulator[(cam_id_0,
-                                       cam_id_1)].triangulate(points=kps2d)
-            kps3d = kps3d.transpose(1, 0)
-            if check_bone_length(kps3d, convention):
-                multi_kps3d.append(kps3d)
-            else:
-                sub_imageid = list()
-                pass
-            chosen_img.append(sub_imageid)
-        return multi_kps3d
-
-    def reconstruction(self, matched_list: list,
-                       geo_affinity_mat: torch.Tensor, keypoints2d: np.ndarray,
-                       sub_imgid2cam: np.ndarray, frame_id: int, n_kps2d: int):
-        """hybrid:
-            Use bottom-up approach to get the 3D keypoints of people:
-            2D keypoints -> 3D keypoints candidates -> 3D keypoints
-            Step1: use 2D keypoints of people to triangulate 3D keypoints
-                candidates.
-            Step2: use the max-product algorithm to inference 3d keypoints.
-           top_down_kps3d_kernel:
-            Use top-down approach to get the 3D keypoints of people:
-            2D keypoints -> 3D keypoints
-            Step1: select two people with minimum reprojection error.
-            Step2: use the 2D keypoints of people to triangulate the 3D
-                keypoints.
-
-        Args:
-            matched_list (list): The id of the matched people in different
-                                 cameras.
-            geo_affinity_mat (torch.Tensor): geometric affinity matrix
-            keypoints2d (np.ndarray): Keypoints in shape (sum, n_kps2d, 2)
-            sub_imgid2cam (np.ndarray): People id to camera id.
-            frame_id (int): Frame id in sequence.
-            n_kps2d (int): The number of 2d keypoints.
-
-        Returns:
-            multi_kps3d (np.ndarray) in shape(n_person, n_kps3d, 3)
-        """
-        if self.hybrid:
-            multi_kps3d, _ = pictorial.hybrid_kernel(
-                self.dataset,
-                matched_list,
-                keypoints2d,
-                sub_imgid2cam,
-                frame_id,
-                keypoint_num=n_kps2d,
-                convention=self.kps2d_convention)
-        else:
-            multi_kps3d = self.top_down_kps3d_kernel(geo_affinity_mat,
-                                                     matched_list, keypoints2d,
-                                                     sub_imgid2cam,
-                                                     self.kps2d_convention)
-
-        multi_kps3d = [multi_kps3d[i].T for i in range(len(multi_kps3d))]
-        multi_kps3d = np.array(multi_kps3d)
-
-        return multi_kps3d
-
     def infer_keypoints3d(self) -> Keypoints:
         """Estimate 3d keypoints from matched 2d keypoints.
 
@@ -470,9 +283,11 @@ class Estimation:
                                                self.mask)
         assert (n_kps2d == self.cfg.n_kps2d)
         # initiate mem_dataset
-        self.dataset = MemDataset(
-            info_dict, self.cam_param_list, template_name='Unified')
-
+        self.dataset = MemDataset(info_dict, self.cam_param_list)
+        matching = build_matching(self.cfg.multi_way_matching)
+        self.cfg.hybrid_kps2d_selector['triangulator']['camera_parameters'] = \
+            self.triangulator.camera_parameters
+        kps2d_selector = build_point_selector(self.cfg.hybrid_kps2d_selector)
         # per frame results
         per_frame_3d = []
         n_max_people = 0
@@ -484,70 +299,79 @@ class Estimation:
             for cam_id in self.dataset.cam_names:
                 info_list += info_dict[cam_id][frame_id]
 
-            keypoints2d = np.array([i['pose2d'] for i in info_list
-                                    ]).reshape(-1, n_kps2d, 2)
+            kps2d = np.array([i['kps2d']
+                              for i in info_list]).reshape(-1, n_kps2d, 2)
+            kps2d_conf = np.array([i['conf'] for i in info_list
+                                   ]).reshape(-1, n_kps2d, 1)
             bbox = np.array([i['bbox'] for i in info_list])
             track_id = np.array([i['id'] for i in info_list])
 
             multi_kps3d = []
-            if len(keypoints2d) > 0:  # detect the person
-                matched_list, sub_imgid2cam, geo_affinity_mat, affinity_mat = \
-                    self.match(keypoints2d, frame_id, n_kps2d)
+            f_dim_group = self.dataset.dimGroup[frame_id]
+            image_tensor = list(self.dataset[frame_id])[0].to(self.cfg.device)
+            if len(kps2d) > 0:  # detect the person
+                matched_list, sub_imgid2cam = matching(kps2d, image_tensor,
+                                                       self.extractor,
+                                                       self.dataset.F,
+                                                       self.cfg.affinity_type,
+                                                       n_kps2d, f_dim_group)
+
                 # check match results
                 if self.cfg.vis_match:
                     visualize_match(frame_id, self.n_views, matched_list,
                                     sub_imgid2cam, bbox, track_id,
                                     self.dataset_name,
                                     self.cfg.data.input_root)
-                multi_kps3d = self.reconstruction(matched_list,
-                                                  geo_affinity_mat,
-                                                  keypoints2d, sub_imgid2cam,
-                                                  frame_id, n_kps2d)
+                mkps2d_id = np.zeros(sub_imgid2cam.shape, dtype=np.int32)
+                for i in range(self.n_views):
+                    for j in range(f_dim_group[i + 1] - f_dim_group[i]):
+                        mkps2d_id[f_dim_group[i] + j] = j
+                for person in matched_list:
+                    if person.shape[0] < 2:
+                        continue
+                    matched_mkps2d_id = np.full(self.n_views, np.nan)
+                    matched_mkps2d_id[
+                        sub_imgid2cam[person]] = mkps2d_id[person]
+                    matched_mkps2d = np.zeros((self.n_views, n_kps2d, 2))
+                    matched_mkps2d_mask = np.zeros((self.n_views, n_kps2d, 1))
+                    matched_mkps2d_conf = np.zeros((self.n_views, n_kps2d, 1))
+
+                    matched_mkps2d[sub_imgid2cam[person]] = kps2d[person]
+                    matched_mkps2d_mask[sub_imgid2cam[person]] = np.ones_like(
+                        kps2d[person][..., 0:1])
+                    matched_mkps2d_conf[
+                        sub_imgid2cam[person]] = kps2d_conf[person]
+
+                    selected_mask = kps2d_selector.get_selection_mask(
+                        np.concatenate((matched_mkps2d, matched_mkps2d_conf),
+                                       axis=-1), matched_mkps2d_mask)
+                    kps3d = self.triangulator.triangulate(
+                        matched_mkps2d, selected_mask)
+                    if not np.isnan(kps3d).all():
+                        multi_kps3d.append(kps3d)
+                multi_kps3d = np.array(multi_kps3d)
 
             per_frame_3d.append(multi_kps3d)
             if len(multi_kps3d) > n_max_people:
                 n_max_people = len(multi_kps3d)
 
-            if self.cfg.show:
-                if self.hybrid:
-                    # if you use hybrid method, the number of keypoints is 13.
-                    for kps3d in multi_kps3d:
-                        kps3d[1] = kps3d[0]
-                        kps3d[2] = kps3d[0]
-                        kps3d[3] = kps3d[0]
-                        kps3d[4] = kps3d[0]
-                bin_match = self.match_mat[:,
-                                           torch.nonzero(
-                                               torch.
-                                               sum(self.match_mat, dim=0) > 0.9
-                                           ).squeeze()] > 0.9
-                bin_match = bin_match.reshape(self.W.shape[0], -1)
-                matched_list = [[] for i in range(bin_match.shape[1])]
-                for sub_imgid, row in enumerate(bin_match):
-                    if row.sum() != 0:
-                        pid = row.double().argmax()
-                        matched_list[pid].append(sub_imgid)
-                matched_list = [np.array(i) for i in matched_list]
-                show_panel_mem(self.dataset, frame_id, multi_kps3d,
-                               self.dataset_name, self.cfg.data.input_root)
-                plot_paper_rows(self.dataset, matched_list, sub_imgid2cam,
-                                frame_id, multi_kps3d, self.dataset_name,
-                                self.cfg.data.input_root)
-
         n_frame = self.end_frame - self.start_frame
         kps3d = np.full((n_frame, n_max_people, n_kps2d, 3), np.nan)
-
+        person_mask = np.full((n_frame, n_max_people, 1, 1), np.nan)
         for frame_id in range(n_frame):
             n_person = len(per_frame_3d[frame_id])
             if n_person > 0:
                 kps3d[frame_id, :n_person] = per_frame_3d[frame_id]
+                person_mask[frame_id, :n_person] = 1
         keypoint3d_path = os.path.join(
             self.cfg.output_dir,
-            f'{self.start_frame}_{self.end_frame-1}' + '.npz')
+            f'{self.start_frame}_{self.end_frame}_mvpose' + '.npz')
 
         kps3d_score = np.ones_like(kps3d[..., 0:1])
-        kps3d = np.concatenate((kps3d, kps3d_score), axis=-1)
+        kps3d = (np.concatenate((kps3d, kps3d_score), axis=-1)) * person_mask
+        kps3d_mask = np.ones_like(kps3d[..., 0])
         keypoints3d = Keypoints(kps=kps3d, convention=self.kps2d_convention)
+        keypoints3d.set_mask(kps3d_mask * person_mask[:, :, :, 0])
         keypoints3d.dump(keypoint3d_path)
 
         return keypoints3d
@@ -567,11 +391,12 @@ class Estimation:
         assert (n_kps2d == self.cfg.n_kps2d)
         # initiate mem_dataset
         self.dataset = MemDataset(
-            info_dict,
-            self.cam_param_list,
-            template_name='Unified',
-            homo_folder=self.cfg.homo_folder)
+            info_dict, self.cam_param_list, homo_folder=self.cfg.homo_folder)
 
+        matching = build_matching(self.cfg.multi_way_matching)
+        self.cfg.hybrid_kps2d_selector['triangulator']['camera_parameters'] = \
+            self.triangulator.camera_parameters
+        kps2d_selector = build_point_selector(self.cfg.hybrid_kps2d_selector)
         # per frame results
         per_frame_3d = []
         n_max_people = 0
@@ -583,93 +408,144 @@ class Estimation:
             for cam_id in self.dataset.cam_names:
                 info_list += info_dict[cam_id][frame_id]
 
-            keypoints2d = np.array([i['pose2d'] for i in info_list
-                                    ]).reshape(-1, n_kps2d, 2)
+            kps2d = np.array([i['kps2d']
+                              for i in info_list]).reshape(-1, n_kps2d, 2)
+            kps2d_conf = np.array([i['conf'] for i in info_list
+                                   ]).reshape(-1, n_kps2d, 1)
             bbox = np.array([i['bbox'] for i in info_list])
             track_id = np.array([i['id'] for i in info_list])
-
+            image_tensor = list(self.dataset[frame_id])[0].to(self.cfg.device)
             multi_kps3d = []
-            if len(keypoints2d) > 0 and (frame_id == self.start_frame or
-                                         (frame_id - self.start_frame) %
-                                         self.interval == 0):
-                matched_list, sub_imgid2cam, geo_affinity_mat, affinity_mat = \
-                    self.match(keypoints2d, frame_id, n_kps2d)
+            f_dim_group = self.dataset.dimGroup[frame_id]
+            if len(kps2d) > 0 and (frame_id == self.start_frame or
+                                   (frame_id - self.start_frame) %
+                                   self.interval == 0):
+                matched_list, sub_imgid2cam = matching(kps2d, image_tensor,
+                                                       self.extractor,
+                                                       self.dataset.F,
+                                                       self.cfg.affinity_type,
+                                                       n_kps2d, f_dim_group)
                 # check match results
                 if self.cfg.vis_match:
                     visualize_match(frame_id, self.n_views, matched_list,
                                     sub_imgid2cam, bbox, track_id,
                                     self.dataset_name,
                                     self.cfg.data.input_root)
-                multi_kps3d = self.reconstruction(matched_list,
-                                                  geo_affinity_mat,
-                                                  keypoints2d, sub_imgid2cam,
-                                                  frame_id, n_kps2d)
+                mkps2d_id = np.zeros(sub_imgid2cam.shape, dtype=np.int32)
+                for i in range(self.n_views):
+                    for j in range(f_dim_group[i + 1] - f_dim_group[i]):
+                        mkps2d_id[f_dim_group[i] + j] = j
+                for person in matched_list:
+                    if person.shape[0] < 2:
+                        continue
+                    matched_mkps2d_id = np.full(self.n_views, np.nan)
+                    matched_mkps2d_id[
+                        sub_imgid2cam[person]] = mkps2d_id[person]
+                    matched_mkps2d = np.zeros((self.n_views, n_kps2d, 2))
+                    matched_mkps2d_mask = np.zeros((self.n_views, n_kps2d, 1))
+                    matched_mkps2d_conf = np.zeros((self.n_views, n_kps2d, 2))
+
+                    matched_mkps2d[sub_imgid2cam[person]] = kps2d[person]
+                    matched_mkps2d_mask[sub_imgid2cam[person]] = np.ones_like(
+                        kps2d[person][..., 0:1])
+                    matched_mkps2d_conf[
+                        sub_imgid2cam[person]] = kps2d_conf[person]
+                    selected_mask = kps2d_selector.get_selection_mask(
+                        np.concatenate((matched_mkps2d, matched_mkps2d_conf),
+                                       axis=-1), matched_mkps2d_mask)
+                    kps3d = self.triangulator.triangulate(
+                        matched_mkps2d, selected_mask)
+                    if not np.isnan(kps3d).all():
+                        multi_kps3d.append(kps3d)
+                multi_kps3d = np.array(multi_kps3d)
+
                 kalman_tracking = KalmanTracking(
                     state_kps3d=multi_kps3d, logger=self.logger)
 
-            if len(keypoints2d) > 0 and frame_id != self.start_frame \
+            if len(kps2d) > 0 and frame_id != self.start_frame \
                and (frame_id - self.start_frame) % self.interval != 0:
 
                 kalman_tracking.predict()
-                measurement_kps3d, not_matched_dim_group, not_matched_kps2d,\
+
+                measurement_kps3d, not_matched_dim_group,\
                     not_matched_index = kalman_tracking.get_measurement_kps3d(
-                        per_frame_3d[-1], self.dataset, keypoints2d, frame_id,
-                        n_kps2d, self.kps2d_convention, self.best_distance,
-                        self.triangulator)
+                        self.n_views, kps2d_selector, per_frame_3d[-1],
+                        self.dataset, kps2d, kps2d_conf, frame_id, n_kps2d,
+                        self.best_distance, self.triangulator,
+                        tracking_bbox=bbox)
+                not_matched_kps2d = kps2d[not_matched_index]
+
                 multi_kps3d = kalman_tracking.update(measurement_kps3d)
 
                 if len(not_matched_kps2d) > 0 and self.use_anchor:
-                    matched_list_new, sub_imgid2cam_new, geo_affinity_mat_new,\
-                        _ = self.match(not_matched_kps2d, frame_id, n_kps2d,
-                                       not_matched_dim_group,
-                                       not_matched_index)
+                    multi_kps3d_new = []
+                    matched_list_new, sub_imgid2cam_new = matching(
+                        not_matched_kps2d,
+                        image_tensor,
+                        self.extractor,
+                        self.dataset.F,
+                        self.cfg.affinity_type,
+                        n_kps2d,
+                        not_matched_dim_group=not_matched_dim_group,
+                        not_matched_index=not_matched_index)
 
-                    if matched_list_new:
-                        # visualize_match(frame_id, self.n_views,
-                        #                 matched_list_new, sub_imgid2cam_new,
-                        #                 bbox[not_matched_index], track_id,
-                        #                 self.dataset_name,
-                        #                 self.cfg.data.input_root)
+                    for person_new in matched_list_new:
+                        if person_new.shape[0] < 2:
+                            continue
+                        matched_mkps2d = np.zeros((self.n_views, n_kps2d, 2))
+                        matched_mkps2d_mask = np.zeros_like(
+                            matched_mkps2d[..., 0:1])
+                        matched_mkps2d_conf = np.zeros_like(
+                            matched_mkps2d[..., 0:1])
 
-                        multi_kps3d_new = self.reconstruction(
-                            matched_list_new, geo_affinity_mat_new,
-                            not_matched_kps2d, sub_imgid2cam_new, frame_id,
-                            n_kps2d)
-                        if len(multi_kps3d_new) > 0:
-                            if len(multi_kps3d) > 0:
-                                multi_kps3d = np.concatenate(
-                                    (multi_kps3d, multi_kps3d_new), axis=0)
-                            else:
-                                multi_kps3d = multi_kps3d_new
+                        matched_mkps2d[sub_imgid2cam_new[
+                            person_new]] = not_matched_kps2d[person_new]
+                        matched_mkps2d_mask[
+                            sub_imgid2cam_new[person_new]] = np.ones_like(
+                                not_matched_kps2d[person_new][..., 0:1])
+                        matched_mkps2d_conf[
+                            sub_imgid2cam_new[person_new]] = kps2d_conf[
+                                not_matched_index][person_new]
+
+                        selected_mask = kps2d_selector.get_selection_mask(
+                            np.concatenate(
+                                (matched_mkps2d, matched_mkps2d_conf),
+                                axis=-1), matched_mkps2d_mask)
+                        kps3d_new = self.triangulator.triangulate(
+                            matched_mkps2d, selected_mask)
+                        if not np.isnan(kps3d_new).all():
+                            multi_kps3d_new.append(kps3d_new)
+                    multi_kps3d_new = np.array(multi_kps3d_new)
+                    if len(multi_kps3d_new) > 0:
+                        if len(multi_kps3d) > 0:
+                            multi_kps3d = np.concatenate(
+                                (multi_kps3d, multi_kps3d_new), axis=0)
+                        else:
+                            multi_kps3d = multi_kps3d_new
 
             per_frame_3d.append(multi_kps3d)
             if len(multi_kps3d) > n_max_people:
                 n_max_people = len(multi_kps3d)
 
-            if self.cfg.show:
-                # if you use hybrid method, the number of keypoints is 13.
-                for kps3d in multi_kps3d:
-                    kps3d[1] = kps3d[0]
-                    kps3d[2] = kps3d[0]
-                    kps3d[3] = kps3d[0]
-                    kps3d[4] = kps3d[0]
-                show_panel_mem(self.dataset, frame_id, multi_kps3d,
-                               self.dataset_name, self.cfg.data.input_root)
         n_frame = self.end_frame - self.start_frame
         kps3d = np.full((n_frame, n_max_people, n_kps2d, 3), np.nan)
-
+        person_mask = np.full((n_frame, n_max_people, 1, 1), np.nan)
         for frame_id in range(n_frame):
             n_person = len(per_frame_3d[frame_id])
             if n_person > 0:
                 kps3d[frame_id, :n_person] = per_frame_3d[frame_id]
+                person_mask[frame_id, :n_person] = 1
         keypoint3d_path = os.path.join(
             self.cfg.output_dir,
-            f'{self.start_frame}_{self.end_frame-1}_tracking_v1' + '.npz')
+            f'{self.start_frame}_{self.end_frame}_tracking_v1' + '.npz')
 
         kps3d_score = np.ones_like(kps3d[..., 0:1])
-        kps3d = np.concatenate((kps3d, kps3d_score), axis=-1)
+        kps3d = (np.concatenate((kps3d, kps3d_score), axis=-1)) * person_mask
+        kps3d_mask = np.ones_like(kps3d[..., 0])
         keypoints3d = Keypoints(kps=kps3d, convention=self.kps2d_convention)
+        keypoints3d.set_mask(kps3d_mask * person_mask[:, :, :, 0])
         keypoints3d.dump(keypoint3d_path)
+
         return keypoints3d
 
     def advance_sort_tracking_keypoints3d(self) -> Keypoints:
@@ -687,10 +563,7 @@ class Estimation:
         assert (n_kps2d == self.cfg.n_kps2d)
         # initiate mem_dataset
         self.dataset = MemDataset(
-            info_dict,
-            self.cam_param_list,
-            template_name='Unified',
-            homo_folder=self.cfg.homo_folder)
+            info_dict, self.cam_param_list, homo_folder=self.cfg.homo_folder)
 
         # tracking framework
         advance_sort = AdvanceSort(
@@ -712,83 +585,28 @@ class Estimation:
         human.extend(advance_sort.human)
 
         n_max_people = len(human)
-        kps3d = np.full(
-            (self.end_frame - self.start_frame, n_max_people, n_kps2d, 3),
-            np.nan)
-        human_reproj_error = []
+        n_frame = self.end_frame - self.start_frame
+        kps3d = np.full((n_frame, n_max_people, n_kps2d, 3), np.nan)
+        person_mask = np.full((n_frame, n_max_people, 1, 1), np.nan)
         human_id = []
 
         for i, person in enumerate(human):
-            human_kps2d = np.transpose(
-                np.array(person.kps2d_history), (1, 0, 2, 3))
             human_kps3d = np.array(person.kps3d_history)
             human_id.append(person.gt_track_id)
             human_end_frame = person.start_frame + len(human_kps3d)
 
             kps3d[person.start_frame - self.start_frame:human_end_frame -
                   self.start_frame, i] = human_kps3d
-
-            reproj_error_per_human = self.triangulator.get_reprojection_error(
-                points2d=human_kps2d.reshape(
-                    len(self.dataset.cam_names), -1, 2),
-                points3d=human_kps3d.reshape(-1, 3),
-                mean=True)
-            human_reproj_error.append(
-                reproj_error_per_human.reshape(-1, n_kps2d).mean(axis=0))
+            person_mask[person.start_frame - self.start_frame:human_end_frame -
+                        self.start_frame, i] = 1
 
         keypoint3d_path = os.path.join(
             self.cfg.output_dir,
-            f'{self.start_frame}_{self.end_frame-1}_omni_tracking' + '.npz')
+            f'{self.start_frame}_{self.end_frame}_omni_tracking' + '.npz')
 
         kps3d_score = np.ones_like(kps3d[..., 0:1])
-        kps3d = np.concatenate((kps3d, kps3d_score), axis=-1)
+        kps3d = (np.concatenate((kps3d, kps3d_score), axis=-1)) * person_mask
         keypoints3d = Keypoints(kps=kps3d, convention=self.kps2d_convention)
         keypoints3d.dump(keypoint3d_path)
-
-        if self.cfg.show:
-            kps3d = kps3d.reshape(len(kps3d), -1, 4)[..., :3]
-            frame_dir_dict = {}
-            img_path = os.path.join(self.cfg.data.input_root,
-                                    self.dataset_name, 'img')
-            cam_folder_list = sorted([i for i in os.listdir(img_path)])
-            for camera_id in self.enable_camera_list:
-                frame_dir_path = os.path.join(img_path,
-                                              cam_folder_list[int(camera_id)])
-                frame_dir_dict[camera_id] = frame_dir_path
-
-            project2d_dir = os.path.join(self.cfg.output_dir,
-                                         'projected_keypoint2d')
-            os.makedirs(project2d_dir, exist_ok=True)
-            projected_kps2d_list = []
-            for _ in self.enable_camera_list:
-                projected_kps2d_list.append(kps3d[:, :, :2] * 0.0)
-            for frame_index in range(kps3d.shape[0]):
-                kps3d_frame = kps3d[frame_index]
-                projected_kps2d_frame = self.triangulator.project(kps3d_frame)
-                for camera_index, kps2d_cam in enumerate(projected_kps2d_list):
-                    kps2d_cam[frame_index, :, :] = projected_kps2d_frame[
-                        camera_index, :, :]
-            for camera_index, camera_id in enumerate(self.enable_camera_list):
-                kps2d_cam = projected_kps2d_list[camera_index]
-                proj_path = os.path.join(project2d_dir,
-                                         f'cam{camera_id}_keypoints2d.npz')
-
-                dict_to_write = {}
-                for frame_index in range(kps2d_cam.shape[0]):
-                    frame_name = 'frame_%06d.jpg' % frame_index
-                    frame_dict = {'keypoints': kps2d_cam[frame_index]}
-                    dict_to_write[frame_name] = frame_dict
-                np.savez_compressed(proj_path, **dict_to_write)
-                encode_path = os.path.join(project2d_dir,
-                                           f'project_cam{camera_id}.mp4')
-
-                plot_and_encode(
-                    keypoints2d=kps2d_cam,
-                    frame_dir=frame_dir_dict[camera_id],
-                    encode_path=encode_path,
-                    fps=25,
-                    start_frame=self.cfg.data.start_frame,
-                    end_frame=self.cfg.data.end_frame,
-                )
 
         return keypoints3d

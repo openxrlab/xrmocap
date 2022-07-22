@@ -8,10 +8,10 @@ from collections import OrderedDict
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms as T
-
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from xrprimer.data_structure.camera.fisheye_camera import \
     FisheyeCameraParameter  # FisheyeCamera with distortion
+
+from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 
 # Config project if not exist
 project_path = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
@@ -22,11 +22,7 @@ if project_path not in sys.path:
 class MemDataset(Dataset):
     """Datasets in memory to boost performance of whole pipeline."""
 
-    def __init__(self,
-                 info_dict,
-                 cam_param_list=None,
-                 template_name='Shelf',
-                 homo_folder=None):
+    def __init__(self, info_dict, cam_param_list=None, homo_folder=None):
         self.args = dict(height=256, width=128)
         self.normalizer = T.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -112,7 +108,7 @@ class MemDataset(Dataset):
                     index = get_keypoint_idx(
                         name='left_ankle', convention='coco')
                     feet = np.asarray([
-                        info['pose2d'][index]
+                        info['kps2d'][index]
                         for info in self.info_dict[camera_id][img_id]
                     ])[:, :2]
                     points = feet.astype(np.float32).reshape(-1, 1, 2)
@@ -148,7 +144,6 @@ class MemDataset(Dataset):
         # handle heatmap info
         self.heatmaps = None
         self.template = load_template()
-        self.distribution = load_distribution(template_name)
 
     def __getitem__(self, item):
         """Get a list of image in multi view at the same time.
@@ -210,88 +205,11 @@ class MemDataset(Dataset):
                 homo_points[cam_id, person_id] = self.info_dict[cam_id][
                     img_id][person_id]['h_proj']
                 mview_kps2d[cam_id, person_id] = self.info_dict[cam_id][
-                    img_id][person_id]['pose2d'][:, :2]
+                    img_id][person_id]['kps2d'][:, :2]
                 track_id[cam_id, person_id] = self.info_dict[cam_id][img_id][
                     person_id]['id']
 
         return homo_points, mview_kps2d, track_id, img_id
-
-    def get_unary(self, person, sub_imgid2cam, candidates, img_id):
-
-        def get2Dfrom3D(x, P):
-            """Get the 2d keypoints from 3d keypoints."""
-            x4d = np.append(x, 1)
-            x2d = np.dot(P, x4d)[0:2] / (np.dot(P, x4d)[2] + 10e-6
-                                         )  # to avoid np.dot(P, x4d)[2] = 0
-
-            return x2d
-
-        # get the unary of 3D candidates
-        n_kps2d = len(candidates)
-        n_point = len(candidates[0])
-        unary = np.ones((n_kps2d, n_point))
-        info_list = list()  # This also occur in multi estimater
-        for cam_id in self.cam_names:
-            info_list += self.info_dict[cam_id][img_id]
-        # project the 3d point to each view to get the 2d points
-
-        for pid in person:
-            use_heatmap = 'heatmap_data' in info_list[pid]
-            Pi = self.P[sub_imgid2cam[pid]]
-            if n_kps2d == 19 or not use_heatmap:  # omni
-                kps_2d = info_list[pid]['pose2d']
-                kps_conf = info_list[pid]['conf']
-            elif n_kps2d == 17 and use_heatmap:  # coco
-                heatmap = info_list[pid]['heatmap_data']
-                crop = np.array(info_list[pid]['heatmap_bbox'])
-            else:
-                raise NotImplementedError
-            points_3d = candidates.reshape(-1, 3).T
-            points_3d_homo = np.vstack(
-                [points_3d,
-                 np.ones(points_3d.shape[-1]).reshape(1, -1)])
-            points_2d_homo = (Pi @ points_3d_homo).T.reshape(n_kps2d, -1, 3)
-            points_2d = points_2d_homo[..., :2] / (
-                points_2d_homo[..., 2].reshape(n_kps2d, -1, 1) + 10e-6)
-
-            if n_kps2d == 19 or not use_heatmap:
-                for kps2d_id, kpj_2d in enumerate(kps_2d):
-                    for j, point3d in enumerate(candidates[kps2d_id]):
-                        point_2d = points_2d[kps2d_id, j]
-                        # we use gaussian to approx the heatmap
-                        if np.isnan(kpj_2d).any():
-                            unary_i = 10e-6
-                        else:
-                            pixel_distance = ((kpj_2d - point_2d)**2).sum()
-                            unary_i = np.exp(
-                                -pixel_distance / 625) * kps_conf[kps2d_id]
-                            unary_i = np.clip(unary_i, 10e-6, 1)
-
-                        if np.isnan(unary_i):  # nan in kpj_2d!
-                            import pdb
-                            pdb.set_trace()
-                        unary[kps2d_id, j] = unary[kps2d_id, j] * unary_i
-            elif n_kps2d == 17 and use_heatmap:
-                for kps2d_id, heatmap_j in enumerate(heatmap):
-                    for j, point3d in enumerate(candidates[kps2d_id]):
-                        point_2d = points_2d[kps2d_id, j]
-                        point_2d_in_heatmap = point_2d - np.array(
-                            [crop[0], crop[1]])
-
-                        if point_2d_in_heatmap[0] > heatmap_j.shape[
-                                1] or point_2d_in_heatmap[
-                                    0] < 0 or point_2d_in_heatmap[
-                                        1] > heatmap_j.shape[
-                                            0] or point_2d_in_heatmap[1] < 0:
-                            unary_i = 10e-6
-                        else:
-                            unary_i = heatmap_j[int(point_2d_in_heatmap[1]),
-                                                int(point_2d_in_heatmap[0])]
-                        unary[kps2d_id, j] = unary[kps2d_id, j] * unary_i
-            else:
-                raise NotImplementedError
-        unary = np.log10(unary)
-        return unary
 
 
 def load_template(dataset='h36m'):
@@ -356,84 +274,3 @@ def load_template(dataset='h36m'):
                   ]])
     }
     return templates[dataset]
-
-
-def load_distribution(dataset='Unified'):
-    joints2edges = {
-        (0, 1): 0,
-        (1, 0): 0,
-        (0, 2): 1,
-        (2, 0): 1,
-        (0, 7): 2,
-        (7, 0): 2,
-        (0, 8): 3,
-        (8, 0): 3,
-        (1, 3): 4,
-        (3, 1): 4,
-        (2, 4): 5,
-        (4, 2): 5,
-        (3, 5): 6,
-        (5, 3): 6,
-        (4, 6): 7,
-        (6, 4): 7,
-        (7, 9): 8,
-        (9, 7): 8,
-        (8, 10): 9,
-        (10, 8): 9,
-        (9, 11): 10,
-        (11, 9): 10,
-        (10, 12): 11,
-        (12, 10): 11
-    }
-    distribution_dict = {
-        'Shelf': {
-            'mean':
-            np.array([
-                0.30280354, 0.30138756, 0.79123502, 0.79222949, 0.28964179,
-                0.30393598, 0.24479075, 0.24903801, 0.40435882, 0.39445121,
-                0.3843522, 0.38199836
-            ]),
-            'std':
-            np.array([
-                0.0376412, 0.0304385, 0.0368604, 0.0350577, 0.03475468,
-                0.03876828, 0.0353617, 0.04009757, 0.03974647, 0.03696424,
-                0.03008979, 0.03143456
-            ]) * 2,
-            'joints2edges':
-            joints2edges
-        },
-        'Campus': {
-            'mean':
-            np.array([
-                0.29567343, 0.28090078, 0.89299809, 0.88799211, 0.32651703,
-                0.33454941, 0.29043165, 0.29932416, 0.43846395, 0.44881553,
-                0.46952846, 0.45528477
-            ]),
-            'std':
-            np.array([
-                0.01731019, 0.0226062, 0.06650426, 0.06009805, 0.04606478,
-                0.04059899, 0.05868499, 0.06553948, 0.04129285, 0.04205624,
-                0.03633746, 0.02889456
-            ]) * 2,
-            'joints2edges':
-            joints2edges
-        },
-        'Unified': {
-            'mean':
-            np.array([
-                0.29743698, 0.28764493, 0.86562234, 0.86257052, 0.31774172,
-                0.32603399, 0.27688682, 0.28548218, 0.42981244, 0.43392589,
-                0.44601327, 0.43572195
-            ]),
-            'std':
-            np.array([
-                0.02486281, 0.02611557, 0.07588978, 0.07094158, 0.04725651,
-                0.04132808, 0.05556177, 0.06311393, 0.04445206, 0.04843436,
-                0.0510811, 0.04460523
-            ]) * 16,
-            'joints2edges':
-            joints2edges
-        }
-    }
-    # logger.debug(f"Using distribution on {dataset}")
-    return distribution_dict[dataset]

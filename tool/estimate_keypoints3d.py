@@ -3,14 +3,16 @@ import datetime
 import mmcv
 import os
 
-from xrmocap.keypoints3d_estimation.estimation import Estimation
+from xrmocap.estimation.mview_mperson_keypoints3d.estimation import Estimation
 from xrmocap.utils.log_utils import setup_logger
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Triangulate multi-view keypoints2d to keypoints3d')
     parser.add_argument(
-        '--config', default='./config/kps3d_estimation/estimate_kps3d.py')
+        '--config',
+        default='./config/keypoints3d_estimation/shelf_config' +
+        '/estimate_keypoints3d.py')
     args = parser.parse_args()
 
     cfg = mmcv.Config.fromfile(args.config)

@@ -4,7 +4,7 @@ import pytest
 import shutil
 import torch
 
-from xrmocap.keypoints3d_estimation.estimation import Estimation
+from xrmocap.estimation.mview_mperson_keypoints3d.estimation import Estimation
 
 input_dir = 'test/data/keypoints3d_estimation/'
 output_dir = 'test/data/output/keypoints3d_estimation/shelf'
@@ -23,7 +23,8 @@ def test_matching():
     else:
         device_name = 'cpu'
     estimate_kps3d_config = mmcv.Config.fromfile(
-        './config/kps3d_estimation/shelf_config/estimate_kps3d.py')
+        './config/estimation/mview_mperson_keypoints3d/'
+        'shelf_config/estimate_keypoints3d.py')
     estimate_kps3d_config.device = device_name
     estimate_kps3d_config.data['start_frame'] = 300
     estimate_kps3d_config.data['end_frame'] = 305

@@ -1,12 +1,12 @@
 # yapf: disable
 import numpy as np
 from typing import List, Union, overload
-
-from xrmocap.data_structure.keypoints import Keypoints
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
 from xrprimer.ops.projection.opencv_projector import OpencvProjector
+
+from xrmocap.data_structure.keypoints import Keypoints
 from .visualize_keypoints2d import visualize_keypoints2d
 
 try:
@@ -33,6 +33,7 @@ def visualize_project_keypoints3d(
         cam_param: Union[FisheyeCameraParameter, PinholeCameraParameter],
         output_path: str,
         img_arr: np.ndarray,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -43,6 +44,7 @@ def visualize_project_keypoints3d(
         cam_param: Union[FisheyeCameraParameter, PinholeCameraParameter],
         output_path: str,
         img_paths: List[str],
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -53,6 +55,7 @@ def visualize_project_keypoints3d(
         cam_param: Union[FisheyeCameraParameter, PinholeCameraParameter],
         output_path: str,
         video_path: str,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -62,6 +65,7 @@ def visualize_project_keypoints3d(
         keypoints: Keypoints,
         cam_param: Union[FisheyeCameraParameter, PinholeCameraParameter],
         output_path: str,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     ...
 
@@ -73,6 +77,7 @@ def visualize_project_keypoints3d(
         img_arr: Union[None, np.ndarray] = None,
         img_paths: Union[None, List[str]] = None,
         video_path: Union[None, str] = None,
+        overwrite: bool = False,
         return_array: bool = False) -> Union[None, np.ndarray]:
     """Project 3d keypoints to 2d, visualize the peojected keypoints, powered
     by mmhuman3d.
@@ -95,6 +100,8 @@ def visualize_project_keypoints3d(
             A list of image paths. Defaults to None.
         video_path (Union[None, str], optional):
             Path to a video file. Defaults to None.
+        overwrite (bool, optional):
+            Whether replace the file at output_path. Defaults to False.
         return_array (bool, optional):
             Whether to return the visualized image array.
             Defaults to False.
@@ -127,6 +134,7 @@ def visualize_project_keypoints3d(
         img_arr=img_arr,
         img_paths=img_paths,
         video_path=video_path,
+        overwrite=overwrite,
         return_array=return_array)
     return vis_arr
 

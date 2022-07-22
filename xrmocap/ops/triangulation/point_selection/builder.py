@@ -3,6 +3,7 @@ from mmcv.utils import Registry
 from .auto_threshold_selector import AutoThresholdSelector
 from .base_selector import BaseSelector
 from .camera_error_selector import CameraErrorSelector
+from .hybrid_kps2d_selector import HybridKps2dSelector
 from .manual_threshold_selector import ManualThresholdSelector
 from .slow_camera_error_selector import SlowCameraErrorSelector
 
@@ -16,6 +17,8 @@ POINTSELECTORS.register_module(
     name='SlowCameraErrorSelector', module=SlowCameraErrorSelector)
 POINTSELECTORS.register_module(
     name='CameraErrorSelector', module=CameraErrorSelector)
+POINTSELECTORS.register_module(
+    name='HybridKps2dSelector', module=HybridKps2dSelector)
 
 
 def build_point_selector(cfg) -> BaseSelector:

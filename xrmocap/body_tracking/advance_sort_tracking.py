@@ -6,8 +6,8 @@ from typing import List, Tuple, Union
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.limbs import get_limbs_from_keypoints
 from xrmocap.utils.log_utils import get_logger
+from ..matching.builder import build_matching
 from .kalman_tracker import KalmanJointTracker
-from .matching.builder import build_matching
 
 # yapf:enable
 
@@ -128,23 +128,6 @@ class Human:
         self.kps3d_history.append(new_key_p3)
         self.track_id_history.append(new_track_id)
         self.track_id_history_.append(new_track_id)
-
-    # Other utilities
-    def get_optim_key(self, camera_group):  # not available
-        """TODO:Implementing temporal optimization.
-
-        Args:
-            camera_group (_type_): _description_
-
-        Returns:
-            _type_: temporal optimized skeleton
-        """
-        input_kps2d = np.transpose(
-            np.stack(self.kps2d_history[-self.optim_frame:]),
-            (1, 0, 2, 3))  # (C, N, J, 2)
-        optim_kps3d = camera_group.triangulate_optim(
-            input_kps2d, constraints=self.conn, scale_smooth=4)
-        return optim_kps3d[-1]
 
     def get_homo_threshold(self):
         """Vary homography threshold based on feet height.

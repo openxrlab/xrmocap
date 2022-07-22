@@ -1,7 +1,12 @@
+# yapf: disable
 import mmcv
 import numpy as np
 
-from xrmocap.ops.triangulation.builder import build_point_selector
+from xrmocap.ops.triangulation.point_selection.builder import (
+    build_point_selector,
+)
+
+# yapf: enable
 
 
 def test_manual_threshold_selector():

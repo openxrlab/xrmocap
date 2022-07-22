@@ -1,9 +1,12 @@
-type = 'Kps3dEstimation'
+import numpy as np
 
-exp_name = 'estimation_kps17'
+type = 'Keypoints3dEstimation'
+
 kps2d_convention = 'coco'
 n_kps2d = 17
 device = 'cuda'
+verbose = False
+logger = None
 # htc_hrnet_perception, human2d_kp17_cpn, mmdet_kp17
 kps2d_type = 'mmdet_kp17'
 use_anchor = True
@@ -14,7 +17,7 @@ data = dict(
     start_frame=300,
     end_frame=310,
     enable_camera_id='0_1_2_3_4',
-    input_root='./data')
+    input_root='data')
 
 # path config
 output_dir = f"./output/mvpose_mmdet/{data['name']}"
@@ -26,19 +29,72 @@ affinity_type = 'geometry_mean'
 affinity_reg_config = './config/affinity_estimation/' + \
                       'resnet50_affinity_estimator.py'
 affinity_reg_checkpoint = './weight/resnet50_reid_camstyle.pth.tar'
-use_dual_stochastic_SVT = True
-lambda_SVT = 50
-alpha_SVT = 0.5
+
+multi_way_matching = dict(
+    type='MultiWayMatching',
+    use_dual_stochastic_SVT=True,
+    lambda_SVT=50,
+    alpha_SVT=0.5,
+)
 best_distance = 500
 
 # reconstration config
+cam_selector = dict(
+    type='CameraErrorSelector',
+    target_camera_number=2,
+    triangulator=dict(
+        type='AniposelibTriangulator', camera_parameters=[], logger=logger),
+    verbose=verbose)
+
+hybrid_kps2d_selector = dict(
+    type='HybridKps2dSelector',
+    triangulator=dict(
+        type='AniposelibTriangulator', camera_parameters=[], logger=logger),
+    distribution=dict(
+        mean=np.array([
+            0.29743698, 0.28764493, 0.86562234, 0.86257052, 0.31774172,
+            0.32603399, 0.27688682, 0.28548218, 0.42981244, 0.43392589,
+            0.44601327, 0.43572195
+        ]),
+        std=np.array([
+            0.02486281, 0.02611557, 0.07588978, 0.07094158, 0.04725651,
+            0.04132808, 0.05556177, 0.06311393, 0.04445206, 0.04843436,
+            0.0510811, 0.04460523
+        ]) * 16,
+        kps2conns={
+            (0, 1): 0,
+            (1, 0): 0,
+            (0, 2): 1,
+            (2, 0): 1,
+            (0, 7): 2,
+            (7, 0): 2,
+            (0, 8): 3,
+            (8, 0): 3,
+            (1, 3): 4,
+            (3, 1): 4,
+            (2, 4): 5,
+            (4, 2): 5,
+            (3, 5): 6,
+            (5, 3): 6,
+            (4, 6): 7,
+            (6, 4): 7,
+            (7, 9): 8,
+            (9, 7): 8,
+            (8, 10): 9,
+            (10, 8): 9,
+            (9, 11): 10,
+            (11, 9): 10,
+            (10, 12): 11,
+            (12, 10): 11
+        }),
+    verbose=verbose,
+    ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
+    convention='coco')
+
 triangulator = 'config/ops/triangulation/aniposelib_triangulator.py'
-use_hybrid = True
 
 # visualize config
-vis_project = False
 vis_match = False
-show = True
 
 # tracking
 use_advance_sort_tracking = False
