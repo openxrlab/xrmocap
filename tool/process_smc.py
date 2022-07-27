@@ -8,12 +8,12 @@ from mmhuman3d.core.visualization.visualize_keypoints3d import visualize_kp3d
 from mmhuman3d.core.visualization.visualize_smpl import (
     visualize_smpl_calibration,
 )
+from xrprimer.utils.log_utils import setup_logger
 
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.estimation.builder import build_estimator
 from xrmocap.io.camera import get_color_camera_parameter_from_smc
 from xrmocap.transform.image.color import bgr2rgb
-from xrmocap.utils.log_utils import setup_logger
 from xrmocap.utils.path_utils import Existence, check_path_existence
 
 # yapf: enable

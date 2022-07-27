@@ -4,10 +4,10 @@ import datetime
 import mmcv
 import os
 import shutil
+from xrprimer.utils.log_utils import setup_logger
 from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_converter.builder import build_data_converter
-from xrmocap.utils.log_utils import setup_logger
 
 # yapf: enable
 
