@@ -2,9 +2,9 @@ import argparse
 import datetime
 import mmcv
 import os
+from xrprimer.utils.log_utils import setup_logger
 
 from xrmocap.estimation.mview_mperson_keypoints3d.estimation import Estimation
-from xrmocap.utils.log_utils import setup_logger
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

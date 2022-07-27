@@ -1,19 +1,14 @@
-from mmcv.cnn import MODELS as MMCV_MODELS
 from mmcv.utils import Registry
 
 from .affinity_estimator import AppearanceAffinityEstimator
+from .multi_view_pose_transformer import MviewPoseTransformer
 
-
-def build_from_cfg(cfg, registry, default_args=None):
-    if cfg is None:
-        return None
-    return MMCV_MODELS.build_func(cfg, registry, default_args)
-
-
-ARCHITECTURES = Registry('architectures', build_func=build_from_cfg)
+ARCHITECTURES = Registry('architectures')
 
 ARCHITECTURES.register_module(
     name='AppearanceAffinityEstimator', module=AppearanceAffinityEstimator)
+ARCHITECTURES.register_module(
+    name='MviewPoseTransformer', module=MviewPoseTransformer)
 
 
 def build_architecture(cfg):

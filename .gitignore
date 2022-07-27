@@ -113,6 +113,10 @@ xrmocap_data/
 # or data link
 xrmocap_data
 weight
+xrmocap/model/deformable
+output/
+xrprimer/
+
 # data for pytest moved to http server
 .vscode
 .idea
