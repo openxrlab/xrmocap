@@ -50,7 +50,7 @@ def load_camera_parameters_from_zoemotion_dir(
             camera_param_dict[camera_id]['distCoeff'][2],
             camera_param_dict[camera_id]['distCoeff'][3]
         ]
-        cam_param.set_distortion_coefficients(dist_coeff_k, dist_coeff_p)
+        cam_param.set_dist_coeff(dist_coeff_k, dist_coeff_p)
         cam_param.set_KRT(
             K=np.array(camera_param_dict[camera_id]['K']).reshape(3, 3),
             R=np.array(camera_param_dict[camera_id]['R']).reshape(3, 3),

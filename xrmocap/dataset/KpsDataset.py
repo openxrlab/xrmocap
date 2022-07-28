@@ -252,7 +252,7 @@ class KpsDataset(Dataset):
             db_rec['camera']['k'][2], 0, 0, 0
         ]
         dist_coeff_p = [db_rec['camera']['p'][0], db_rec['camera']['p'][1]]
-        cam_param.set_distortion_coefficients(dist_coeff_k, dist_coeff_p)
+        cam_param.set_dist_coeff(dist_coeff_k, dist_coeff_p)
 
         cam_param.set_KRT(
             K=cam_intri, R=cam['R'], T=cam['standard_T'], world2cam=False)
