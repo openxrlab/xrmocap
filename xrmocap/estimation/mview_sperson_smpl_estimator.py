@@ -41,6 +41,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                  final_selectors: List[Union[dict, BaseSelector, None]] = None,
                  kps3d_optimizers: Union[List[Union[BaseOptimizer, dict]],
                                          None] = None,
+                 load_batch_size: int = 500,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Api for estimating smpl parameters in a multi-view, single-person
@@ -77,6 +78,8 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 keypoints3d will be
                 optimized by the cascaded final optimizers after triangulation.
                 Defaults to None.
+            load_batch_size (int, optional):
+                How many frames are loaded at the same time. Defaults to 500.
             verbose (bool, optional):
                 Whether to print(logger.info) information during estimating.
                 Defaults to True.
@@ -85,6 +88,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 Defaults to None.
         """
         super().__init__(work_dir, verbose, logger)
+        self.load_batch_size = load_batch_size
 
         if isinstance(bbox_detector, dict):
             bbox_detector['logger'] = logger
@@ -221,30 +225,60 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
         smpl_data = self.estimate_smpl(keypoints3d=keypoints3d)
         return keypoints2d_list, keypoints3d, smpl_data
 
-    def estimate_keypoints2d(self, img_arr: np.ndarray) -> List[Keypoints]:
+    def estimate_keypoints2d(
+        self,
+        img_arr: Union[None, np.ndarray] = None,
+        img_paths: Union[None, List[List[str]]] = None,
+    ) -> List[Keypoints]:
         """Estimate keypoints2d in a top-down way.
 
         Args:
-            img_arr (np.ndarray):
-                BGR image array in shape [n_view, n_frame, h, w, c].
+            img_arr (Union[None, np.ndarray], optional):
+                A multi-view image array, in shape
+                [n_view, n_frame, h, w, c]. Defaults to None.
+            img_paths (Union[None, List[List[str]]], optional):
+                A nested list of image paths, in shape
+                [n_view, n_frame]. Defaults to None.
 
         Returns:
             List[Keypoints]:
                 A list of keypoints2d instances.
         """
         self.logger.info('Estimating keypoints2d.')
+        input_list = [img_arr, img_paths]
+        input_count = 0
+        for input_instance in input_list:
+            if input_instance is not None:
+                input_count += 1
+        if input_count > 1:
+            self.logger.error('Redundant input!\n' +
+                              'Please offer only one between' +
+                              ' img_arr, img_paths.')
+            raise ValueError
         ret_list = []
         for view_index in range(img_arr.shape[0]):
-            view_img_arr = img_arr[view_index]
-            bbox_list = self.bbox_detector.infer_array(
-                image_array=view_img_arr,
-                disable_tqdm=(not self.verbose),
-                multi_person=False)
-            kps2d_list, _, _ = self.kps2d_estimator.infer_array(
-                image_array=view_img_arr,
-                bbox_list=bbox_list,
-                disable_tqdm=(not self.verbose),
-            )
+            if img_arr is not None:
+                view_img_arr = img_arr[view_index]
+                bbox_list = self.bbox_detector.infer_array(
+                    image_array=view_img_arr,
+                    disable_tqdm=(not self.verbose),
+                    multi_person=False)
+                kps2d_list, _, _ = self.kps2d_estimator.infer_array(
+                    image_array=view_img_arr,
+                    bbox_list=bbox_list,
+                    disable_tqdm=(not self.verbose),
+                )
+            else:
+                bbox_list = self.bbox_detector.infer_frames(
+                    frame_path_list=img_paths,
+                    disable_tqdm=(not self.verbose),
+                    multi_person=True,
+                    load_batch_size=self.load_batch_size)
+                kps2d_list, _, _ = self.kps2d_estimator.infer_frames(
+                    frame_path_list=img_paths,
+                    bbox_list=bbox_list,
+                    disable_tqdm=(not self.verbose),
+                    load_batch_size=self.load_batch_size)
             keypoints2d = self.kps2d_estimator.get_keypoints_from_result(
                 kps2d_list)
             ret_list.append(keypoints2d)
@@ -317,9 +351,15 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
             kps=kps3d_arr,
             mask=kps3d_mask,
             convention=keypoints2d_list[0].get_convention())
+        optim_kwargs = dict(
+            mview_kps2d=np.expand_dims(mview_kps2d_arr, axis=2),
+            mview_kps2d_mask=np.expand_dims(triangulate_mask, axis=2))
         if self.kps3d_optimizers is not None:
             for optimizer in self.kps3d_optimizers:
-                keypoints3d = optimizer.optimize_keypoints3d(keypoints3d)
+                if hasattr(optimizer, 'triangulator'):
+                    optimizer.triangulator = selected_triangulator
+                keypoints3d = optimizer.optimize_keypoints3d(
+                    keypoints3d, **optim_kwargs)
         return keypoints3d
 
     def estimate_smpl(self, keypoints3d: Keypoints) -> SMPLData:

@@ -23,5 +23,18 @@ class BaseOptimizer:
         self.verbose = verbose
         self.logger = get_logger(logger)
 
-    def optimize_keypoints3d(self, keypoints: Keypoints) -> Keypoints:
+    def optimize_keypoints3d(self, keypoints: Keypoints,
+                             **kwargs: dict) -> Keypoints:
+        """Forward function of keypoints3d optimizer.
+
+        Args:
+            keypoints (Keypoints): Input keypoints3d.
+        kwargs:
+            Redundant keyword arguments to be
+            ignored, including:
+                mview_keypoints2d
+
+        Returns:
+            Keypoints: The optimized keypoints3d.
+        """
         raise NotImplementedError

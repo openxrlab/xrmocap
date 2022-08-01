@@ -25,10 +25,10 @@ smplify = dict(
     info_level='stage',
     n_epochs=1,
     use_one_betas_per_video=True,
-    logger=logger,
     hooks=[
         dict(type='SMPLifyVerboseHook'),
     ],
+    logger=logger,
     body_model=dict(
         type='SMPL',
         gender='neutral',
@@ -170,20 +170,25 @@ smplify = dict(
     ],
 )
 cam_pre_selector = dict(
-    type='ManualThresholdSelector', threshold=0.9, verbose=verbose)
+    type='ManualThresholdSelector', threshold=0.4, verbose=verbose)
 cam_selector = dict(
     type='CameraErrorSelector',
-    target_camera_number=5,
-    triangulator=dict(
-        type='AniposelibTriangulator', camera_parameters=[], logger=logger),
+    target_camera_number=6,
+    triangulator=dict(type='AniposelibTriangulator', camera_parameters=[]),
     verbose=verbose)
 final_selectors = [
     # use ManualThresholdSelector to set a lower bound
-    dict(type='ManualThresholdSelector', threshold=0.6, verbose=verbose),
+    dict(type='ManualThresholdSelector', threshold=0.4, verbose=verbose),
     dict(
         type='AutoThresholdSelector',
         start=0.95,
         stride=-0.025,
         verbose=verbose)
 ]
-kps3d_optimizers = [dict(type='NanInterpolation', verbose=verbose)]
+kps3d_optimizers = [
+    dict(type='NanInterpolation', verbose=verbose),
+    dict(
+        type='AniposelibOptimizer',
+        triangulator=dict(type='AniposelibTriangulator', camera_parameters=[]),
+        verbose=verbose)
+]

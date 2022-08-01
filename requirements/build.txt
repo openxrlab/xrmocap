@@ -1,0 +1,4 @@
+filterpy
+pre-commit
+prettytable
+scipy

@@ -144,6 +144,8 @@ def prepare_triangulate_input(
             'Type of points_mask is not in (np.ndarray, list, tuple).\n' +
             f'Type: {type(points_mask)}.')
         raise TypeError
+    if len(points_mask.shape) == len(points.shape) - 1:
+        points_mask = np.expand_dims(points_mask, -1)
     # check points shape
     if not (points.shape[0] == points_mask.shape[0]
             and points.shape[0] == camera_number):
@@ -160,7 +162,7 @@ def prepare_triangulate_input(
     # check points_mask shape
     if points.shape[:-1] != points_mask.shape[:-1] or\
             points_mask.shape[-1] != 1:
-        logger.error('points_mask must be [n_view, ..., 1] like points.' +
+        logger.error('points_mask must be [n_view, ..., 1] like points.\n' +
                      f'points_mask.shape: {points_mask.shape}' +
                      f'points.shape: {points.shape}')
         raise ValueError
