@@ -20,9 +20,8 @@ CONFIG_SLOW_CAM_SELECTOR = join(CONFIG_ROOT, 'slow_camera_error_selector.py')
 
 
 def test_camera_error_selector():
-    keypoints2d = np.load(join(TEST_DATA_ROOT,
-                               'keypoints2d.npz'))['keypoints2d']
-    n_view, _, _, _ = keypoints2d.shape
+    kps2d = np.load(join(TEST_DATA_ROOT, 'keypoints2d.npz'))['keypoints2d']
+    n_view, _, _, _ = kps2d.shape
     cam_param_list = []
     for kinect_index in range(n_view):
         cam_param_path = join(TEST_DATA_ROOT, f'cam_{kinect_index:02d}.json')
@@ -41,34 +40,33 @@ def test_camera_error_selector():
         len(triangulator.camera_parameters) - 1
     camera_selector = build_point_selector(camera_selector)
     # test camera indexes
-    camera_indexes = camera_selector.get_camera_indexes(points=keypoints2d)
+    camera_indexes = camera_selector.get_camera_indexes(points=kps2d)
     assert len(camera_indexes) == len(triangulator.camera_parameters) - 1
     # test camera mask
-    init_mask = np.ones_like(keypoints2d[..., 0:1])
-    keypoints2d_backup = keypoints2d.copy()
+    init_mask = np.ones_like(kps2d[..., 0:1])
+    kps2d_backup = kps2d.copy()
     init_mask_backup = init_mask.copy()
-    points2d_mask = camera_selector.get_selection_mask(keypoints2d, init_mask)
-    assert np.all(keypoints2d_backup == keypoints2d)
+    points2d_mask = camera_selector.get_selection_mask(kps2d, init_mask)
+    assert np.all(kps2d_backup == kps2d)
     assert np.allclose(init_mask_backup, init_mask, equal_nan=True)
     assert np.all(points2d_mask.shape == init_mask.shape)
     # test some view has been masked
-    init_mask = np.ones_like(keypoints2d[..., 0:1])
+    init_mask = np.ones_like(kps2d[..., 0:1])
     init_mask[0, ...] = 0
-    camera_indexes = camera_selector.get_camera_indexes(keypoints2d, init_mask)
+    camera_indexes = camera_selector.get_camera_indexes(kps2d, init_mask)
     assert len(camera_indexes) == len(triangulator.camera_parameters) - 1
-    points2d_mask = camera_selector.get_selection_mask(keypoints2d, init_mask)
+    points2d_mask = camera_selector.get_selection_mask(kps2d, init_mask)
     assert np.allclose(points2d_mask, init_mask, equal_nan=True)
     assert np.all(points2d_mask.shape == init_mask.shape)
     init_mask[0:2, ...] = 0
     # expect n-1 views, but only n-2 views are valid
     with pytest.raises(ValueError):
-        camera_selector.get_selection_mask(keypoints2d, init_mask)
+        camera_selector.get_selection_mask(kps2d, init_mask)
 
 
 def test_slow_camera_error_selector():
-    keypoints2d = np.load(join(TEST_DATA_ROOT,
-                               'keypoints2d.npz'))['keypoints2d']
-    n_view, _, _, _ = keypoints2d.shape
+    kps2d = np.load(join(TEST_DATA_ROOT, 'keypoints2d.npz'))['keypoints2d']
+    n_view, _, _, _ = kps2d.shape
     cam_param_list = []
     for kinect_index in range(n_view):
         cam_param_path = join(TEST_DATA_ROOT, f'cam_{kinect_index:02d}.json')
@@ -87,13 +85,13 @@ def test_slow_camera_error_selector():
         len(triangulator.camera_parameters) - 1
     camera_selector = build_point_selector(camera_selector)
     # test camera indexes
-    camera_indexes = camera_selector.get_camera_indexes(points=keypoints2d)
+    camera_indexes = camera_selector.get_camera_indexes(points=kps2d)
     assert len(camera_indexes) == len(triangulator.camera_parameters) - 1
     # test camera mask
-    init_mask = np.ones_like(keypoints2d[..., 0:1])
-    keypoints2d_backup = keypoints2d.copy()
+    init_mask = np.ones_like(kps2d[..., 0:1])
+    kps2d_backup = kps2d.copy()
     init_mask_backup = init_mask.copy()
-    points2d_mask = camera_selector.get_selection_mask(keypoints2d, init_mask)
-    assert np.all(keypoints2d_backup == keypoints2d)
+    points2d_mask = camera_selector.get_selection_mask(kps2d, init_mask)
+    assert np.all(kps2d_backup == kps2d)
     assert np.allclose(init_mask_backup, init_mask, equal_nan=True)
     assert np.all(points2d_mask.shape == init_mask.shape)

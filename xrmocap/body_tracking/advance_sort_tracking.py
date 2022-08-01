@@ -408,7 +408,7 @@ class AdvanceSort:
 
                 kps3d = triangulator.triangulate(kps2d)
                 error = triangulator.get_reprojection_error(
-                    points2d=kps2d, points3d=kps3d, mean=True)
+                    points2d=kps2d, points3d=kps3d, reduction='mean')
                 if np.isnan(error).all():
                     continue
                 error = error[~np.isnan(error)].mean(
@@ -546,7 +546,7 @@ class AdvanceSort:
                         human_idx) in enumerate(zip(tri_kps2d, tri_human_idx)):
                 kps3d = triangulator.triangulate(kps2d)
                 error = triangulator.get_reprojection_error(
-                    points2d=kps2d, points3d=kps3d, mean=True)
+                    points2d=kps2d, points3d=kps3d, reduction='mean')
                 if np.isnan(error).all():
                     continue
                 proj_error = error[~np.isnan(error)].mean(

@@ -608,5 +608,4 @@ class Estimation:
         kps3d = (np.concatenate((kps3d, kps3d_score), axis=-1)) * person_mask
         keypoints3d = Keypoints(kps=kps3d, convention=self.kps2d_convention)
         keypoints3d.dump(keypoint3d_path)
-
         return keypoints3d

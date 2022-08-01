@@ -19,23 +19,21 @@ def fixture():
 
 
 def test_get_limbs_from_keypoints():
-    kps2d_arr = np.load(
-        os.path.join('test/data/ops/test_triangulation',
-                     'keypoints2d.npz'))['keypoints2d']
     # test get from numpy
-    keypoints2d = Keypoints(kps=kps2d_arr, convention='coco_wholebody')
-    limbs = get_limbs_from_keypoints(keypoints=keypoints2d)
+    keypoints3d = Keypoints.fromfile(
+        'test/data/ops/test_projection/keypoints3d.npz')
+    limbs = get_limbs_from_keypoints(keypoints=keypoints3d)
     assert len(limbs) > 0
     assert limbs.get_points() is None
     # test get from torch
-    keypoints2d_torch = keypoints2d.to_tensor()
-    limbs = get_limbs_from_keypoints(keypoints=keypoints2d_torch)
+    keypoints3d_torch = keypoints3d.to_tensor()
+    limbs = get_limbs_from_keypoints(keypoints=keypoints3d_torch)
     assert len(limbs) > 0
     assert len(limbs.get_parts()) > 0
     assert limbs.get_points() is None
     # test get with points
     limbs = get_limbs_from_keypoints(
-        keypoints=keypoints2d, frame_idx=0, person_idx=0)
+        keypoints=keypoints3d, frame_idx=0, person_idx=0)
     assert limbs.get_points() is not None
     conn = limbs.get_connections()
     canvas = np.ones(shape=(1080, 1920, 3), dtype=np.uint8)
@@ -52,6 +50,6 @@ def test_get_limbs_from_keypoints():
         img=canvas)
     # test get connection names
     limbs = get_limbs_from_keypoints(
-        keypoints=keypoints2d, frame_idx=0, person_idx=0, fill_limb_names=True)
+        keypoints=keypoints3d, frame_idx=0, person_idx=0, fill_limb_names=True)
     conn_dict = limbs.get_connections_by_names()
     assert len(conn_dict) > 0

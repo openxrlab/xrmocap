@@ -12,7 +12,7 @@ def interpolate_np_data(data: np.ndarray) -> np.ndarray:
 
     Args:
         data (np.ndarray):
-            points data in shape [n_frame, n_point, point_dim].
+            Points data in shape [n_frame, n_point, point_dim].
 
     Returns:
         np.ndarray:
@@ -72,7 +72,19 @@ class NanInterpolation(BaseOptimizer):
         """
         super().__init__(verbose=verbose, logger=logger)
 
-    def optimize_keypoints3d(self, keypoints: Keypoints) -> Keypoints:
+    def optimize_keypoints3d(self, keypoints: Keypoints,
+                             **kwargs: dict) -> Keypoints:
+        """Forward function of keypoints3d optimizer.
+
+        Args:
+            keypoints (Keypoints): Input keypoints3d.
+        kwargs:
+            Redundant keyword arguments to be
+            ignored.
+
+        Returns:
+            Keypoints: The optimized keypoints3d.
+        """
         if keypoints.dtype == 'numpy':
             keypoints_np = keypoints
         else:

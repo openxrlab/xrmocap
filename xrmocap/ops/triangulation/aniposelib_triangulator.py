@@ -2,12 +2,21 @@
 import logging
 import numpy as np
 from scipy.spatial.transform import Rotation as scipy_Rotation
-from typing import Union
-from xrprimer.data_structure.camera import FisheyeCameraParameter
+from typing import List, Union
+from xrprimer.data_structure.camera import (
+    FisheyeCameraParameter, PinholeCameraParameter,
+)
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
+from ..projection.aniposelib_projector import AniposelibProjector
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 
 # yapf: enable
 try:
@@ -26,26 +35,47 @@ except (ImportError, ModuleNotFoundError):
 
 
 class AniposelibTriangulator(BaseTriangulator):
+    CAMERA_CONVENTION = 'opencv'
+    CAMERA_WORLD2CAM = True
 
     def __init__(self,
-                 camera_parameters: list,
+                 camera_parameters: List[FisheyeCameraParameter],
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Triangulator for points triangulation, based on aniposelib.
 
         Args:
-            camera_parameters (list):
+            camera_parameters (List[FisheyeCameraParameter]):
                 A list of Pinhole/FisheyeCameraParameter, or a list
                 of paths to dumped Pinhole/FisheyeCameraParameters.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
-        super().__init__(camera_parameters=camera_parameters)
         self.logger = get_logger(logger)
+        super().__init__(camera_parameters=camera_parameters, logger=logger)
         if not has_aniposelib:
             self.logger.error(import_exception)
             raise ModuleNotFoundError(
                 'Please install aniposelib to run triangulation.')
+
+    def set_cameras(
+        self, camera_parameters: List[Union[PinholeCameraParameter,
+                                            FisheyeCameraParameter]]
+    ) -> None:
+        """Set cameras for this triangulator.
+
+        Args:
+            camera_parameters (List[Union[PinholeCameraParameter,
+                                          FisheyeCameraParameter]]):
+                A list of PinholeCameraParameter, or a list
+                of FisheyeCameraParameter.
+        """
+        if len(camera_parameters) > 0 and \
+                isinstance(camera_parameters[0], str):
+            self.logger.error('camera_parameters must be a list' +
+                              ' of camera parameter instances, not strs.')
+            raise TypeError
+        super().set_cameras(camera_parameters=camera_parameters)
 
     def triangulate(
             self,
@@ -99,7 +129,7 @@ class AniposelibTriangulator(BaseTriangulator):
         points3d = points3d.reshape(*output_points3d_shape)
         return points3d
 
-    def __prepare_aniposelib_camera__(self):
+    def __prepare_aniposelib_camera__(self) -> aniposelib.cameras.CameraGroup:
         aniposelib_camera_list = []
         for cam_param in self.camera_parameters:
             if isinstance(cam_param, FisheyeCameraParameter):
@@ -111,30 +141,27 @@ class AniposelibTriangulator(BaseTriangulator):
                 dist = [
                     0.0,
                 ] * 5
-            args_dict = {
-                'name':
-                cam_param.name,
-                'dist':
-                dist,
-                'size': [cam_param.height, cam_param.width],
-                'matrix':
-                cam_param.get_intrinsic(k_dim=3),
-                'rvec':
-                scipy_Rotation.from_matrix(cam_param.extrinsic_r).as_rotvec(),
-                'tvec':
-                cam_param.extrinsic_t,
-            }
+            args_dict = dict(
+                name=cam_param.name,
+                dist=dist,
+                size=[cam_param.height, cam_param.width],
+                matrix=cam_param.get_intrinsic(k_dim=3),
+                rvec=scipy_Rotation.from_matrix(
+                    cam_param.extrinsic_r).as_rotvec(),
+                tvec=cam_param.extrinsic_t,
+            )
             camera = aniposelib.cameras.Camera(**args_dict)
             aniposelib_camera_list.append(camera)
         camera_group = aniposelib.cameras.CameraGroup(aniposelib_camera_list)
         return camera_group
 
-    def get_reprojection_error(self,
-                               points2d: Union[np.ndarray, list, tuple],
-                               points3d: Union[np.ndarray, list, tuple],
-                               points_mask: Union[np.ndarray, list,
-                                                  tuple] = None,
-                               mean=False) -> np.ndarray:
+    def get_reprojection_error(
+        self,
+        points2d: Union[np.ndarray, list, tuple],
+        points3d: Union[np.ndarray, list, tuple],
+        points_mask: Union[np.ndarray, list, tuple] = None,
+        reduction: Literal['mean', 'sum', 'none'] = 'none'
+    ) -> Union[np.ndarray, float]:
         """Get reprojection error between reprojected points2d and input
         points2d. Not tested yet.
 
@@ -158,11 +185,16 @@ class AniposelibTriangulator(BaseTriangulator):
                 If points_mask[index] == np.nan, the whole pair will
                 be ignored and not counted by any method.
                 Defaults to None.
+            reduction (Literal['mean', 'sum', 'none'], optional):
+                The method that reduces the error to a
+                scalar. Options are 'none', 'mean' and 'sum'.
+                Defaults to 'none'.
 
         Returns:
-            np.ndarray:
-                An ndarray of error, in shape
+            Union[np.ndarray, float]:
+                If reduction is None, an ndarray of error, in shape
                 [n_view, ..., 2].
+                If reduction is sum or mean, a float scalar is returned.
         """
         points2d, points_mask = prepare_triangulate_input(
             camera_number=len(self.camera_parameters),
@@ -180,30 +212,29 @@ class AniposelibTriangulator(BaseTriangulator):
         # ignore points according to mask
         ignored_indexes = np.where(points_mask != 1)
         points2d[ignored_indexes[0], ignored_indexes[1], :] = np.nan
-        errors = camera_group.reprojection_error(points3d, points2d, mean=mean)
-        if mean:
-            return errors
-        else:
+        errors = camera_group.reprojection_error(
+            points3d, points2d, mean=False)
+
+        if reduction == 'none':
             output_errors_shape = np.array(input_points2d_shape)
             output_errors_shape[-1] = 2
             errors = errors.reshape(*output_errors_shape)
             return errors
+        elif reduction == 'mean':
+            axis = [x for x in range(len(errors.shape))]
+            errors = np.mean(errors, axis=tuple(axis))
+        else:  # sum
+            axis = [x for x in range(len(errors.shape))]
+            errors = np.sum(errors, axis=tuple(axis))
+        return errors
 
-    def project(self, points3d: Union[np.ndarray, list, tuple]) -> np.ndarray:
-        """Project 3d points to 2d points. Not tested yet.
-
-        Args:
-            points3d (Union[np.ndarray, list, tuple]):
-                An ndarray or a nested list of points3d, in shape
-                [..., 3+n], n >= 0.
-                Data in points3d[..., 3:] will be ignored.
+    def get_projector(self) -> AniposelibProjector:
+        """Get an AniposelibProjector according to parameters of this
+        triangulator.
 
         Returns:
-            np.ndarray:
-                an [n_view, ..., 2] array of 2D points
+            AniposelibProjector
         """
-        points3d = points3d[..., :3].copy().reshape(-1, 3)
-        camera_group = self.__prepare_aniposelib_camera__()
-        projected_points2d = camera_group.project(points3d)
-
-        return projected_points2d
+        projector = AniposelibProjector(
+            camera_parameters=self.camera_parameters, logger=self.logger)
+        return projector

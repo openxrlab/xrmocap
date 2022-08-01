@@ -47,19 +47,7 @@ b. Install MMHuman3D following the [official instructions](https://github.com/op
 
 
 
-c. Install XRPrimer to virtual environment.
-
-```shell
-# As a user, install the whl file:
-pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
-
-# As a developer, compile from source code:
-pip install conan
-conan remote add xrlab http://conan.kestrel.sensetime.com/artifactory/api/conan/xrlab
-cd data && git clone git@gitlab.bj.sensetime.com:openxrlab/xrprimer.git
-cd xrprimer && pip install -e . && cd ../../
-python -c "import xrprimer; print(xrprimer.__version__)"
-```
+c. Install XRPrimer following the [official instructions](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
 
 
 d. Install XRMoCap to virtual environment,  in editable mode.

@@ -114,5 +114,5 @@ setup(
     ],
     license='Apache License 2.0',
     tests_require=parse_requirements('requirements/tests.txt'),
-    install_requires=parse_requirements('requirements/runtime.txt'),
+    install_requires=parse_requirements('requirements/build.txt'),
     zip_safe=False)

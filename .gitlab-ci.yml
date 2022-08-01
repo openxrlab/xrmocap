@@ -39,9 +39,7 @@ test:
     - pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
     - python -c "import xrprimer; print(xrprimer.__version__)"
     - echo "--- xrprimer installed --- "
-    - echo "--- install mmhuman3d --- "
-    - pip install git+https://github.com/open-mmlab/mmhuman3d.git
-    - echo "--- mmhuman3d installed --- "
+    - pip install -r requirements/runtime.txt
     - pip install -e .
     - unset http_proxy
     - unset https_proxy

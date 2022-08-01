@@ -112,10 +112,11 @@ class KalmanTracking:
                     if iou > 0.5:
                         bbox_mask[i], bbox_mask[j] = 0, 0
         matched_list = []
+        projector = triangulator.get_projector()
         selected_idx = np.where(bbox_mask)[0]
 
         for human_id in range(kps3d.shape[0]):
-            kps2d = triangulator.project(kps3d[human_id])
+            kps2d = projector.project(kps3d[human_id])
             sub_matched = []
             for view in range(kps2d.shape[0]):
                 tracking_bbox_id = [

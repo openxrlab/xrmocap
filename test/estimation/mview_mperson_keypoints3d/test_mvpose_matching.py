@@ -42,6 +42,3 @@ def test_matching():
     keypoints3d = estimation.infer_keypoints3d()
     kps = keypoints3d.get_keypoints()[..., :3]
     assert kps.shape == (5, 2, 17, 3)
-
-
-test_matching()
