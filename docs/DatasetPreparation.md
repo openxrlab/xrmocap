@@ -43,10 +43,10 @@ type = 'MviewMpersonDataVisualization'
 data_root = 'Shelf'
 output_dir = 'datasets/Shelf/visualization_output'
 meta_path = 'datasets/Shelf/xrmocap_meta_testset'
-predict_3d_paths = ['datasets/Shelf/xrmocap_meta_testset/predicted_keypoints3d.npz']
+pred_kps3d_paths = ['datasets/Shelf/xrmocap_meta_testset/predicted_keypoints3d.npz']
 bbox_thr = 0.96
 vis_percep2d = True
-vis_gt3d = True
+vis_gt_kps3d = True
 ```
 
 Run the dataset visualization tool as below, you will find videos at `output_dir`.

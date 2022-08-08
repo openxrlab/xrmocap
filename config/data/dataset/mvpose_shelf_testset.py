@@ -12,5 +12,5 @@ shuffled = False
 bbox_convention = 'xyxy'
 bbox_thr = 0.9
 kps2d_convention = 'coco'
-kps3d_convention = 'coco'
+gt_kps3d_convention = 'coco'
 cam_world2cam = False

@@ -112,8 +112,8 @@ model = dict(
                 max_per_img=100)),
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='https://download.openmmlab.com/mmtracking/'
-            'mot/faster_rcnn/faster-rcnn_r50_fpn_4e_mot17-half-64ee2ed4.pth')),
+            checkpoint='weight/faster-rcnn_r50_fpn_4e_mot17-half-64ee2ed4.pth')
+    ),
     type='DeepSORT',
     motion=dict(type='KalmanFilter', center_only=False),
     reid=dict(
@@ -139,8 +139,7 @@ model = dict(
             act_cfg=dict(type='ReLU')),
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='https://download.openmmlab.com/mmtracking/'
-            'mot/reid/tracktor_reid_r50_iter25245-a452f51f.pth')),
+            checkpoint='weight/tracktor_reid_r50_iter25245-a452f51f.pth')),
     tracker=dict(
         type='SortTracker',
         obj_score_thr=0.5,

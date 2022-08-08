@@ -2,6 +2,7 @@ import glob
 import logging
 import numpy as np
 import os
+import re
 import torch
 from typing import Tuple, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
@@ -28,7 +29,7 @@ class MviewMpersonDataset(BaseDataset):
                  bbox_convention: Union[None, Literal['xyxy', 'xywh']] = None,
                  bbox_thr: float = 0.0,
                  kps2d_convention: Union[None, str] = None,
-                 kps3d_convention: Union[None, str] = None,
+                 gt_kps3d_convention: Union[None, str] = None,
                  cam_world2cam: bool = False,
                  cam_k_dim: int = 3,
                  logger: Union[None, str, logging.Logger] = None) -> None:
@@ -61,7 +62,7 @@ class MviewMpersonDataset(BaseDataset):
             kps2d_convention (Union[None, str], optional):
                 Target convention of keypoints2d, if None,
                 kps2d will not be returned by getitem. Defaults to None.
-            kps3d_convention (Union[None, str], optional):
+            gt_kps3d_convention (Union[None, str], optional):
                 Target convention of keypoints3d, if None,
                 kps3d will keep its convention in meta-data.
                 Defaults to None.
@@ -90,13 +91,14 @@ class MviewMpersonDataset(BaseDataset):
         self.bbox_convention = bbox_convention
         self.bbox_thr = bbox_thr
         self.kps2d_convention = kps2d_convention
-        self.kps3d_convention = kps3d_convention
+        self.gt_kps3d_convention = gt_kps3d_convention
         self.cam_world2cam = cam_world2cam
         self.cam_k_dim = cam_k_dim
         # init empty attr
         self.index_mapping = []
         self.image_list = []
         self.fisheye_params = []
+        self.view_idxs = []
         self.gt3d = []
         self.percep_bbox2d = []
         self.percep_keypoints2d = []
@@ -104,9 +106,9 @@ class MviewMpersonDataset(BaseDataset):
         scene_names = glob.glob(os.path.join(meta_path, 'scene_*'))
         self.n_scene = len(scene_names)
         # load meta-data from file
+        self.load_camera_parameters()
         self.load_image_list()
         self.init_index_mapping()
-        self.load_camera_parameters()
         self.load_ground_truth_3d()
         self.load_perception_2d()
 
@@ -138,6 +140,8 @@ class MviewMpersonDataset(BaseDataset):
             kw_data (dict):
                 Dict for keyword data. bbox and kps2d can be found here.
         """
+        if index >= len(self):
+            raise StopIteration
         scene_idx, frame_idx, end_of_clip = self.process_index_mapping(index)
         # load multi-view images
         img_paths = self.image_list[scene_idx][frame_idx]
@@ -168,7 +172,10 @@ class MviewMpersonDataset(BaseDataset):
         kw_data = {}
         if self.bbox_convention is not None:
             # A list of bboxes, len(mview_bbox) = n_view
-            mview_bbox = self.percep_bbox2d[scene_idx][frame_idx]
+            mview_bbox = []
+            for mapped_view_idx in range(len(self.fisheye_params[scene_idx])):
+                mview_bbox.append(
+                    self.percep_bbox2d[scene_idx][mapped_view_idx][frame_idx])
             kw_data['bbox2d'] = mview_bbox
         if self.kps2d_convention is not None:
             mview_keypoints2d_list = self.percep_keypoints2d[scene_idx]
@@ -189,7 +196,8 @@ class MviewMpersonDataset(BaseDataset):
             n_view = len(image_list_names)
             # index of mview_list is view idx
             mview_list = []
-            for view_idx in range(n_view):
+            for idx in range(n_view):
+                view_idx = self.view_idxs[idx]
                 with open(
                         os.path.join(scene_dir,
                                      f'image_list_view_{view_idx:02d}.txt'),
@@ -200,8 +208,8 @@ class MviewMpersonDataset(BaseDataset):
             mframe_list = []
             for frame_idx in range(len(mview_list[0])):
                 sframe_list = []
-                for view_idx in range(n_view):
-                    sframe_list.append(mview_list[view_idx][frame_idx].strip())
+                for idx in range(n_view):
+                    sframe_list.append(mview_list[idx][frame_idx].strip())
                 mframe_list.append(sframe_list)
             mscene_list.append(mframe_list)
         self.image_list = mscene_list
@@ -250,10 +258,21 @@ class MviewMpersonDataset(BaseDataset):
         for scene_idx in range(self.n_scene):
             scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
             cam_dir = os.path.join(scene_dir, 'camera_parameters')
-            camera_names = glob.glob(os.path.join(cam_dir, 'fisheye_param_*'))
-            n_view = len(camera_names)
+            file_names = sorted(os.listdir(cam_dir))
+            cam_names = []
+            view_idxs = []
+            for file_name in file_names:
+                if file_name.startswith('fisheye_param_'):
+                    cam_names.append(file_name)
+                    view_idxs.append(
+                        int(
+                            re.search(r'fisheye_param_([0-9]+).json',
+                                      file_name).group(1)))
+            n_view = len(cam_names)
+            self.view_idxs = view_idxs
             mview_list = []
-            for view_idx in range(n_view):
+            for idx in range(n_view):
+                view_idx = self.view_idxs[idx]
                 fisheye_param = FisheyeCameraParameter.fromfile(
                     os.path.join(cam_dir,
                                  f'fisheye_param_{view_idx:02d}.json'))
@@ -273,10 +292,10 @@ class MviewMpersonDataset(BaseDataset):
             keypoints3d = Keypoints.fromfile(keypoints3d_path)
             keypoints3d.logger = self.logger
             keypoints3d = keypoints3d.to_tensor()
-            if self.kps3d_convention is not None:
+            if self.gt_kps3d_convention is not None:
                 keypoints3d = convert_keypoints(
                     keypoints=keypoints3d,
-                    dst=self.kps3d_convention,
+                    dst=self.gt_kps3d_convention,
                     approximate=True)
             # save mask info into confidence
             kps3d_mask = keypoints3d.get_mask()
@@ -300,7 +319,8 @@ class MviewMpersonDataset(BaseDataset):
             n_view = len(image_list_names)
             mview_bbox = []
             mview_kps2d = []
-            for view_idx in range(n_view):
+            for idx in range(n_view):
+                view_idx = self.view_idxs[idx]
                 ignore_idxs = None
                 if self.bbox_convention is not None:
                     src_bbox_convention = perception2d_dict[
