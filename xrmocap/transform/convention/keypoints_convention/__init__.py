@@ -12,10 +12,11 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from . import campus, human_data  # noqa:F401
+from . import campus, human_data, panoptic  # noqa:F401
 
 # yapf: enable
 KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
+KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
 
 
 def convert_keypoints(

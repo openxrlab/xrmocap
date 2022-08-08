@@ -1,32 +1,44 @@
 # yapf: disable
+import cv2
+import json
 import logging
 import numpy as np
 import os
-from scipy.io import loadmat
+import re
+from tqdm import tqdm
 from typing import List, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.utils.ffmpeg_utils import video_to_array
+from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_visualization import MviewMpersonDataVisualization
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_detection.builder import MMtrackDetector, build_detector
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
-from xrmocap.utils.path_utils import Existence, check_path_existence
 from .base_data_converter import BaseDataCovnerter
 
 # yapf: enable
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
-class CampusDataCovnerter(BaseDataCovnerter):
+
+class PanopticDataCovnerter(BaseDataCovnerter):
 
     def __init__(self,
                  data_root: str,
                  bbox_detector: Union[dict, None] = None,
                  kps2d_estimator: Union[dict, None] = None,
-                 scene_range: List[List[int]] = 'all',
-                 gt_person_idxs: List[int] = [0, 1, 2],
+                 scene_names: Union[str, List[str]] = 'all',
+                 view_idxs: Union[str, List[int]] = 'all',
+                 scene_range: Union[str, List[List[int]]] = 'all',
+                 frame_period: int = 1,
+                 metric_unit: Literal['meter', 'centimeter'] = 'meter',
                  batch_size: int = 500,
                  meta_path: str = 'xrmocap_meta',
-                 dataset_name: str = 'campus',
+                 dataset_name: str = 'panoptic',
                  visualize: bool = False,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
@@ -46,22 +58,34 @@ class CampusDataCovnerter(BaseDataCovnerter):
                 A top-down kps2d estimator, or its config, or None.
                 If None, converting perception 2d will be skipped.
                 Defaults to None.
+            scene_names (List[str], optional):
+                A list of scene directory names, like
+                ['160422_haggling1', '160906_ian5'].
+                Defaults to 'all', all scenes in data_root will be selected.
+            view_idxs (List[int], optional):
+                A list of selected view indexes in each scene,
+                like [[0, 1], [0, 2, 4]].
+                Defaults to 'all', all views will be selected.
             scene_range (List[List[int]], optional):
-                Frame range of scenes. For instance, [[350, 470], [650, 750]]
-                will split the dataset into 2 scenes,
+                Frame range of scenes. For instance,
+                [[350, 470], [650, 750]]
+                will select 120 frames from scene_0 and
+                100 frames from scene_1,
                 scene_0: 350-470, scene_1 650-750.
-                Defaults to 'all', scene_0: 0-2000.
-            gt_person_idxs (List[int], optional):
-                A list of person indexes. Ground truth of the selected people
-                will be converted.
-                Defaults to [0, 1, 2].
+                Defaults to 'all', all frames will be selected.
+            frame_period (int, optional):
+                Sample rate of this converter. This converter will
+                select one frame data from every frame_period frames.
+                Defaults to 1.
+            metric_unit (Literal['meter', 'centimeter'], optional):
+                Metric unit of gt3d and camera parameters. Defaults to 'meter'.
             batch_size (int, optional):
                 How many frames are loaded at the same time. Defaults to 500.
             meta_path (str, optional):
                 Path to the meta-data dir. Defaults to 'xrmocap_meta'.
             dataset_name (str, optional):
                 Name of the dataset.
-                Defaults to 'campus'.
+                Defaults to 'panoptic'.
             visualize (bool, optional):
                 Whether to visualize perception2d data and
                 ground-truth 3d data. Defaults to False.
@@ -78,15 +102,23 @@ class CampusDataCovnerter(BaseDataCovnerter):
             dataset_name=dataset_name,
             verbose=verbose,
             logger=logger)
-        self.n_view = 3
+        if view_idxs == 'all':
+            self.view_idxs = [i for i in range(31)]
+        else:
+            self.view_idxs = view_idxs
+        self.n_view = len(view_idxs)
         # index: scene idx, value: (start_frame_idx, end_frame_idx)
+        if scene_names == 'all':
+            self.scene_names = self.list_scene_names()
+        else:
+            self.scene_names = scene_names
         if scene_range == 'all':
             self.scene_range = [
-                [0, 2000],
-            ]
+                None,
+            ] * len(self.scene_names)
         else:
             self.scene_range = scene_range
-        self.gt_person_idxs = gt_person_idxs
+
         self.batch_size = batch_size
         if isinstance(bbox_detector, dict):
             bbox_detector['logger'] = logger
@@ -99,6 +131,8 @@ class CampusDataCovnerter(BaseDataCovnerter):
             self.kps2d_estimator = build_detector(kps2d_estimator)
         else:
             self.kps2d_estimator = kps2d_estimator
+        self.metric_unit = metric_unit
+        self.frame_period = frame_period
         self.visualize = visualize
         if self.visualize:
             vis_percep2d = self.bbox_detector is not None and \
@@ -107,6 +141,7 @@ class CampusDataCovnerter(BaseDataCovnerter):
                 data_root=data_root,
                 meta_path=meta_path,
                 vis_percep2d=vis_percep2d,
+                vis_gt_kps3d=True,
                 output_dir=os.path.join(meta_path, 'visualize'),
                 verbose=verbose,
                 logger=logger)
@@ -132,6 +167,7 @@ class CampusDataCovnerter(BaseDataCovnerter):
         for scene_idx in range(len(self.scene_range)):
             scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
             os.makedirs(scene_dir, exist_ok=True)
+            self.covnert_video_frames(scene_idx)
             self.covnert_image_list(scene_idx)
             self.convert_cameras(scene_idx)
             self.convert_ground_truth(scene_idx)
@@ -141,8 +177,64 @@ class CampusDataCovnerter(BaseDataCovnerter):
         if self.visualize:
             self.visualization.run(overwrite=overwrite)
 
+    def list_scene_names(self) -> List[str]:
+        """Get the list of scene names in self.data_root.
+
+        Returns:
+            List[str]: The list of scene names.
+        """
+        # A scene name in panoptic always like
+        # 1[67]\d{4}_[a-z]*[0-9](_[0-9]*)?
+        pattern = re.compile(r'1[67]\d{4}_[a-z]*[0-9](_[0-9]+)?')
+        file_list = sorted(os.listdir(self.data_root))
+        scene_names = []
+        for file_name in file_list:
+            file_path = os.path.join(self.data_root, file_name)
+            match_result = pattern.match(file_name)
+            if match_result is not None and \
+                    len(match_result.group(0)) == len(file_name) and \
+                    check_path_existence(file_path, 'dir') == \
+                    Existence.DirectoryExistNotEmpty:
+                scene_names.append(file_name)
+        return scene_names
+
+    def covnert_video_frames(self, scene_idx: int) -> None:
+        """Convert videos in source dataset to extracted jpg pictures.
+
+        Args:
+            scene_idx (int):
+                Index of this scene.
+        """
+        scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
+        if self.verbose:
+            self.logger.info('Converting video frames' +
+                             f' for scene {scene_idx}.')
+        scene_name = self.scene_names[scene_idx]
+        video_dir_name = 'hdVideos'
+        for idx in range(self.n_view):
+            view_idx = self.view_idxs[idx]
+            video_name = f'hd_00_{view_idx:02d}.mp4'
+            video_path = os.path.join(self.data_root, scene_name,
+                                      video_dir_name, video_name)
+            if self.scene_range[scene_idx] is None:
+                self.scene_range[scene_idx] = [0, None]
+            start_idx = self.scene_range[scene_idx][0]
+            end_idx = self.scene_range[scene_idx][1]
+            img_arr = video_to_array(
+                video_path, start=start_idx, end=end_idx, logger=self.logger)
+            if end_idx is None:
+                end_idx = start_idx + len(img_arr)
+                self.scene_range[scene_idx][1] = end_idx
+            output_folder = os.path.join(scene_dir, f'hd_00_{view_idx:02d}')
+            os.makedirs(output_folder, exist_ok=True)
+            for idx in tqdm(
+                    range(start_idx, end_idx, self.frame_period),
+                    disable=not self.verbose):
+                img = img_arr[idx - start_idx]
+                cv2.imwrite(os.path.join(output_folder, f'{idx:06d}.jpg'), img)
+
     def covnert_image_list(self, scene_idx: int) -> None:
-        """Convert source data to image list text file.
+        """Convert extracted images to image list text file.
 
         Args:
             scene_idx (int):
@@ -152,21 +244,23 @@ class CampusDataCovnerter(BaseDataCovnerter):
         if self.verbose:
             self.logger.info('Converting image relative path list' +
                              f' for scene {scene_idx}.')
-        for view_idx in range(self.n_view):
-            frame_dir = os.path.join(self.data_root, f'Camera{view_idx}')
+        for idx in range(self.n_view):
+            view_idx = self.view_idxs[idx]
+            frame_dir = os.path.join(scene_dir, f'hd_00_{view_idx:02d}')
             frame_list = []
             start_idx = self.scene_range[scene_idx][0]
             end_idx = self.scene_range[scene_idx][1]
-            for frame_idx in range(start_idx, end_idx):
-                file_name = f'campus4-c{view_idx}-{frame_idx:05d}.png'
-                rela_file_path = os.path.join(f'Camera{view_idx}', file_name)
+            for frame_idx in range(start_idx, end_idx, self.frame_period):
+                file_name = f'{frame_idx:06d}.jpg'
                 abs_file_path = os.path.join(frame_dir, file_name)
+                rela_file_path = os.path.relpath(abs_file_path, self.data_root)
                 if check_path_existence(abs_file_path,
                                         'file') == Existence.FileExist:
                     frame_list.append(rela_file_path + '\n')
                 else:
-                    self.logger.error('Campus dataset is broken.' +
-                                      f' Missing file: {abs_file_path}')
+                    self.logger.error(
+                        'Frames extract from CMU panoptic dataset' +
+                        ' is broken.' + f' Missing file: {abs_file_path}')
                     raise FileNotFoundError
             frame_list[-1] = frame_list[-1][:-1]
             with open(
@@ -176,11 +270,7 @@ class CampusDataCovnerter(BaseDataCovnerter):
                 f_write.writelines(frame_list)
 
     def convert_cameras(self, scene_idx: int) -> None:
-        """Convert source data to XRPrimer camera parameters. Intrinsic in
-        Calibration/producePmat.m can be trusted while extrinsic cannot. We get
-        extrinsic by:
-
-        K^(-1) * K * [ R | T ]
+        """Convert source data to XRPrimer camera parameters.
 
         Args:
             scene_idx (int):
@@ -190,49 +280,46 @@ class CampusDataCovnerter(BaseDataCovnerter):
         if self.verbose:
             self.logger.info(
                 f'Converting camera parameters for scene {scene_idx}.')
-        cam_param_path = os.path.join(self.data_root, 'Calibration',
-                                      'producePmat.m')
+        scene_name = self.scene_names[scene_idx]
+        cam_param_path = os.path.join(self.data_root, scene_name,
+                                      f'calibration_{scene_name}.json')
         with open(cam_param_path, 'r') as f_read:
-            lines = f_read.readlines()
-        param_keys = ['width', 'height', 'scale', 'focal', 'cx', 'cy', 'sx']
-        param_dict = {}
-        for key in param_keys:
-            param_dict[key] = []
-        for line in lines:
-            if '=' in line:
-                line = line.strip().replace(';', '')
-                strs = line.split('=')
-                if strs[0] in param_dict:
-                    param_dict[strs[0]].append(float(strs[1]))
+            panoptic_calib_dict = json.load(f_read)
         cam_dir = os.path.join(scene_dir, 'camera_parameters')
         os.makedirs(cam_dir, exist_ok=True)
-        scale = param_dict['scale'][0]
-        width = int(param_dict['width'][0] * scale)
-        height = int(param_dict['height'][0] * scale)
-        for view_idx in range(self.n_view):
+        for idx in range(self.n_view):
+            view_idx = self.view_idxs[idx]
             fisheye_param = FisheyeCameraParameter(
-                name=f'fisheye_param_{view_idx:02d}')
-            fisheye_param.set_intrinsic(
-                width=width,
-                height=height,
-                fx=param_dict['focal'][view_idx] / param_dict['sx'][view_idx] *
-                scale,
-                fy=param_dict['focal'][view_idx] / param_dict['sx'][view_idx] *
-                scale,
-                cx=param_dict['cx'][view_idx] * scale,
-                cy=param_dict['cy'][view_idx] * scale)
-            proj_mat_path = os.path.join(self.data_root, 'Calibration',
-                                         f'P{view_idx}.txt')
-            with open(proj_mat_path, 'r') as f_read:
-                lines = f_read.readlines()
-            one_line = (lines[0] + lines[1] + lines[2]).replace('\n', ' ')
-            strs = one_line.split(' ')[:12]
-            proj_mat = np.asarray([float(str_value)
-                                   for str_value in strs]).reshape(3, 4)
-            rt_mat = np.matmul(
-                np.linalg.inv(fisheye_param.get_intrinsic(3)), proj_mat)
+                name=f'fisheye_param_{view_idx:02d}', logger=self.logger)
+            cam_key = f'00_{view_idx:02d}'
+            panoptic_cam_dict = None
+            for _, dict_value in enumerate(panoptic_calib_dict['cameras']):
+                if dict_value['name'] == cam_key:
+                    panoptic_cam_dict = dict_value
+            if panoptic_cam_dict is None:
+                self.logger.error('Camera calibration not found in json.' +
+                                  f' Missing key: hd_{cam_key}.')
+                raise KeyError
+            fisheye_param.set_resolution(
+                width=panoptic_cam_dict['resolution'][0],
+                height=panoptic_cam_dict['resolution'][1])
+            if self.metric_unit == 'meter':
+                translation = np.array(panoptic_cam_dict['t']) / 100.0
+            elif self.metric_unit == 'centimeter':
+                translation = np.array(panoptic_cam_dict['t'])
+            else:
+                self.logger.error(f'Wrong metric unit: {self.metric_unit}')
+                raise ValueError
             fisheye_param.set_KRT(
-                R=rt_mat[:, :3], T=rt_mat[:, 3], world2cam=True)
+                K=panoptic_cam_dict['K'],
+                R=panoptic_cam_dict['R'],
+                T=translation,
+                world2cam=True)
+            dist_list = panoptic_cam_dict['distCoef']
+            fisheye_param.set_dist_coeff(
+                dist_coeff_k=[dist_list[0], dist_list[1], dist_list[4]],
+                dist_coeff_p=[dist_list[2], dist_list[3]])
+            # dump the distorted camera
             fisheye_param.dump(
                 os.path.join(cam_dir, f'{fisheye_param.name}.json'))
 
@@ -247,32 +334,52 @@ class CampusDataCovnerter(BaseDataCovnerter):
             self.logger.info(
                 f'Converting ground truth keypoints3d for scene {scene_idx}.')
         scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
+        scene_name = self.scene_names[scene_idx]
         start_idx = self.scene_range[scene_idx][0]
         end_idx = self.scene_range[scene_idx][1]
-        gt_path = os.path.join(self.data_root, 'actorsGT.mat')
-        gt_mat = loadmat(gt_path)
-        kps3d_mat = gt_mat['actor3D'][0]
-        n_person = len(self.gt_person_idxs)
-        n_frame = end_idx - start_idx
-        n_kps = get_keypoint_num('campus')
-        kps3d_arr = np.zeros(shape=(n_frame, n_person, n_kps, 3))
+        gt_path = os.path.join(self.data_root, scene_name,
+                               'hdPose3d_stage1_coco19')
+        n_frame = int((end_idx - start_idx) / self.frame_period) + 1
+        n_person = 1
+        n_kps = get_keypoint_num('panoptic')
+        kps3d_arr = np.zeros(shape=(n_frame, n_person, n_kps, 4))
         kps3d_mask = np.zeros(shape=(n_frame, n_person, n_kps), dtype=np.uint8)
-        for p_idx in range(n_person):
-            for f_idx in range(n_frame):
-                sview_sperson_mat = kps3d_mat[self.gt_person_idxs[p_idx]][
-                    f_idx + start_idx][0]
-                if len(sview_sperson_mat) == 1:
-                    kps3d_mask[f_idx, p_idx, :] = 0
-                else:
-                    kps3d_mask[f_idx, p_idx, :] = 1
-                    kps3d_arr[f_idx, p_idx, :, :] = sview_sperson_mat
-        kps3d_conf = np.expand_dims(
-            kps3d_mask.astype(kps3d_arr.dtype), axis=-1)
-        kps3d_arr = np.concatenate((kps3d_arr, kps3d_conf), axis=-1)
+        for f_idx in range(start_idx, end_idx, self.frame_period):
+            json_path = os.path.join(gt_path, f'body3DScene_{f_idx:08d}.json')
+            if check_path_existence(json_path) == Existence.FileExist:
+                with open(json_path, 'r') as f_read:
+                    panoptic_body3d_dict = json.load(f_read)
+                for person_dict in panoptic_body3d_dict['bodies']:
+                    person_id = int(person_dict['id'])
+                    if person_id > n_person - 1:
+                        new_n_person = person_id - n_person + 1
+                        new_kps3d = np.zeros(
+                            shape=(n_frame, new_n_person, n_kps, 4))
+                        new_mask = np.zeros(
+                            shape=(n_frame, new_n_person, n_kps),
+                            dtype=np.uint8)
+                        kps3d_arr = np.concatenate((kps3d_arr, new_kps3d),
+                                                   axis=1)
+                        kps3d_mask = np.concatenate((kps3d_mask, new_mask),
+                                                    axis=1)
+                        n_person = person_id + 1
+                    mapped_idx = int((f_idx - start_idx) / self.frame_period)
+                    kps3d_arr[mapped_idx, person_id,
+                              ...] = np.array(person_dict['joints19']).reshape(
+                                  n_kps, 4)
+                    kps3d_mask[mapped_idx, person_id, ...] = 1
+        if self.metric_unit == 'meter':
+            factor = 0.01
+        elif self.metric_unit == 'centimeter':
+            factor = 1.0
+        else:
+            self.logger.error(f'Wrong metric unit: {self.metric_unit}')
+            raise ValueError
+        kps3d_arr[..., :3] *= factor
         keypoints3d = Keypoints(
             kps=kps3d_arr,
             mask=kps3d_mask,
-            convention='campus',
+            convention='panoptic',
             logger=self.logger)
         keypoints3d.dump(os.path.join(scene_dir, 'keypoints3d_GT.npz'))
 
@@ -287,7 +394,8 @@ class CampusDataCovnerter(BaseDataCovnerter):
         scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
         scene_bbox_list = []
         scene_keypoints_list = []
-        for view_idx in range(self.n_view):
+        for idx in range(self.n_view):
+            view_idx = self.view_idxs[idx]
             if self.verbose:
                 self.logger.info('Inferring perception 2D data for' +
                                  f' scene {scene_idx} view {view_idx}')
@@ -328,13 +436,13 @@ class CampusDataCovnerter(BaseDataCovnerter):
             bbox_convention='xyxy',
             kps2d_convention=keypoints2d.get_convention(),
         )
-        for view_idx in range(self.n_view):
-            dict_to_save[f'bbox2d_view_{view_idx:02d}'] = scene_bbox_list[
-                view_idx]
+        for idx in range(self.n_view):
+            view_idx = self.view_idxs[idx]
+            dict_to_save[f'bbox2d_view_{view_idx:02d}'] = scene_bbox_list[idx]
             dict_to_save[f'kps2d_view_{view_idx:02d}'] = scene_keypoints_list[
-                view_idx].get_keypoints()
+                idx].get_keypoints()
             dict_to_save[
                 f'kps2d_mask_view_{view_idx:02d}'] = scene_keypoints_list[
-                    view_idx].get_mask()
+                    idx].get_mask()
         np.savez_compressed(
             file=os.path.join(scene_dir, 'perception_2d.npz'), **dict_to_save)

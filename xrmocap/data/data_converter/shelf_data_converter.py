@@ -18,7 +18,8 @@ class ShelfDataCovnerter(CampusDataCovnerter):
                  data_root: str,
                  bbox_detector: Union[dict, None] = None,
                  kps2d_estimator: Union[dict, None] = None,
-                 scene_range: List[List[int]] = None,
+                 scene_range: List[List[int]] = 'all',
+                 gt_person_idxs: List[int] = [0, 1, 2],
                  batch_size: int = 500,
                  meta_path: str = 'xrmocap_meta',
                  dataset_name: str = 'shelf',
@@ -45,7 +46,11 @@ class ShelfDataCovnerter(CampusDataCovnerter):
                 Frame range of scenes. For instance, [[350, 470], [650, 750]]
                 will split the dataset into 2 scenes,
                 scene_0: 350-470, scene_1 650-750.
-                Defaults to None, scene_0: 0-2000.
+                Defaults to None, scene_0: 0-3200.
+            gt_person_idxs (List[int], optional):
+                A list of person indexes. Ground truth of the selected people
+                will be converted, as mvpose only evaluates 3/4 of Shelf GT.
+                Defaults to [0, 1, 2].
             batch_size (int, optional):
                 How many frames are loaded at the same time. Defaults to 500.
             meta_path (str, optional):
@@ -63,6 +68,10 @@ class ShelfDataCovnerter(CampusDataCovnerter):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
+        if scene_range == 'all':
+            self.scene_range = [
+                [0, 3200],
+            ]
         super().__init__(
             data_root=data_root,
             meta_path=meta_path,
@@ -72,6 +81,7 @@ class ShelfDataCovnerter(CampusDataCovnerter):
             scene_range=scene_range,
             bbox_detector=bbox_detector,
             kps2d_estimator=kps2d_estimator,
+            gt_person_idxs=gt_person_idxs,
             visualize=visualize,
             batch_size=batch_size)
         self.n_view = 5

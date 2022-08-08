@@ -24,9 +24,10 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                  bbox_thr: float = 0.0,
                  vis_percep2d: bool = True,
                  kps2d_convention: Union[None, str] = None,
-                 predict_3d_paths: List[str] = None,
-                 vis_gt3d: bool = True,
-                 kps3d_convention: Union[None, str] = None,
+                 pred_kps3d_paths: List[str] = None,
+                 pred_kps3d_convention: Union[None, str] = None,
+                 vis_gt_kps3d: bool = True,
+                 gt_kps3d_convention: Union[None, str] = None,
                  vis_cameras: bool = False,
                  meta_path: str = 'xrmocap_meta',
                  verbose: bool = True,
@@ -51,16 +52,22 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 Target convention of keypoints2d, if None,
                 kps2d will keep its convention in meta-data.
                 Defaults to None.
-            predict_3d_paths (List[str], optional):
+            pred_kps3d_paths (List[str], optional):
                 Paths to the predicted keypoints3d npz files.
                 Assume there's 2 scenes, you can pass either
                 [path0, path1] or [path0, ''].
                 Defaults to None.
-            vis_gt3d (bool, optional):
+            pred_kps3d_convention (Union[None, str], optional):
+                Target convention of predicted keypoints3d,
+                if None,
+                kps3d will keep its convention in meta-data.
+                Defaults to None.
+            vis_gt_kps3d (bool, optional):
                 Whether to visualize groundtruth3d data.
                 Defaults to True.
-            kps3d_convention (Union[None, str], optional):
-                Target convention of keypoints3d, if None,
+            gt_kps3d_convention (Union[None, str], optional):
+                Target convention of groundtruth keypoints3d,
+                if None,
                 kps3d will keep its convention in meta-data.
                 Defaults to None.
             vis_cameras (bool, optional):
@@ -84,12 +91,13 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         self.bbox_thr = bbox_thr
         self.vis_percep2d = vis_percep2d
         self.kps2d_convention = kps2d_convention
-        self.vis_gt3d = vis_gt3d
-        self.kps3d_convention = kps3d_convention
+        self.vis_gt_kps3d = vis_gt_kps3d
+        self.gt_kps3d_convention = gt_kps3d_convention
         self.vis_cameras = vis_cameras
-        self.predict_3d_paths = predict_3d_paths \
-            if predict_3d_paths is not None \
+        self.pred_kps3d_paths = pred_kps3d_paths \
+            if pred_kps3d_paths is not None \
             else []
+        self.pred_kps3d_convention = pred_kps3d_convention
 
     def run(self, overwrite: bool = False) -> None:
         """Visualize meta-data selected in __init__().
@@ -106,22 +114,22 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         for file_name in file_names:
             if file_name.startswith('scene_'):
                 scene_names.append(file_name)
-        if len(self.predict_3d_paths) != 0 and \
-                len(self.predict_3d_paths) != len(scene_names):
+        if len(self.pred_kps3d_paths) != 0 and \
+                len(self.pred_kps3d_paths) != len(scene_names):
             self.logger.error(
                 f'There are {len(scene_names)} scenes found at meta_path,' +
-                ' but length of predict_3d_paths' +
-                f' is {len(self.predict_3d_paths)}.'
+                ' but length of pred_kps3d_paths' +
+                f' is {len(self.pred_kps3d_paths)}.'
                 ' Please align' +
-                ' predict_3d_paths\' length like [\'\', path, \'\']')
+                ' pred_kps3d_paths\' length like [\'\', path, \'\']')
         for scene_idx, scene_name in enumerate(scene_names):
             scene_vis_dir = os.path.join(self.output_dir, f'scene_{scene_idx}')
             os.makedirs(scene_vis_dir, exist_ok=True)
-            if len(self.predict_3d_paths) > 0:
+            if len(self.pred_kps3d_paths) > 0:
                 self.visualize_predict_3d(scene_idx)
             if self.vis_percep2d:
                 self.visualize_perception_2d(scene_idx)
-            if self.vis_gt3d:
+            if self.vis_gt_kps3d:
                 self.visualize_ground_truth_3d(scene_idx)
 
     def visualize_perception_2d(self, scene_idx: int) -> None:
@@ -139,12 +147,18 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         cam_dir = os.path.join(scene_dir, 'camera_parameters')
         file_names = sorted(os.listdir(cam_dir))
         cam_names = []
+        view_idxs = []
         for file_name in file_names:
             if file_name.startswith('fisheye_param_'):
                 cam_names.append(file_name)
+                view_idxs.append(
+                    int(
+                        file_name.replace('fisheye_param_',
+                                          '').replace('.json', '')))
         n_view = len(cam_names)
         mview_plot_arr = []
-        for view_idx in range(n_view):
+        for idx in range(n_view):
+            view_idx = view_idxs[idx]
             if self.verbose:
                 self.logger.info('Visualizing perception 2D data for' +
                                  f' scene {scene_idx} view {view_idx}')
@@ -195,6 +209,9 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
         keypoints3d = Keypoints.fromfile(
             os.path.join(scene_dir, 'keypoints3d_GT.npz'))
+        if self.gt_kps3d_convention is not None:
+            keypoints3d = convert_keypoints(
+                keypoints3d, dst=self.gt_kps3d_convention, approximate=True)
         self.visualize_keypoints3d(scene_idx, keypoints3d, 'groundtruth3d')
 
     def visualize_predict_3d(self, scene_idx: int) -> None:
@@ -204,9 +221,14 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             scene_idx (int):
                 Index of this scene.
         """
-        if len(self.predict_3d_paths) != 0:
-            keypoints_path = self.predict_3d_paths[scene_idx]
+        if len(self.pred_kps3d_paths) != 0:
+            keypoints_path = self.pred_kps3d_paths[scene_idx]
             keypoints3d = Keypoints.fromfile(keypoints_path)
+            if self.pred_kps3d_convention is not None:
+                keypoints3d = convert_keypoints(
+                    keypoints3d,
+                    dst=self.pred_kps3d_convention,
+                    approximate=True)
             self.visualize_keypoints3d(scene_idx, keypoints3d, 'predict3d')
 
     def visualize_keypoints3d(self,
@@ -225,18 +247,21 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 Defaults to 'groundtruth3d'.
         """
         scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
-        if self.kps3d_convention is not None:
-            keypoints3d = convert_keypoints(
-                keypoints3d, dst=self.kps3d_convention, approximate=True)
         cam_dir = os.path.join(scene_dir, 'camera_parameters')
         file_names = sorted(os.listdir(cam_dir))
         cam_names = []
+        view_idxs = []
         for file_name in file_names:
             if file_name.startswith('fisheye_param_'):
                 cam_names.append(file_name)
+                view_idxs.append(
+                    int(
+                        file_name.replace('fisheye_param_',
+                                          '').replace('.json', '')))
         n_view = len(cam_names)
         mview_plot_arr = []
-        for view_idx in range(n_view):
+        for idx in range(n_view):
+            view_idx = view_idxs[idx]
             if self.verbose:
                 self.logger.info(f'Visualizing {output_prefix} data for' +
                                  f' scene {scene_idx} view {view_idx}')

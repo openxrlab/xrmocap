@@ -11,5 +11,5 @@ test_mode = True
 shuffled = False
 bbox_convention = None
 kps2d_convention = None
-kps3d_convention = 'campus'
+gt_kps3d_convention = 'campus'
 cam_world2cam = False
