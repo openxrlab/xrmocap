@@ -310,8 +310,9 @@ class SMPLData(dict):
                 A dict of SMPL data, whose keys are
                 betas, body_pose, global_orient and transl.
         """
-        body_pose = self.get_body_pose().reshape(-1, 3)
-        global_orient = self.get_global_orient().reshape(-1, 3)
+        body_pose = self.get_body_pose().reshape(self.get_batch_size(), -1)
+        global_orient = self.get_global_orient().reshape(
+            self.get_batch_size(), 3)
         transl = self.get_transl()
         betas = self.get_betas(repeat_betas=repeat_betas)
         dict_to_return = {

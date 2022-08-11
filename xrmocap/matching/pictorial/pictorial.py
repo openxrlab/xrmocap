@@ -2,6 +2,8 @@ import numpy as np
 import scipy
 from typing import List, Tuple
 
+from xrmocap.utils.mvpose_utils import distribution
+
 
 def get_conns(n_kps):
     conns = {}
@@ -39,12 +41,11 @@ def get_conns(n_kps):
     return conns
 
 
-def get_struct(conns: dict, distribution: dict) -> List[dict]:
+def get_struct(conns: dict) -> List[dict]:
     """Get the pictorial structure.
 
     Args:
         conns (dict): The connection tree
-        distribution (dict): The keypoints connection information.
 
     Returns:
         List[dict]: The selected keypoints connection information.
@@ -67,8 +68,8 @@ def get_struct(conns: dict, distribution: dict) -> List[dict]:
         limb[i]['parent'] = graph[limb[i]['child']]['parent']
         conn_id = distribution['kps2conns'][(limb[i]['child'],
                                              limb[i]['parent'])]
-        limb[i]['bone_mean'] = distribution['mean'][conn_id]
-        limb[i]['bone_std'] = distribution['std'][conn_id]
+        limb[i]['bone_mean'] = np.array(distribution['mean'])[conn_id]
+        limb[i]['bone_std'] = (np.array(distribution['std']) * 16)[conn_id]
     return limb
 
 
@@ -93,7 +94,6 @@ def get_prior(kps_idx: int, kps_cand_idx: int, parent_idx: int,
     bone_mean = limb[limb_2_kps[kps_idx]]['bone_mean']
     distance = np.linalg.norm(candidates[kps_idx][kps_cand_idx] -
                               candidates[parent_idx][parent_cand_idx])
-    # TODO: Change to gaussian distribution
     relative_error = np.abs(distance - bone_mean) / bone_std
     prior = scipy.stats.norm.sf(relative_error) * 2
     return prior

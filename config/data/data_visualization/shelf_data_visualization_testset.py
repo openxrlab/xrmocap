@@ -7,4 +7,4 @@ bbox_thr = 0.96
 vis_percep2d = True
 kps2d_convention = None
 vis_gt_kps3d = True
-kps3d_convention = None
+gt_kps3d_convention = None

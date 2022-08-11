@@ -434,7 +434,7 @@ class SMPLify(object):
             input_list (List[BaseInput]):
                 Additional input for loss handlers. Each element is
                 an instance of subclass of BaseInput.
-            param_dict (dict):
+            optim_param (dict):
                 A dict of optimizable parameters, whose keys are
                 self.__class__.OPTIM_PARAM and values are
                 Tensors in batch.

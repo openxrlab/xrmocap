@@ -5,7 +5,44 @@ import os
 import torch
 
 from xrmocap.data_structure.keypoints import Keypoints
+from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from xrmocap.transform.limbs import get_limbs_from_keypoints
+
+distribution = dict(
+    mean=[
+        0.29743698, 0.28764493, 0.86562234, 0.86257052, 0.31774172, 0.32603399,
+        0.27688682, 0.28548218, 0.42981244, 0.43392589, 0.44601327, 0.43572195
+    ],
+    std=[
+        0.02486281, 0.02611557, 0.07588978, 0.07094158, 0.04725651, 0.04132808,
+        0.05556177, 0.06311393, 0.04445206, 0.04843436, 0.0510811, 0.04460523
+    ],
+    kps2conns={
+        (0, 1): 0,
+        (1, 0): 0,
+        (0, 2): 1,
+        (2, 0): 1,
+        (0, 7): 2,
+        (7, 0): 2,
+        (0, 8): 3,
+        (8, 0): 3,
+        (1, 3): 4,
+        (3, 1): 4,
+        (2, 4): 5,
+        (4, 2): 5,
+        (3, 5): 6,
+        (5, 3): 6,
+        (4, 6): 7,
+        (6, 4): 7,
+        (7, 9): 8,
+        (9, 7): 8,
+        (8, 10): 9,
+        (10, 8): 9,
+        (9, 11): 10,
+        (11, 9): 10,
+        (10, 12): 11,
+        (12, 10): 11
+    })
 
 
 def get_distance(x: np.ndarray, y: np.ndarray) -> np.float64:
@@ -229,3 +266,85 @@ def get_min_reprojection_error(person, mview_proj_mat, kps2d_mat,
     x, y = np.where(reproj_error == reproj_error.min())
     sub_imageid = np.array([person[x[0]], person[y[0]]])
     return sub_imageid
+
+
+def check_limb_is_correct(model_start_point: np.ndarray,
+                          model_end_point: np.ndarray,
+                          gt_strat_point: np.ndarray,
+                          gt_end_point: np.ndarray,
+                          alpha=0.5) -> bool:
+    """Check that limb predictions are correct.
+
+    Returns:
+        bool: If the predicted limb is correct, return True.
+    """
+    limb_lenth = np.linalg.norm(gt_end_point - gt_strat_point)
+    start_difference = np.linalg.norm(gt_strat_point - model_start_point)
+    end_difference = np.linalg.norm(gt_end_point - model_end_point)
+    return ((start_difference + end_difference) / 2) <= alpha * limb_lenth
+
+
+def vectorize_distance(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Calculate euclid distance on each row of a and b.
+
+    Args:
+        a (np.ndarray): Points in shape [N, ...]
+        b (np.ndarray): Points in shape [M, ...]
+
+    Returns:
+        np.ndarray: Dist in shape [MxN, ...]
+        representing correspond distance.
+    """
+    N = a.shape[0]
+    a = a.reshape(N, -1)
+    M = b.shape[0]
+    b = b.reshape(M, -1)
+    a2 = np.tile(np.sum(a**2, axis=1).reshape(-1, 1), (1, M))
+    b2 = np.tile(np.sum(b**2, axis=1), (N, 1))
+    dist = a2 + b2 - 2 * (a @ b.T)
+    dist = np.sqrt(dist)
+    dist[np.where(np.isnan(dist))] = 1000
+    return dist
+
+
+def add_campus_jaw_headtop(nose, kps3d_campus):
+    for frame_idx in range(nose.shape[0]):
+        for i, kps3d in enumerate(kps3d_campus[frame_idx]):
+            add_kps3d = np.zeros((2, 3))
+            add_kps3d[0] = (kps3d[8] + kps3d[9]) / 2  # Use middle of shoulder
+            add_kps3d[1] = nose[frame_idx][i]  # use nose
+            add_kps3d[1] = add_kps3d[0] + (
+                add_kps3d[1] - add_kps3d[0]) * np.array([0.75, 0.75, 1.5])
+            add_kps3d[0] = add_kps3d[0] + (nose[frame_idx][i] -
+                                           add_kps3d[0]) * np.array(
+                                               [1. / 2., 1. / 2., 1. / 2.])
+            kps3d[-2:] = add_kps3d
+    return kps3d_campus
+
+
+def align_by_right_ankle(kps, convention: str = 'campus'):
+    index = get_keypoint_idx(name='right_ankle', convention=convention)
+    if index == -1:
+        raise ValueError('Check the convention of kps3d!')
+    root = kps[index, :]
+    return kps - root
+
+
+def compute_mpjpe(pred: np.ndarray, gt: np.ndarray, align=False):
+    """Compute MPJPE given prediction and ground-truth.
+
+    Args:
+        pred (np.ndarray): points with shape Nx3,
+            N means the number of keypoints.
+        gt (np.ndarray): points with shape Nx3
+        align (bool, optional): boolean value that determines whether to align
+                                with the root. Defaults to False.
+
+    Returns:
+        MPJPE of the input keypoints
+    """
+    if align:
+        pred = align_by_right_ankle(pred)
+        gt = align_by_right_ankle(gt)
+    mpjpe = np.sqrt(np.sum(np.square(pred - gt), axis=-1))
+    return mpjpe
