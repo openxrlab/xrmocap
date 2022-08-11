@@ -181,7 +181,7 @@ class MviewMpersonDataset(BaseDataset):
             mview_keypoints2d_list = self.percep_keypoints2d[scene_idx]
             mview_kps2d_list = []
             for _, keypoints2d in enumerate(mview_keypoints2d_list):
-                mview_kps2d_list.append(keypoints2d.get_keypoints())
+                mview_kps2d_list.append(keypoints2d.get_keypoints()[frame_idx])
             kw_data['kps2d'] = mview_kps2d_list
         return mview_img_tensor, k_tensor, r_tensor,\
             t_tensor, kps3d, end_of_clip, kw_data

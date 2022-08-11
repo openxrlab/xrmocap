@@ -40,7 +40,7 @@ def setup_parser():
         '--vis_config',
         help='Config file for a data converter.',
         type=str,
-        default='config/data/data_visualization/' + 'shelf_testset.py')
+        default='config/data/data_visualization/shelf_testset.py')
     parser.add_argument(
         '--overwrite',
         action='store_true',

@@ -21,7 +21,6 @@ class HybridKps2dSelector(BaseSelector):
 
     def __init__(self,
                  triangulator: Union[BaseTriangulator, dict],
-                 distribution: dict,
                  verbose: bool = True,
                  ignore_kps_name: List[str] = None,
                  convention: str = 'coco',
@@ -33,7 +32,6 @@ class HybridKps2dSelector(BaseSelector):
             triangulator (Union[BaseSelector, dict]):
                 Triangulator for reprojection error calculation.
                 An instance or config dict.
-            distribution (dict): Bone constraints. Defaults to None.
             verbose (bool, optional):
                 Whether to log info like valid views stats.
                 Defaults to True.
@@ -49,7 +47,6 @@ class HybridKps2dSelector(BaseSelector):
             self.triangulator = build_triangulator(triangulator)
         else:
             self.triangulator = triangulator
-        self.distribution = distribution
         self.ignore_kps_name = ignore_kps_name
         self.convention = convention
         self.ignore_indexes = []
@@ -163,7 +160,7 @@ class HybridKps2dSelector(BaseSelector):
         unary = unary[selected_kps]
         conns = get_conns(n_kps)
         # construct pictorial model
-        limb = get_struct(conns, self.distribution)
+        limb = get_struct(conns)
         selected_cand_idx = infer_kps3d_max_product(unary, limb, candidates)
 
         ret_selected_cand_idx = np.zeros(

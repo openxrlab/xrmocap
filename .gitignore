@@ -110,6 +110,7 @@ venv.bak/
 test/data/
 # data folder
 xrmocap_data/
+output/
 # or data link
 xrmocap_data
 weight

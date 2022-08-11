@@ -643,6 +643,9 @@ def mview_array_to_video(
         n_video_x = n_video_y + 1
         if n_video_x * n_video_y < n_view:
             n_video_y += 1
+    else:
+        n_video_y = int(n_video_y)
+        n_video_x = n_video_y
     # use the max n_frame and max resolution
     # as template
     n_frames = 0

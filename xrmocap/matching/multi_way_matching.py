@@ -16,7 +16,8 @@ class MultiWayMatching(BaseMatching):
     def __init__(self,
                  lambda_SVT: int,
                  alpha_SVT: float,
-                 use_dual_stochastic_SVT=False,
+                 use_dual_stochastic_SVT: bool = False,
+                 n_cam_min: int = 2,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Multi-way matching with cycle consistency.
 
@@ -25,6 +26,8 @@ class MultiWayMatching(BaseMatching):
             alpha_SVT (float): Alpha constants in SVT algorithms.
             use_dual_stochastic_SVT (bool, optional): Use dual stochastic in
                 SVT algorithms. Defaults to False.
+            n_cam_min (int, optional): The number of cameras that captured
+                the same person. Defaults to 2.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -34,6 +37,7 @@ class MultiWayMatching(BaseMatching):
         self.lambda_SVT = lambda_SVT
         self.alpha_SVT = alpha_SVT
         self.use_dual_stochastic_SVT = use_dual_stochastic_SVT
+        self.n_cam_min = n_cam_min
 
     def __call__(self,
                  mview_kps2d: np.ndarray,
@@ -43,7 +47,6 @@ class MultiWayMatching(BaseMatching):
                  affinity_type: str,
                  n_kps2d: int,
                  dim_group: Union[torch.Tensor, None] = None,
-                 not_matched_dim_group: Union[list, None] = None,
                  not_matched_index: Union[list, None] = None,
                  rerank: bool = False) -> Tuple[List[np.ndarray], np.ndarray]:
         """Match people id from different cameras.
@@ -57,8 +60,6 @@ class MultiWayMatching(BaseMatching):
             affinity_type (str): The affinity type.
             n_kps2d (int): The number of keypoints considered in triangulate.
             dim_group (Union[torch.Tensor, None], optional): Defaults to None.
-            not_matched_dim_group (Union[list, None], optional):
-                Defaults to None.
             not_matched_index (Union[list, None], optional): Defaults to None.
             rerank (bool, optional): Defaults to False.
 
@@ -72,8 +73,7 @@ class MultiWayMatching(BaseMatching):
                 of people captured by two or more cameras.
             sub_imgid2cam: The camera label of the captured people.
         """
-        if not_matched_dim_group is not None and not_matched_index is not None:
-            dim_group = not_matched_dim_group
+        if not_matched_index is not None:
             image_tensor = image_tensor[not_matched_index]
         mview_kps2d[np.isnan(mview_kps2d)] = 1e-9
 
@@ -104,6 +104,7 @@ class MultiWayMatching(BaseMatching):
             self.W,
             dim_group,
             self.logger,
+            n_cam_min=self.n_cam_min,
             alpha=self.alpha_SVT,
             _lambda=self.lambda_SVT,
             dual_stochastic=self.use_dual_stochastic_SVT)
@@ -119,9 +120,10 @@ class MultiWayMatching(BaseMatching):
                 pid = np.where(row.double() > 0)[0]
                 if len(pid) == 1:
                     for pid_ in pid:
-                        matched_list[pid_].append(sub_imgid)
+                        if sub_imgid2cam[sub_imgid] not in sub_imgid2cam[
+                                matched_list[pid_]]:
+                            matched_list[pid_].append(sub_imgid)
         matched_list = [np.array(i) for i in matched_list]
-
         return matched_list, sub_imgid2cam
 
     @classmethod
@@ -153,6 +155,7 @@ class MultiWayMatching(BaseMatching):
                   affinity_mat: torch.Tensor,
                   dim_group: torch.Tensor,
                   logger: Union[None, str, logging.Logger] = None,
+                  n_cam_min=2,
                   alpha=0.1,
                   _lambda=50,
                   dual_stochastic=True,
@@ -170,6 +173,8 @@ class MultiWayMatching(BaseMatching):
                                     different perspectives.
             logger (Union[None, str, logging.Logger], optional):
                 Defaults to None.
+            n_cam_min (int): The number of cameras that captured
+                the same person. Defaults to 2.
             alpha (float, optional): Defaults to 0.1.
             _lambda (int, optional): Defaults to 50.
             dual_stochastic (bool, optional): Defaults to True.
@@ -274,7 +279,8 @@ class MultiWayMatching(BaseMatching):
         match_mat = cls.transform_closure(X_bin).clone().detach()
 
         bin_match = match_mat[:,
-                              torch.nonzero(torch.sum(match_mat, dim=0) > 1.9).
+                              torch.nonzero(
+                                  torch.sum(match_mat, dim=0) >= n_cam_min).
                               squeeze()] > 0.9
         bin_match = bin_match.reshape(W.shape[0], -1)
         return match_mat, bin_match
