@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Union
 
 from xrmocap.utils.camera_utils import project_pose
 from xrmocap.utils.distribute_utils import (
@@ -15,7 +16,7 @@ from xrmocap.utils.mvp_utils import accuracy, norm2absolute
 
 
 class PerKpL1Loss(nn.Module):
-    """PerKpL1Loss for MVP.
+    """PerKpL1Loss for Multi-view Multi-pose Transformer.
 
     More details can be found on the website. https://github.com/sail-sg/mvp
     """
@@ -30,9 +31,32 @@ class PerKpL1Loss(nn.Module):
     def forward(self,
                 pred: torch.Tensor,
                 target: torch.Tensor,
-                use_target_weight=False,
-                target_weight=None,
-                num_boxes=None):
+                use_target_weight: bool = False,
+                target_weight: Union[None, float] = None,
+                num_boxes: Union[None, int] = None) -> float:
+        """Calculate PerKpL1Loss with given predicted keypoints and target
+        keypoints.
+
+        Args:
+            pred (torch.Tensor):
+                A float tensor of arbitrary shape.
+                The predictions for each example.
+            target (torch.Tensor):
+                A float tensor with the same shape as inputs.
+            use_target_weight (bool, optional):
+                Whether to apply weights for this loss.
+                Defaults to False.
+            target_weight (Union[None, float], optional):
+                Loss weight. Defaults to None.
+            num_boxes (Union[None, int], optional):
+                Number of bboxes. Only apply when loss type
+                is 'MPJPE'. Defaults to None.
+
+
+        Returns:
+            loss(float):
+                Value of per keypoint L1 loss.
+        """
         if use_target_weight:
             batch_size = pred.size(0)
             n_kps = pred.size(1)
@@ -84,8 +108,29 @@ class PerProjectionL1Loss(nn.Module):
                 pred: torch.Tensor,
                 target: torch.Tensor,
                 cameras: dict,
-                use_target_weight=False,
-                target_weight=None):
+                use_target_weight: bool = False,
+                target_weight: Union[None, float] = None) -> float:
+        """Calculate PerProjectionL1Loss with given predicted keypoints and
+        target keypoints.
+
+        Args:
+            pred (torch.Tensor):
+                A float tensor of arbitrary shape.
+                The predictions for each example.
+            target (torch.Tensor):
+                A float tensor with the same shape as inputs.
+            cameras (dict):
+                Dict of camera parameters for all the views.
+            use_target_weight (bool, optional):
+                Whether to apply weights for this loss.
+                Defaults to False.
+            target_weight (Union[None, float], optional):
+                Loss weight. Defaults to None.
+
+        Returns:
+            loss(float):
+                Value of per projection L1 loss.
+        """
         assert pred.size(0) == target.size(0)
         pred_multi_view = pred[None].repeat(len(cameras), 1, 1, 1)
         gt_multi_view = target[None].repeat(len(cameras), 1, 1, 1)
@@ -131,25 +176,24 @@ class PerProjectionL1Loss(nn.Module):
 
 
 class SigmoidFocalLoss(nn.Module):
-    """
-    Loss used in RetinaNet for dense detection:
-    https://arxiv.org/abs/1708.02002.
-    Args:
-        inputs: A float tensor of arbitrary shape.
-                The predictions for each example.
-        targets: A float tensor with the same shape as
-        inputs. Stores the binary
-                classification label for each element in inputs
-                (0 for the negative class and 1 for the positive class).
-        alpha: (optional) Weighting factor in range (0,1) to balance
-                positive vs negative examples. Default = -1 (no weighting).
-        gamma: Exponent of the modulating factor (1 - p_t) to
-            balance easy vs hard examples.
-    Returns:
-        Loss tensor
-    """
+    """Loss used in RetinaNet for dense detection
+    https://arxiv.org/abs/1708.02002."""
 
-    def __init__(self, alpha=0.25, gamma=2, reduction='none'):
+    def __init__(self,
+                 alpha: float = 0.25,
+                 gamma: float = 2.,
+                 reduction='none') -> None:
+        """
+        Args:
+            alpha (float, optional):
+                Weighting factor in range (0,1) to balance
+                positive vs negative examples. Defaults to 0.25.
+            gamma (float, optional):
+                Exponent of the modulating factor to
+                balance easy vs hard examples.. Defaults to 2..
+            reduction (str, optional):
+                Loss reduction type. Defaults to 'none'.
+        """
         super(SigmoidFocalLoss, self).__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
         reduction = 'none' if reduction is None else reduction
@@ -158,7 +202,25 @@ class SigmoidFocalLoss(nn.Module):
         self.reduction = reduction
 
     def forward(self, pred: torch.Tensor, target: torch.Tensor,
-                n_samples: int):
+                n_samples: int) -> float:
+        """Calculate sigmoid focal loss.
+
+        Args:
+            pred (torch.Tensor):
+                A float tensor of arbitrary shape.
+                The predictions for each example.
+            target (torch.Tensor):
+                A float tensor with the same shape as
+                inputs. Stores the binary classification label for
+                each element in inputs (0 for the negative class
+                and 1 for the positive class).
+            n_samples (int):
+                Number of samples.
+
+        Returns:
+            loss(float):
+                Value of sigmoid focal loss.
+        """
 
         prob = pred.sigmoid()
         ce_loss = F.binary_cross_entropy_with_logits(
@@ -174,11 +236,12 @@ class SigmoidFocalLoss(nn.Module):
 
 
 class SetCriterion(nn.Module):
-    """The process happens in two steps:
+    """Create the criterion: The supervision process happens in two steps:
 
-    1) we compute hungarian assignment between ground truth poses and the
-    outputs of the model 2) we supervise each pair of matched ground-truth /
-    prediction (supervise class and pose)
+    1) Compute hungarian assignment between ground-truth poses and the
+    outputs of the model
+    2) Supervise each pair of matched ground truth and
+    prediction in class and pose
 
     More details can be found on the website
     https://github.com/sail-sg/mvp
@@ -186,35 +249,54 @@ class SetCriterion(nn.Module):
 
     def __init__(self,
                  losses,
-                 image_size,
-                 n_classes,
-                 n_person,
-                 loss_kp_type,
+                 image_size: list,
+                 n_classes: int,
+                 n_person: int,
+                 loss_kp_type: str,
                  matcher,
                  weight_dict,
-                 space_size,
-                 space_center,
-                 use_loss_pose_perprojection,
-                 loss_pose_normalize,
-                 pred_conf_threshold,
-                 focal_alpha=0.25,
-                 root_idx=2):
-        """ Create the criterion.
-        Parameters:
-            n_classes: number of object categories,
-            omitting the special no-object category
+                 space_size: list,
+                 space_center: list,
+                 use_loss_pose_perprojection: bool,
+                 loss_pose_normalize: bool,
+                 pred_conf_threshold: list,
+                 focal_alpha: float = 0.25,
+                 root_idx: Union[list, int] = 2):
+        """Create the criterion.
 
-            matcher: module able to compute a
-            matching between targets and proposals
-
-            weight_dict: dict containing as key the names of
-            the losses and as values their relative weight.
-
-            losses: list of all the losses to be applied.
-            See get_loss for list of available losses.
-
-            focal_alpha: alpha in Focal Loss
+        Args:
+            losses:
+                List of all the losses to be applied.
+            image_size (list):
+                Input image size.
+            n_classes (int):
+                Number of object categories,
+                omitting the special no-object category.
+            n_person (int):
+                Max number of person the model can handle.
+            loss_kp_type (str):
+                Type of keypoint loss.
+            matcher:
+                Matcher to match predicted keypoints with ground truth.
+            weight_dict:
+                Dict containing as key the names of
+                the losses and as values their relative weight.
+            space_size (list):
+                Size of the 3D space.
+            space_center (list):
+                Center position of the 3D space.
+            use_loss_pose_perprojection (bool):
+                Whether to use PerProjectionL1Loss.
+            loss_pose_normalize (bool):
+                Whether to normalize the pose.
+            pred_conf_threshold (list):
+                List of confidence threshold to filter non-human keypoints.
+            focal_alpha (float, optional): Alpha in Focal Loss.
+                Defaults to 0.25.
+            root_idx (Union[list, int], optional):
+                Index of the root keypoint. Defaults to 2.
         """
+
         super().__init__()
         self.n_classes = n_classes
         self.matcher = matcher
@@ -248,7 +330,12 @@ class SetCriterion(nn.Module):
             self.criterion_pose_perprojection = \
                 PerProjectionL1Loss(loss_kp_type)
 
-    def loss_labels(self, outputs, meta, indexes, n_samples, log=True):
+    def loss_labels(self,
+                    outputs: dict,
+                    meta: list,
+                    indexes: int,
+                    n_samples: int,
+                    log: bool = True):
         """Classification loss (NLL) targets dicts must contain the key
         "labels" containing a tensor of dim [nb_target_poses]"""
         assert 'pred_logits' in outputs
@@ -283,7 +370,8 @@ class SetCriterion(nn.Module):
         return losses
 
     @torch.no_grad()
-    def loss_cardinality(self, outputs, meta, indexes, n_samples):
+    def loss_cardinality(self, outputs: dict, meta: list, indexes: int,
+                         n_samples: int):
         """Compute the cardinality error, ie the absolute error in the number
         of predicted non-empty poses This is not really a loss, it is intended
         for logging purposes only.
@@ -303,11 +391,11 @@ class SetCriterion(nn.Module):
         return losses
 
     def loss_poses(self,
-                   outputs,
-                   meta,
-                   indexes,
-                   n_samples,
-                   output_abs_coord=False):
+                   outputs: dict,
+                   meta: list,
+                   indexes: int,
+                   n_samples: int,
+                   output_abs_coord: bool = False):
         """Compute the losses related to the bounding poses, the L1 regression
         loss and the GIoU loss targets dicts must contain the key "poses"
         containing a tensor of dim [nb_target_poses, 4] The target poses are
@@ -396,7 +484,8 @@ class SetCriterion(nn.Module):
         target_idx = torch.cat([target for (_, target) in indexes])
         return batch_idx, target_idx
 
-    def get_loss(self, loss, outputs, targets, indexes, n_samples, **kwargs):
+    def get_loss(self, loss: str, outputs: dict, targets: list, indexes: int,
+                 n_samples: int, **kwargs):
         loss_map = {
             'labels': self.loss_labels,
             'cardinality': self.loss_cardinality,
@@ -406,15 +495,20 @@ class SetCriterion(nn.Module):
         return \
             loss_map[loss](outputs, targets, indexes, n_samples, **kwargs)
 
-    def forward(self, outputs, meta):
-        """ This performs the loss computation.
-        Parameters:
-             outputs: dict of tensors,
-             see the output specification of the model for the format
+    def forward(self, outputs: dict, meta: list):
+        """This performs the loss computation.
 
-             targets: list of dicts, such that len(targets) == batch_size.
-                      The expected keys in each dict depends on the
-                      losses applied, see each loss' doc
+        Args:
+            outputs (dict):
+                Dict of tensors
+            meta (list):
+                List of dict, meta information.
+
+        Returns:
+            losses(dict):
+                A dictionary contains all the losses type and value.
+            losses_weighted(float):
+                Value of weighted sum of all losses.
         """
         outputs_without_aux = {
             k: v

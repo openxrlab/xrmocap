@@ -78,6 +78,8 @@ def get_affine_transform(center,
                          output_size,
                          shift=np.array([0, 0], dtype=np.float32),
                          inv=0):
+    """This function calculates affine transformation from given center, scale,
+    rotation and shift."""
 
     def get_3rd_point(a, b):
         # get the third point from the first two points to define

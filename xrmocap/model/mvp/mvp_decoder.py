@@ -29,20 +29,56 @@ class MvPDecoderLayer(nn.Module):
     """
 
     def __init__(self,
-                 space_size,
-                 space_center,
-                 image_size,
-                 d_model=256,
-                 dim_feedforward=1024,
-                 dropout=0.1,
-                 activation='relu',
-                 n_feature_levels=4,
-                 n_heads=8,
-                 dec_n_points=4,
-                 detach_refpoints_cameraprj=True,
-                 fuse_view_feats='mean',
-                 n_views=5,
-                 projattn_pose_embed_mode='use_rayconv'):
+                 space_size: list,
+                 space_center: list,
+                 image_size: list,
+                 d_model: int = 256,
+                 dim_feedforward: int = 1024,
+                 dropout: int = 0.1,
+                 activation: str = 'relu',
+                 n_feature_levels: int = 4,
+                 n_heads: int = 8,
+                 dec_n_points: int = 4,
+                 detach_refpoints_cameraprj: bool = True,
+                 fuse_view_feats: str = 'mean',
+                 n_views: int = 5,
+                 projattn_pose_embed_mode: str = 'use_rayconv'):
+        """Create the decoder layer.
+
+        Args:
+            space_size (list):
+                Size of the 3D space.
+            space_center (list):
+                Center position of the 3D space.
+            image_size (list):
+                [w,h], a list of image size.
+            d_model (int, optional):
+                Size of model and feature size. Defaults to 256.
+            dim_feedforward (int, optional):
+                Dimension of the feedforward
+                layers. Defaults to 1024.
+            dropout (int, optional):
+                Defaults to 0.1.
+            activation (str, optional):
+                Activation function.  Defaults to 'relu'.
+            n_feature_levels (int, optional):
+                Number of feature levels. Defaults to 4.
+            n_heads (int, optional):
+                Number of attention heads. Defaults to 8.
+            dec_n_points (int, optional):
+                Number of sampling points per attention
+                head per feature level. Defaults to 4.
+            detach_refpoints_cameraprj (bool, optional):
+                Whether to detach reference points
+                in reprojection. Defaults to True.
+            fuse_view_feats (str, optional):
+                Type of feature fuse function. Defaults to 'mean'.
+            n_views (int, optional):
+                Number of views. Defaults to 5.
+            projattn_pose_embed_mode (str, optional):
+                The positional embedding mode of projective attention.
+                ['use_rayconv','use_2d_coordconv']. Defaults to 'use_rayconv'.
+        """
         super().__init__()
 
         # projective attention
@@ -283,8 +319,19 @@ class MvPDecoder(nn.Module):
 
     def __init__(self,
                  decoder_layer,
-                 n_decoder_layer,
-                 return_intermediate=False):
+                 n_decoder_layer: int,
+                 return_intermediate: bool = False):
+        """Create a decoder.
+
+        Args:
+            decoder_layer:
+                The decoder layer.
+            n_decoder_layer (int):
+                Number of decoder layers in the decoder.
+            return_intermediate (bool, optional):
+                Whether to return the intermediate result.
+                Defaults to False.
+        """
         super().__init__()
         self.layers = get_clones(decoder_layer, n_decoder_layer)
         self.n_layers = n_decoder_layer
@@ -334,16 +381,24 @@ class MvPDecoder(nn.Module):
 
 
 class MLP(nn.Module):
-    """
-    Very simple multi-layer perceptron (also called FFN)
-    Args:
-        input_dim: The dimension of input feature.
-        hidden_dim: The dimension of intermediate feature.
-        output_dim: The dimension of output.
-        n_layers: number of layers.
-    """
+    """Very simple multi-layer perceptron, used as feedforward network
+    (FFN)."""
 
-    def __init__(self, input_dim, hidden_dim, output_dim, n_layers):
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int,
+                 n_layers: int):
+        """Create the FFN.
+
+        Args:
+            input_dim (int):
+                The dimension of input feature.
+            hidden_dim (int):
+                The dimension of intermediate feature.
+            output_dim (int):
+                The dimension of output.
+            n_layers (int):
+                Number of layers.
+        """
+
         super().__init__()
         self.n_layers = n_layers
         h = [hidden_dim] * (n_layers - 1)

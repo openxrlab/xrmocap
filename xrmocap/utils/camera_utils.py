@@ -2,7 +2,31 @@ import numpy as np
 import torch
 
 
-def unfold_camera_param(camera, device='cpu'):
+def unfold_camera_param(camera: dict, device='cpu'):
+    """This function is to extract camera extrinsic, intrinsic and distorsion
+    parameters from dictionary.
+
+    Args:
+        camera (dict):
+            Dictionary to store the camera parameters.
+        device (str, optional):
+            Device of input and output. Defaults to 'cpu'.
+
+    Returns:
+        R(Union[np.ndarray, torch.Tensor]):
+            Extrinsic parameters, rotation matrix.
+        T(Union[np.ndarray, torch.Tensor]):
+            Extrinsic parameters, translation matrix.
+        f(Union[np.ndarray, torch.Tensor]):
+            Focal length in x, y direction.
+        c(Union[np.ndarray, torch.Tensor]):
+            Camera center.
+        k(Union[list, torch.Tensor]):
+            Radial distortion coefficients.
+        p(Union[list, torch.Tensor]):
+            Tangential distortion coefficients.
+    """
+
     R = camera['R']
     T = camera['T']
     fx = camera['fx']
@@ -53,7 +77,9 @@ def unfold_camera_param(camera, device='cpu'):
 
 
 def project_point_radial(x, R, T, f, c, k, p, device):
-    """
+    """This function is to project a point in 3D space to 2D pixel space with
+    given camera parameters.
+
     Args
         x: Nx3 points in world coordinates
         R: 3x3 Camera rotation matrix
@@ -62,6 +88,7 @@ def project_point_radial(x, R, T, f, c, k, p, device):
         c: 2x1 Camera center
         k: 3x1 Camera radial distortion coefficients
         p: 2x1 Camera tangential distortion coefficients
+
     Returns
         ypixel.T: Nx2 points in pixel space
     """

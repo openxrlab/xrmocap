@@ -25,14 +25,18 @@ class HungarianMatcher(nn.Module):
                  cost_giou: float = 1):
         """Creates the matcher.
 
-        Params:
-            cost_class: This is the relative weight of the
-            classification error in the matching cost
-            cost_pose: This is the relative weight of the L1
-            error of the pose coordinates in the matching cost
-            cost_giou: This is the relative weight of the giou
-            loss of the pose in the matching cost
+        Args:
+            cost_class (float, optional):
+                This is the relative weight of the classification
+                error in the matching cost. Defaults to 1.
+            cost_pose (float, optional):
+                This is the relative weight of the L1 error of the
+                pose coordinates in the matching cost. Defaults to 1.
+            cost_giou (float, optional):
+                This is the relative weight of the giou loss of
+                the pose in the matching cost. Defaults to 1.
         """
+
         super().__init__()
         self.cost_class = cost_class
         self.cost_pose = cost_pose
@@ -45,42 +49,28 @@ class HungarianMatcher(nn.Module):
         if dist == 'per_kp_mean':
             return torch.cdist(x1, x2, p=1)
 
-    def forward(self, outputs, meta):
+    def forward(self, outputs: dict, meta: list):
         """Performs the matching.
 
-        Params:
-            outputs: This is a dict that contains at least these entries:
+        Args:
+            outputs (dict):
+                A dict that contains at least these entries:
                  "pred_logits": Tensor of dim
                  [batch_size, n_queries, n_classes]
                  with the classification logits
-
                  "pred_poses": Tensor of dim
                  [batch_size, n_queries, 4]
                  with the predicted box coordinates
-
-            targets: This is a list of targets (len(targets) = batch_size),
-            where each target is a dict containing:
-
+            meta (list):
+                A list of targets (len(targets) = batch_size),
+                where each target is a dict containing:
                  "labels": Tensor of dim [n_target_poses]
                  (where n_target_poses is the number of ground-truth
                  objects in the target) containing the class labels
-
                  "poses": Tensor of dim [n_target_poses, 4]
                  containing the target box coordinates
-
-        Returns:
-            A list of size batch_size, containing
-            tuples of (index_i, index_j) where:
-                - index_i is the indexes of the
-                selected predictions (in order)
-
-                - index_j is the indexes of the
-                corresponding selected targets (in order)
-
-            For each batch element, it holds:
-                len(index_i) = len(index_j)
-                = min(n_queries, n_target_poses)
         """
+
         gt_kps3d = meta[0]['kps3d_norm'].float()
         n_person_gt = meta[0]['n_person']
         n_kps = gt_kps3d.shape[2]

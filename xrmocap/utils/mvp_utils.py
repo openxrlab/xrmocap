@@ -29,6 +29,7 @@ class AverageMeter(object):
 
 
 def match_name_keywords(n, name_keywords):
+    """Match the keys in two dictionaries."""
     for b in name_keywords:
         if b in n:
             return True
@@ -40,12 +41,26 @@ def get_model_name(model, resnet_layer):
     return name
 
 
-def get_directory(state='train',
-                  output_dir='output',
+def get_directory(state: str = 'train',
+                  output_dir: str = 'output',
                   cfg_name: str = 'mvp_train',
                   dataset: str = 'dataset',
                   model: str = 'multi_view_pose_transformer',
                   resnet_layer: int = 50):
+    """This function generates the log file directory and output file
+    directory.
+
+    Args:
+        state (str, optional): Train or test mode. Defaults to 'train'.
+        output_dir (str, optional): Output directory. Defaults to 'output'.
+        cfg_name (str, optional): Name of the configuration file. Defaults
+            to 'mvp_train'.
+        dataset (str, optional): Name of the dataset. Defaults to 'dataset'.
+        model (str, optional): Name of the model. Defaults to
+            'multi_view_pose_transformer'.
+        resnet_layer (int, optional): Number of layers in the backbone Resnet.
+            Defaults to 50.
+    """
     this_dir = Path(os.path.dirname(__file__))
     root_output_dir = (this_dir / '..' / '..' / output_dir).resolve()
 
@@ -118,6 +133,7 @@ def inverse_sigmoid(x, eps=1e-5):
 
 
 def convert_result_to_kps(pred):
+    """Convert MVP predict result to Keypoints object."""
     pred = pred[0]
     pred = pred[pred[:, 0, 3] >= 0]
     per_frame_kps3d = pred[:, :, :4]

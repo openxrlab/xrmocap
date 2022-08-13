@@ -2,30 +2,43 @@ import math
 import torch
 import torch.distributed as dist
 from torch.utils.data.sampler import Sampler
+from typing import Union
 
 
 class DistributedSampler(Sampler):
     """Sampler that restricts data loading to a subset of the dataset.
+
     It is especially useful in conjunction with
     :class:`torch.nn.parallel.DistributedDataParallel`. In such case, each
     process can pass a DistributedSampler instance as a DataLoader sampler,
     and load a subset of the original dataset that is exclusive to it.
-    .. note::
-        Dataset is assumed to be of constant size.
-    Arguments:
-        dataset: Dataset used for sampling.
-        n_replicas (optional): Number of processes participating in
-            distributed training.
-        rank (optional): Rank of the current process within n_replicas.
     """
 
     def __init__(self,
                  dataset,
-                 n_replicas=None,
-                 rank=None,
-                 local_rank=None,
-                 local_size=None,
-                 shuffle=True):
+                 n_replicas: Union[None, int] = None,
+                 rank: Union[None, int] = None,
+                 local_rank: Union[None, int] = None,
+                 local_size: Union[None, int] = None,
+                 shuffle: bool = True):
+        """
+        Args:
+            dataset:
+                Dataset used for sampling.
+            n_replicas (Union[None, int], optional):
+                Number of processes participating in distributed
+                training. Defaults to None.
+            rank (Union[None, int], optional):
+                Rank of the current process within n_replicas.
+                Defaults to None.
+            local_rank (Union[None, int], optional):
+                Defaults to None.
+            local_size (Union[None, int], optional):
+                Defaults to None.
+            shuffle (bool, optional):
+                Whether to shuffle the data. Defaults to True.
+
+        """
         if n_replicas is None:
             if not dist.is_available():
                 raise RuntimeError(

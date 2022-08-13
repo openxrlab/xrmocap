@@ -30,6 +30,8 @@ def setup_for_distributed(is_master):
 
 
 def init_distributed_mode(world_size, dist_url, logger):
+    """This function initiate the distributed training setup, and return the
+    current gpu index."""
     logger = get_logger(logger)
     if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
         rank = int(os.environ['RANK'])
@@ -128,9 +130,11 @@ def all_gather(data):
     """
     Run all_gather on arbitrary picklable data (not necessarily tensors)
     Args:
-        data: any picklable object
+        data:
+            Any picklable object
     Returns:
-        list[data]: list of data gathered from each rank
+        data_list(list):
+            List of data gathered from each rank
     """
     world_size = get_world_size()
     if world_size == 1:

@@ -1,5 +1,7 @@
+import logging
 import torch.nn as nn
 from mmcv.cnn.resnet import ResNet
+from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.utils.distribute_utils import is_main_process
@@ -9,16 +11,38 @@ class PoseResNet(nn.Module):
     """PoseResNet with ResNet as backbone."""
 
     def __init__(self,
-                 logger,
-                 n_kps,
-                 deconv_with_bias,
-                 n_deconv_layers,
-                 n_deconv_filters,
-                 n_deconv_kernels,
-                 final_conv_kernel,
+                 logger: Union[None, str, logging.Logger],
+                 n_kps: int,
+                 deconv_with_bias: bool,
+                 n_deconv_layers: int,
+                 n_deconv_filters: list,
+                 n_deconv_kernels: list,
+                 final_conv_kernel: int,
                  inplanes: int = 2048,
                  n_layers: int = 50,
                  **kwargs):
+        """Create the Pose Resnet backbone network.
+
+        Args:
+            logger (Union[None, str, logging.Logger]):
+                Logger for logging. If None, root logger will be selected.
+            n_kps (int):
+                Number of keypoints.
+            deconv_with_bias (bool):
+                Whether to introduce bias in deconvolution.
+            n_deconv_layers (int):
+                Number of deconvolution layers.
+            n_deconv_filters (list):
+                Number of deconvolution filters.
+            n_deconv_kernels (list):
+                Number of deconvolution kernels.
+            final_conv_kernel (int):
+                Kernel size of the final convolution layer.
+            inplanes (int, optional):
+                Number of input channels. Defaults to 2048.
+            n_layers (int, optional):
+                Number of layers of the Resnet. Defaults to 50.
+        """
         self.logger = get_logger(logger)
         self.inplanes = inplanes
         self.deconv_with_bias = deconv_with_bias

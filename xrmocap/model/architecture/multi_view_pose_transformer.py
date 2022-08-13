@@ -1,11 +1,13 @@
 # yapf: disable
 
+import logging
 import math
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import constant_, normal_, xavier_uniform_
+from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.model.loss.builder import build_loss
@@ -31,26 +33,89 @@ except (ImportError, ModuleNotFoundError):
 
 
 class MviewPoseTransformer(nn.Module):
-    """Multi-view Pose Transformer Module: Modified from DETR and Deformable
-    Detr https://github.com/facebookresearch/detr
+    """Multi-view Pose Transformer Module.
+
+    Modified from DETR and Deformable Detr
+    https://github.com/facebookresearch/detr
     https://github.com/fundamentalvision/Deformable-DETR.
 
     More details can be found on the website.
     https://github.com/sail-sg/mvp
-
-    Args:
-        cfg: the config file
     """
 
-    def __init__(self, is_train, logger, n_kps, n_instance, image_size,
-                 d_model, use_feat_level, n_cameras, query_embed_type,
-                 with_pose_refine, loss_weight_loss_ce, loss_per_kp, aux_loss,
-                 pred_conf_threshold, pred_class_fuse,
-                 projattn_pose_embed_mode, query_adaptation,
-                 convert_kp_format_indexes, backbone_setup,
-                 decoder_layer_setup, decoder_setup, pos_encoding_setup,
-                 pose_embed_setup, matcher_setup, criterion_setup, space_size,
-                 space_center):
+    def __init__(self, is_train: bool, logger: Union[None, str,
+                                                     logging.Logger],
+                 n_kps: int, n_instance: int, image_size: list, d_model: int,
+                 use_feat_level: list, n_cameras: int, query_embed_type: str,
+                 with_pose_refine: bool, loss_weight_loss_ce: float,
+                 loss_per_kp: float, aux_loss: bool, pred_conf_threshold: list,
+                 pred_class_fuse: str, projattn_pose_embed_mode: str,
+                 query_adaptation: bool, convert_kp_format_indexes: list,
+                 backbone_setup: dict, decoder_layer_setup: dict,
+                 decoder_setup: dict, pos_encoding_setup: dict,
+                 pose_embed_setup: dict, matcher_setup: dict,
+                 criterion_setup: dict, space_size: list,
+                 space_center: list) -> None:
+        """
+        Args:
+            is_train (bool):
+                True if it is initialized during training.
+            logger (Union[None, str, logging.Logger]):
+                Logger for logging. If None, root logger will be selected.
+            n_kps (int):
+                Number of keypoints per person.
+            n_instance (int):
+                Max number of person the model can handle.
+            image_size (list):
+                Input image size.
+            d_model (int):
+                Size of model and feature size.
+            use_feat_level (list):
+                Index of backbone features used.
+            n_cameras (int):
+                Number of cameras.
+            query_embed_type (str):
+                Type of query embedding.
+                ['person_kp','image_person_kp','per_kp'].
+            with_pose_refine (bool):
+                Whether to use pose refine.
+            loss_weight_loss_ce (float):
+                Loss weight for CE loss.
+            loss_per_kp (float):
+                Loss weight for KP loss.
+            aux_loss (bool):
+                Whether to split loss by decoder layers.
+            pred_conf_threshold (list):
+                List of confidence threshold to filter non-human keypoints.
+            pred_class_fuse (str):
+                Type of fusing predictions.
+                ['mean', 'feat_mean_pool', 'feat_max_pool']
+            projattn_pose_embed_mode (str):
+                The positional embedding mode of projective
+                attention. ['use_rayconv','use_2d_coordconv']
+                query_adaptation (bool): Whether to use query adaptation.
+            convert_kp_format_indexes (list):
+                Convention from CMU panoptic keypoint format.
+            backbone_setup (dict):
+                Dict if parameters to setup the backbone.
+            decoder_layer_setup (dict):
+                Dict if parameters to setup decoder layers.
+            decoder_setup (dict):
+                Dict if parameters to setup the decoder.
+            pos_encoding_setup (dict):
+                Dict if parameters to setup positional encoding.
+            pose_embed_setup (dict):
+                Dict if parameters to setup pose embedding.
+            matcher_setup (dict):
+                Dict if parameters to setup the matcher.
+            criterion_setup (dict):
+                Dict if parameters to setup criterions.
+            space_size (list):
+                Size of the 3D space.
+            space_center (list):
+                Center position of the 3D space.
+
+        """
 
         super(MviewPoseTransformer, self).__init__()
         self.logger = get_logger(logger)
