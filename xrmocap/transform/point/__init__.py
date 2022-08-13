@@ -1,13 +1,25 @@
 import numpy as np
 import torch
+from typing import Union
 
 
-def affine_transform_pts(pts, t):
+def affine_transform_pts(
+        pts: Union[list, torch.Tensor],
+        t: Union[list, torch.Tensor]) -> Union[list, torch.Tensor]:
+    """Affine transformation for points.
+
+    Args:
+        pts (Union[list, torch.Tensor]):
+            Point(s) to be transferred.
+            Nx2 or [batch_size, n_views, N, 2]
+        t (Union[list, torch.Tensor]):
+            Transformation. Nx2 or [batch_size, n_views, N, 2]
+
+    Returns:
+        pts_trans(Union[list, torch.Tensor]):
+            Affine transformed point(s).
     """
-    pts: Nx2 or [batch_size, n_views, N, 2]
-    t: [2,3] or [batch_size, n_views, 2, 3]
-    pts_trans: Nx2 or [batch_size, n_views, N, 2]
-    """
+
     if not hasattr(pts, 'device'):
         if pts.ndim == 1:
             pts_trans = np.array([pts[0], pts[1], 1.]).T

@@ -1,5 +1,6 @@
 # yapf: disable
 
+import logging
 import numpy as np
 import os
 import random
@@ -13,6 +14,7 @@ import torchvision.transforms as transforms
 from mmcv.runner import get_dist_info, load_checkpoint
 from prettytable import PrettyTable
 from torch.utils.data import DistributedSampler
+from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
@@ -33,14 +35,107 @@ from xrmocap.utils.mvp_utils import (
 
 class MVPTrainer():
 
-    def __init__(self, logger, device, seed, distributed, model_path, gpu_idx,
-                 workers, train_dataset, test_dataset, train_batch_size,
-                 test_batch_size, lr, lr_linear_proj_mult, weight_decay,
-                 optimizer, end_epoch, pretrained_backbone, model_root,
-                 finetune_model, resume, normalize, final_output_dir,
-                 lr_decay_epoch, inference_conf_thr, test_model_file,
-                 clip_max_norm, print_freq, cudnn_setup, dataset_setup,
-                 mvp_setup):
+    def __init__(self,
+                 distributed: bool,
+                 model_path: Union[None, str],
+                 gpu_idx: int,
+                 train_dataset: str,
+                 test_dataset: str,
+                 lr: float,
+                 weight_decay: float,
+                 optimizer: str,
+                 end_epoch: int,
+                 pretrained_backbone: str,
+                 finetune_model: Union[None, str],
+                 resume: bool,
+                 normalize: dict,
+                 final_output_dir: str,
+                 lr_decay_epoch: list,
+                 test_model_file: str,
+                 cudnn_setup: dict,
+                 dataset_setup: dict,
+                 mvp_setup: dict,
+                 logger: Union[None, str, logging.Logger] = None,
+                 device: str = 'cuda',
+                 seed: int = 42,
+                 workers: int = 4,
+                 train_batch_size: int = 1,
+                 test_batch_size: int = 1,
+                 lr_linear_proj_mult: float = 0.1,
+                 model_root: str = './weight',
+                 inference_conf_thr: list = [0.0],
+                 print_freq: int = 100,
+                 clip_max_norm: float = 0.1) -> None:
+        """Create a trainer for training the Multi-view Pose Transformer(MVP).
+
+        Args:
+            distributed (bool):
+                If distributed training is used.
+            model_path (Union[None, str]):
+                Path to the model weight,for evaluation.
+            gpu_idx (int):
+                Index of current GPU when using distributed training.
+            train_dataset (str):
+                Name of the train dataset.
+            test_dataset (str):
+                Name of the test dataset.
+            lr (float):
+                Learning rate.
+            weight_decay (float):
+                Weight decay.
+            optimizer (str):
+                Type of optimizer.
+            end_epoch (int):
+                End epoch of trainig.
+            pretrained_backbone (str):
+                Path to pretrained backbone weights
+                if using pretrained model.
+            finetune_model (Union[None, str]):
+                Path to a pretrained model weights to be finetuned.
+            resume (bool):
+                If auto resume from checkpoints is used.
+            normalize (dict):
+                Normalization mean and std for datasets.
+            final_output_dir (str):
+                Path to output folder.
+            lr_decay_epoch (list):
+                Lr decay milestones.
+            test_model_file (str):
+                Path to test model weight.
+            cudnn_setup (dict):
+                Dict of parameters to setup cudnn.
+            dataset_setup (dict):
+                Dict of parameters to setup the dataset.
+            mvp_setup (dict):
+                Dict of parameters to setup the MVP architecture.
+            logger (Union[None, str, logging.Logger], optional):
+                Logger for logging. If None, root logger will be selected.
+                Defaults to None.
+            device (str, optional):
+                Training device, 'cuda' for GPU usage.
+                Defaults to 'cuda'.
+            seed (int, optional):
+                Fix random seed between experiments if needed.
+                Defaults to 42.
+            workers (int, optional):
+                Number of workers.. Defaults to 4.
+            train_batch_size (int, optional):
+                Batch size in training. Defaults to 1.
+            test_batch_size (int, optional):
+                Batch size in testing. Defaults to 1.
+            lr_linear_proj_mult (float, optional):
+                LR factor for linear projection related weights.
+                Defaults to 0.1.
+            model_root (str, optional):
+                Root folder for pretrained weights. Defaults to './weight'.
+            inference_conf_thr (list, optional):
+                List of confidence threshold to filter non-human
+                keypoints. Defaults to [0.0].
+            print_freq (int, optional):
+                Printing frequency during training. Defaults to 100.
+            clip_max_norm (float, optional):
+                Gradient clipping.. Defaults to 0.1.
+        """
 
         self.logger = get_logger(logger)
         self.device = device
@@ -539,13 +634,34 @@ class MVPTrainer():
 def train_3d(model,
              optimizer,
              loader,
-             epoch,
-             logger,
-             output_dir,
-             clip_max_norm,
-             print_freq,
-             device=torch.device('cuda'),
-             n_views=5):
+             epoch: int,
+             logger: Union[None, str, logging.Logger],
+             output_dir: str,
+             clip_max_norm: float,
+             print_freq: int,
+             n_views: int = 5):
+    """Train one epoch.
+
+    Args:
+        model: Model to be trained.
+        optimizer:
+            Optimizer used in training.
+        loader:
+            Dataloader.
+        epoch (int):
+            Current epoch.
+        logger (Union[None, str, logging.Logger]):
+            Logger for logging. If None, root logger will be selected.
+        output_dir (str):
+            Path to output folder.
+        clip_max_norm (float):
+            Gradient clipping.
+        print_freq (int):
+            Printing frequency during training.
+        n_views (int, optional):
+            Number of views. Defaults to 5.
+    """
+    device = model.device
     logger = get_logger(logger)
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -638,12 +754,40 @@ def train_3d(model,
 
 def validate_3d(model,
                 loader,
-                logger,
-                output_dir,
-                threshold,
-                print_freq,
-                n_views=5,
-                is_train=False):
+                logger: Union[None, str, logging.Logger],
+                output_dir: str,
+                threshold: float,
+                print_freq: int,
+                n_views: int = 5,
+                is_train: bool = False):
+    """Evaluate model during training or testing.
+
+    Args:
+        model:
+            Model to be evaluated.
+        loader:
+            Dataloader.
+        logger (Union[None, str, logging.Logger]):
+            Logger for logging. If None, root logger will be selected.
+        output_dir (str):
+            Path to output folder.
+        threshold (float):
+            Confidence threshold to filter non-human keypoints.
+        print_freq (int):
+            Printing frequency during training.
+        n_views (int, optional):
+            Number of views. Defaults to 5.
+        is_train (bool, optional):
+            True if it is called during trainig. Defaults to False.
+
+    Returns:
+        preds(torch.Tensor):
+            Predicted results of all the keypoints.
+        meta_image_files(dict):
+            A dictionary contains all the meta information.
+        keypoints3d(Keypoints):
+            An instance of class keypoints.
+    """
     batch_time = AverageMeter()
     data_time = AverageMeter()
     logger = get_logger(logger)

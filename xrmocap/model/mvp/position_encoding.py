@@ -52,17 +52,36 @@ class PositionEmbeddingSine(nn.Module):
         return pos
 
 
-def get_2d_coords(image_size, H, W, K, R, T, ret_rays_o=False):
+def get_2d_coords(image_size: list, H: int, W: int, K: torch.Tensor,
+                  R: torch.Tensor, T: torch.Tensor):
+    """Get 2d world coordinates of pixels.
+
+    Args:
+        image_size (list): Image size.
+        H (int):
+            Height of input feature map.
+        W (int):
+            Width of input feature map.
+        K (torch.Tensor):
+            Camera intrinsic parameters.
+        R (torch.Tensor):
+            Camera extrinsic parameters, [3,3] matrix for rotation.
+        T (torch.Tensor):
+            Camera extrinsic parameters, [3,1] tensor for translation.
+
+    Returns:
+        torch.Tensor: World coordinates of pixels.
+    """
     # calculate the camera origin
     ratio = W / image_size[0]
-    # batch = K.size(0)
+
     views = K.size(1)
     K = K.reshape(-1, 3, 3).float()
     R = R.reshape(-1, 3, 3).float()
     T = T.reshape(-1, 3, 1).float()
     # re-scale camera parameters
     K[:, :2] *= ratio
-    # rays_o = -torch.bmm(R.transpose(2, 1), T)
+
     # calculate the world coordinates of pixels
     j, i = torch.meshgrid(
         torch.linspace(0, H - 1, H), torch.linspace(0, W - 1, W))
@@ -71,22 +90,37 @@ def get_2d_coords(image_size, H, W, K, R, T, ret_rays_o=False):
     return xy.unsqueeze(0).expand(-1, views, -1, -1, -1)
 
 
-def get_rays(image_size, H, W, K, R, T, ret_rays_o=False):
-    """
-    Get ray origin and normalized directions in world
+def get_rays(image_size: list,
+             H: int,
+             W: int,
+             K: torch.Tensor,
+             R: torch.Tensor,
+             T: torch.Tensor,
+             ret_rays_o: bool = False):
+    """Get ray origin and normalized directions in world
     coordinate for all pixels in one image.
     Reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/
                ray-tracing-generating-camera-rays/standard-coordinate-systems
 
-    Inputs:
-        directions: (H, W, 3) precomputed ray directions in camera coordinate
-        c2w: (3, 4) transformation matrix from
-        camera coordinate to world coordinate
 
-    Outputs:
-        rays_o: (H*W, 3), the origin of the rays in world coordinate
-        rays_d: (H*W, 3), the normalized direction of
-        the rays in world coordinate
+    Args:
+        image_size (list): Image size.
+        H (int):
+            Height of input feature map.
+        W (int):
+            Width of input feature map.
+        K (torch.Tensor):
+            Camera intrinsic parameters.
+        R (torch.Tensor):
+            Camera extrinsic parameters, [3,3] matrix for rotation.
+        T (torch.Tensor):
+            Camera extrinsic parameters, [3,1] tensor for translation.
+        ret_rays_o (bool, optional):
+            Whether to return ray origin. Defaults to False.
+
+    Returns:
+        torch.Tensor: Rays of shape [batch, views, H, W, 3].
+
     """
     # calculate the camera origin
     ratio = W / image_size[0]
