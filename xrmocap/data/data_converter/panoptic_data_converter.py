@@ -5,10 +5,11 @@ import logging
 import numpy as np
 import os
 import re
+from json.decoder import JSONDecodeError
 from tqdm import tqdm
 from typing import List, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
-from xrprimer.utils.ffmpeg_utils import video_to_array
+from xrprimer.utils.ffmpeg_utils import VideoInfoReader, video_to_array
 from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_visualization import MviewMpersonDataVisualization
@@ -35,7 +36,8 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                  view_idxs: Union[str, List[int]] = 'all',
                  scene_range: Union[str, List[List[int]]] = 'all',
                  frame_period: int = 1,
-                 metric_unit: Literal['meter', 'centimeter'] = 'meter',
+                 metric_unit: Literal['meter', 'centimeter',
+                                      'millimeter'] = 'meter',
                  batch_size: int = 500,
                  meta_path: str = 'xrmocap_meta',
                  dataset_name: str = 'panoptic',
@@ -77,7 +79,8 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                 Sample rate of this converter. This converter will
                 select one frame data from every frame_period frames.
                 Defaults to 1.
-            metric_unit (Literal['meter', 'centimeter'], optional):
+            metric_unit (Literal[
+                    'meter', 'centimeter', 'millimeter'], optional):
                 Metric unit of gt3d and camera parameters. Defaults to 'meter'.
             batch_size (int, optional):
                 How many frames are loaded at the same time. Defaults to 500.
@@ -119,6 +122,8 @@ class PanopticDataCovnerter(BaseDataCovnerter):
         else:
             self.scene_range = scene_range
 
+        if batch_size % frame_period != 0:
+            batch_size = int(batch_size / frame_period) * frame_period
         self.batch_size = batch_size
         if isinstance(bbox_detector, dict):
             bbox_detector['logger'] = logger
@@ -143,6 +148,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                 vis_percep2d=vis_percep2d,
                 vis_gt_kps3d=True,
                 output_dir=os.path.join(meta_path, 'visualize'),
+                vis_aio_video=False,
                 verbose=verbose,
                 logger=logger)
 
@@ -165,6 +171,8 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                   'w') as f_write:
             f_write.write(f'{self.dataset_name}')
         for scene_idx in range(len(self.scene_range)):
+            if scene_idx != 7:
+                continue
             scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
             os.makedirs(scene_dir, exist_ok=True)
             self.covnert_video_frames(scene_idx)
@@ -211,27 +219,51 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                              f' for scene {scene_idx}.')
         scene_name = self.scene_names[scene_idx]
         video_dir_name = 'hdVideos'
+        # auto frame range
+        if self.scene_range[scene_idx] is None:
+            self.scene_range[scene_idx] = [0, None]
+        # number of frames vary among views
+        # find their common frame indexes
+        min_n_frame = 1e9
         for idx in range(self.n_view):
             view_idx = self.view_idxs[idx]
             video_name = f'hd_00_{view_idx:02d}.mp4'
             video_path = os.path.join(self.data_root, scene_name,
                                       video_dir_name, video_name)
-            if self.scene_range[scene_idx] is None:
-                self.scene_range[scene_idx] = [0, None]
-            start_idx = self.scene_range[scene_idx][0]
-            end_idx = self.scene_range[scene_idx][1]
-            img_arr = video_to_array(
-                video_path, start=start_idx, end=end_idx, logger=self.logger)
-            if end_idx is None:
-                end_idx = start_idx + len(img_arr)
-                self.scene_range[scene_idx][1] = end_idx
+            reader = VideoInfoReader(video_path, logger=self.logger)
+            min_n_frame = min(int(reader['nb_frames']) - 1, min_n_frame)
+        self.scene_range[scene_idx][1] = min(min_n_frame,
+                                             self.scene_range[scene_idx][1])
+        n_frame = self.scene_range[scene_idx][1] - \
+            self.scene_range[scene_idx][0]
+        for idx in range(self.n_view):
+            view_idx = self.view_idxs[idx]
+            video_name = f'hd_00_{view_idx:02d}.mp4'
+            video_path = os.path.join(self.data_root, scene_name,
+                                      video_dir_name, video_name)
             output_folder = os.path.join(scene_dir, f'hd_00_{view_idx:02d}')
             os.makedirs(output_folder, exist_ok=True)
-            for idx in tqdm(
-                    range(start_idx, end_idx, self.frame_period),
-                    disable=not self.verbose):
-                img = img_arr[idx - start_idx]
-                cv2.imwrite(os.path.join(output_folder, f'{idx:06d}.jpg'), img)
+            for start_idx in range(self.scene_range[scene_idx][0],
+                                   self.scene_range[scene_idx][1],
+                                   self.batch_size):
+                end_idx = min(self.scene_range[scene_idx][1],
+                              start_idx + self.batch_size)
+                if self.batch_size < n_frame:
+                    self.logger.info('Decoding frames' +
+                                     f'({start_idx}-{end_idx})/' +
+                                     f'{self.scene_range[scene_idx][0]}' +
+                                     f'-{self.scene_range[scene_idx][1]}')
+                img_arr = video_to_array(
+                    video_path,
+                    start=start_idx,
+                    end=end_idx,
+                    logger=self.logger)
+                for idx in tqdm(
+                        range(start_idx, end_idx, self.frame_period),
+                        disable=not self.verbose):
+                    img = img_arr[idx - start_idx]
+                    cv2.imwrite(
+                        os.path.join(output_folder, f'{idx:06d}.jpg'), img)
 
     def covnert_image_list(self, scene_idx: int) -> None:
         """Convert extracted images to image list text file.
@@ -307,6 +339,8 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                 translation = np.array(panoptic_cam_dict['t']) / 100.0
             elif self.metric_unit == 'centimeter':
                 translation = np.array(panoptic_cam_dict['t'])
+            elif self.metric_unit == 'millimeter':
+                translation = np.array(panoptic_cam_dict['t']) * 10.0
             else:
                 self.logger.error(f'Wrong metric unit: {self.metric_unit}')
                 raise ValueError
@@ -347,31 +381,39 @@ class PanopticDataCovnerter(BaseDataCovnerter):
         for f_idx in range(start_idx, end_idx, self.frame_period):
             json_path = os.path.join(gt_path, f'body3DScene_{f_idx:08d}.json')
             if check_path_existence(json_path) == Existence.FileExist:
-                with open(json_path, 'r') as f_read:
-                    panoptic_body3d_dict = json.load(f_read)
-                for person_dict in panoptic_body3d_dict['bodies']:
-                    person_id = int(person_dict['id'])
-                    if person_id > n_person - 1:
-                        new_n_person = person_id - n_person + 1
-                        new_kps3d = np.zeros(
-                            shape=(n_frame, new_n_person, n_kps, 4))
-                        new_mask = np.zeros(
-                            shape=(n_frame, new_n_person, n_kps),
-                            dtype=np.uint8)
-                        kps3d_arr = np.concatenate((kps3d_arr, new_kps3d),
-                                                   axis=1)
-                        kps3d_mask = np.concatenate((kps3d_mask, new_mask),
-                                                    axis=1)
-                        n_person = person_id + 1
-                    mapped_idx = int((f_idx - start_idx) / self.frame_period)
-                    kps3d_arr[mapped_idx, person_id,
-                              ...] = np.array(person_dict['joints19']).reshape(
-                                  n_kps, 4)
-                    kps3d_mask[mapped_idx, person_id, ...] = 1
+                try:
+                    with open(json_path, 'r') as f_read:
+                        panoptic_body3d_dict = json.load(f_read)
+                    load_success = True
+                except JSONDecodeError:
+                    self.logger.error(f'Broken json file at {json_path}.')
+                    load_success = False
+                if load_success:
+                    for person_dict in panoptic_body3d_dict['bodies']:
+                        person_id = int(person_dict['id'])
+                        if person_id > n_person - 1:
+                            new_n_person = person_id - n_person + 1
+                            new_kps3d = np.zeros(
+                                shape=(n_frame, new_n_person, n_kps, 4))
+                            new_mask = np.zeros(
+                                shape=(n_frame, new_n_person, n_kps),
+                                dtype=np.uint8)
+                            kps3d_arr = np.concatenate((kps3d_arr, new_kps3d),
+                                                       axis=1)
+                            kps3d_mask = np.concatenate((kps3d_mask, new_mask),
+                                                        axis=1)
+                            n_person = person_id + 1
+                        mapped_idx = int(
+                            (f_idx - start_idx) / self.frame_period)
+                        kps3d_arr[mapped_idx, person_id, ...] = np.array(
+                            person_dict['joints19']).reshape(n_kps, 4)
+                        kps3d_mask[mapped_idx, person_id, ...] = 1
         if self.metric_unit == 'meter':
             factor = 0.01
         elif self.metric_unit == 'centimeter':
             factor = 1.0
+        elif self.metric_unit == 'millimeter':
+            factor = 10.0
         else:
             self.logger.error(f'Wrong metric unit: {self.metric_unit}')
             raise ValueError

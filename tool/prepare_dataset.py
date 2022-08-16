@@ -1,6 +1,7 @@
 # yapf: disable
 import argparse
 import datetime
+import logging
 import mmcv
 import os
 import shutil
@@ -14,22 +15,30 @@ from xrmocap.data.data_converter.builder import build_data_converter
 
 def main(args):
     converter_config = dict(mmcv.Config.fromfile(args.converter_config))
-    meta_path = converter_config['meta_path']
     if check_path_existence('logs', 'dir') == Existence.DirectoryNotExist:
         os.mkdir('logs')
     if not args.disable_log_file:
         time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
         log_path = os.path.join('logs', f'converter_log_{time_str}.txt')
-        logger = setup_logger(logger_name=__name__, logger_path=log_path)
+        logger = setup_logger(
+            logger_name=__name__,
+            logger_path=log_path,
+            logger_level=logging.DEBUG)
     else:
         logger = setup_logger(logger_name=__name__)
+    converter_config['data_root'] = args.data_root
+    converter_config['meta_path'] = args.meta_path
+    # save config in log
+    config = mmcv.Config(converter_config, filename=args.converter_config)
+    config_str = config.dump()
+    logger.debug('\n' + config_str)
     converter_config['logger'] = logger
     data_converter = build_data_converter(converter_config)
     data_converter.run(overwrite=args.overwrite)
     if not args.disable_log_file:
         shutil.move(
             log_path,
-            dst=os.path.join(meta_path, f'converter_log_{time_str}.txt'))
+            dst=os.path.join(args.meta_path, f'converter_log_{time_str}.txt'))
 
 
 def setup_parser():
@@ -42,6 +51,17 @@ def setup_parser():
         type=str,
         default='config/data/data_converter/' +
         'campus_data_converter_testset.py')
+    # dataset args
+    parser.add_argument(
+        '--data_root',
+        help='Path to the dataset root dir.',
+        type=str,
+        default='./xrmocap_data/CampusSeq1')
+    parser.add_argument(
+        '--meta_path',
+        help='Path to the meta-data dir.',
+        type=str,
+        default='./xrmocap_data/CampusSeq1/' + 'xrmocap_meta_testset')
     parser.add_argument(
         '--overwrite',
         action='store_true',

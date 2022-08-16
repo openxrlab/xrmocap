@@ -22,14 +22,17 @@ def main(args):
         logger = setup_logger(logger_name=__name__, logger_path=log_path)
     else:
         logger = setup_logger(logger_name=__name__)
+    vis_config['data_root'] = args.data_root
+    vis_config['meta_path'] = args.meta_path
+    vis_config['output_dir'] = args.output_dir
     vis_config['logger'] = logger
-    output_dir = vis_config['output_dir']
     data_visualization = build_data_visualization(vis_config)
     data_visualization.run(overwrite=args.overwrite)
     if not args.disable_log_file:
         shutil.move(
             log_path,
-            dst=os.path.join(output_dir, f'visualization_log_{time_str}.txt'))
+            dst=os.path.join(args.output_dir,
+                             f'visualization_log_{time_str}.txt'))
 
 
 def setup_parser():
@@ -40,7 +43,23 @@ def setup_parser():
         '--vis_config',
         help='Config file for a data converter.',
         type=str,
-        default='config/data/data_visualization/shelf_testset.py')
+        default='config/data/data_visualization/' + 'shelf_testset.py')
+    # dataset args
+    parser.add_argument(
+        '--data_root',
+        help='Path to the dataset root dir.',
+        type=str,
+        default='./xrmocap_data/CampusSeq1')
+    parser.add_argument(
+        '--meta_path',
+        help='Path to the meta-data dir.',
+        type=str,
+        default='./xrmocap_data/CampusSeq1/' + 'xrmocap_meta_testset')
+    parser.add_argument(
+        '--output_dir',
+        help='Path to the dir for all output.',
+        type=str,
+        default='./xrmocap_data/output')
     parser.add_argument(
         '--overwrite',
         action='store_true',
