@@ -36,7 +36,7 @@ test:
     - nvidia-smi
     - echo "Start building..."
     - echo "--- install xrprimer --- "
-    - pip install xrprimer==0.5.0 -i https://repo.sensetime.com/repository/pypi/simple
+    - pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
     - python -c "import xrprimer; print(xrprimer.__version__)"
     - echo "--- xrprimer installed --- "
     - pip install -r requirements/runtime.txt

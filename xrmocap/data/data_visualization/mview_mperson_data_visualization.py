@@ -29,6 +29,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                  vis_gt_kps3d: bool = True,
                  gt_kps3d_convention: Union[None, str] = None,
                  vis_cameras: bool = False,
+                 vis_aio_video: bool = True,
                  meta_path: str = 'xrmocap_meta',
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
@@ -73,6 +74,10 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             vis_cameras (bool, optional):
                 Whether to visualize cameras in the scene.
                 Defaults to False.
+            vis_aio_video (bool, optional):
+                Whether to concat videos from all views together
+                and output an all-in-one video.
+                Defaults to True.
             meta_path (str, optional):
                 Path to the meta-data dir. Defaults to 'xrmocap_meta'.
             verbose (bool, optional):
@@ -94,6 +99,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         self.vis_gt_kps3d = vis_gt_kps3d
         self.gt_kps3d_convention = gt_kps3d_convention
         self.vis_cameras = vis_cameras
+        self.vis_aio_video = vis_aio_video
         self.pred_kps3d_paths = pred_kps3d_paths \
             if pred_kps3d_paths is not None \
             else []
@@ -193,11 +199,13 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 output_path=video_path,
                 img_paths=frame_list,
                 overwrite=True,
-                return_array=True)
+                return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)
         # draw views all in one
-        video_path = os.path.join(scene_vis_dir, 'perception2d_AIO.mp4')
-        mview_array_to_video(mview_plot_arr, video_path, logger=self.logger)
+        if self.vis_aio_video:
+            video_path = os.path.join(scene_vis_dir, 'perception2d_AIO.mp4')
+            mview_array_to_video(
+                mview_plot_arr, video_path, logger=self.logger)
 
     def visualize_ground_truth_3d(self, scene_idx: int) -> None:
         """Visualize converted ground truth keypoints3d data.
@@ -285,9 +293,11 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 output_path=video_path,
                 img_paths=frame_list,
                 overwrite=True,
-                return_array=True)
+                return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)
         # draw views all in one
-        video_path = os.path.join(scene_vis_dir,
-                                  f'{output_prefix}_project_AIO.mp4')
-        mview_array_to_video(mview_plot_arr, video_path, logger=self.logger)
+        if self.vis_aio_video:
+            video_path = os.path.join(scene_vis_dir,
+                                      f'{output_prefix}_project_AIO.mp4')
+            mview_array_to_video(
+                mview_plot_arr, video_path, logger=self.logger)
