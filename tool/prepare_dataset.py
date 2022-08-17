@@ -26,8 +26,13 @@ def main(args):
             logger_level=logging.DEBUG)
     else:
         logger = setup_logger(logger_name=__name__)
-    converter_config['data_root'] = args.data_root
-    converter_config['meta_path'] = args.meta_path
+    if len(args.data_root) > 0 and len(args.meta_path) > 0:
+        logger.info('Taking paths from sys.argv.')
+        converter_config['data_root'] = args.data_root
+        converter_config['meta_path'] = args.meta_path
+    else:
+        logger.info('Not all paths are configured in sys.argv,' +
+                    f' use the paths in {args.converter_config}.')
     # save config in log
     config = mmcv.Config(converter_config, filename=args.converter_config)
     config_str = config.dump()
@@ -56,12 +61,9 @@ def setup_parser():
         '--data_root',
         help='Path to the dataset root dir.',
         type=str,
-        default='./xrmocap_data/CampusSeq1')
+        default='')
     parser.add_argument(
-        '--meta_path',
-        help='Path to the meta-data dir.',
-        type=str,
-        default='./xrmocap_data/CampusSeq1/' + 'xrmocap_meta_testset')
+        '--meta_path', help='Path to the meta-data dir.', type=str, default='')
     parser.add_argument(
         '--overwrite',
         action='store_true',

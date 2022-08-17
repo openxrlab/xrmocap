@@ -14,7 +14,7 @@ kps2d_estimator = dict(
         config='config/human_detection/mmpose_hrnet_w48_' +
         'coco_wholebody_384x288_dark_plus.py',
         device='cuda'))
-metric_unit = 'meter'
+
 scene_names = 'all'
 scene_range = [[5, 15]]
 view_idxs = [3, 6, 12]

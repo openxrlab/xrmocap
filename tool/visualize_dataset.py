@@ -22,9 +22,16 @@ def main(args):
         logger = setup_logger(logger_name=__name__, logger_path=log_path)
     else:
         logger = setup_logger(logger_name=__name__)
-    vis_config['data_root'] = args.data_root
-    vis_config['meta_path'] = args.meta_path
-    vis_config['output_dir'] = args.output_dir
+    if len(args.data_root) > 0 and \
+            len(args.meta_path) > 0 and \
+            len(args.output_dir) > 0:
+        logger.info('Taking paths from sys.argv.')
+        vis_config['data_root'] = args.data_root
+        vis_config['meta_path'] = args.meta_path
+        vis_config['output_dir'] = args.output_dir
+    else:
+        logger.info('Not all paths are configured in sys.argv,' +
+                    f' use the paths in {args.vis_config}.')
     vis_config['logger'] = logger
     data_visualization = build_data_visualization(vis_config)
     data_visualization.run(overwrite=args.overwrite)
@@ -49,17 +56,14 @@ def setup_parser():
         '--data_root',
         help='Path to the dataset root dir.',
         type=str,
-        default='./xrmocap_data/CampusSeq1')
+        default='')
     parser.add_argument(
-        '--meta_path',
-        help='Path to the meta-data dir.',
-        type=str,
-        default='./xrmocap_data/CampusSeq1/' + 'xrmocap_meta_testset')
+        '--meta_path', help='Path to the meta-data dir.', type=str, default='')
     parser.add_argument(
         '--output_dir',
         help='Path to the dir for all output.',
         type=str,
-        default='./xrmocap_data/output')
+        default='')
     parser.add_argument(
         '--overwrite',
         action='store_true',

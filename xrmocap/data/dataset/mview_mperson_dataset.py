@@ -26,6 +26,8 @@ class MviewMpersonDataset(BaseDataset):
                  meta_path: str = 'xrmocap_meta',
                  test_mode: bool = True,
                  shuffled: bool = False,
+                 metric_unit: Literal['meter', 'centimeter',
+                                      'millimeter'] = 'meter',
                  bbox_convention: Union[None, Literal['xyxy', 'xywh']] = None,
                  bbox_thr: float = 0.0,
                  kps2d_convention: Union[None, str] = None,
@@ -50,6 +52,9 @@ class MviewMpersonDataset(BaseDataset):
                 Whether this dataset is used to load shuffled frames.
                 If True, getitem will always get end_of_clip=True.
                 Defaults to False.
+            metric_unit (Literal[
+                    'meter', 'centimeter', 'millimeter'], optional):
+                Metric unit of gt3d and camera parameters. Defaults to 'meter'.
             bbox_convention (Union[None, Literal['xyxy', 'xywh']], optional):
                 Target convention of bbox, if None,
                 bbox will not be returned by getitem.
@@ -88,6 +93,16 @@ class MviewMpersonDataset(BaseDataset):
             logger=logger)
         # assign attr val
         self.shuffled = shuffled
+        self.metric_unit = metric_unit
+        if self.metric_unit == 'meter':
+            self.factor = 1.0
+        elif self.metric_unit == 'centimeter':
+            self.factor = 100.0
+        elif self.metric_unit == 'millimeter':
+            self.factor = 1000.0
+        else:
+            self.logger.error(f'Wrong metric unit: {self.metric_unit}')
+            raise ValueError
         self.bbox_convention = bbox_convention
         self.bbox_thr = bbox_thr
         self.kps2d_convention = kps2d_convention
@@ -276,6 +291,9 @@ class MviewMpersonDataset(BaseDataset):
                 fisheye_param = FisheyeCameraParameter.fromfile(
                     os.path.join(cam_dir,
                                  f'fisheye_param_{view_idx:02d}.json'))
+                translation = self.factor * np.array(
+                    fisheye_param.get_extrinsic_t())
+                fisheye_param.set_KRT(T=translation)
                 if fisheye_param.world2cam != self.cam_world2cam:
                     fisheye_param.inverse_extrinsic()
                 mview_list.append(fisheye_param)
@@ -301,6 +319,7 @@ class MviewMpersonDataset(BaseDataset):
             kps3d_mask = keypoints3d.get_mask()
             kps3d = keypoints3d.get_keypoints()
             kps3d[..., -1] = kps3d[..., -1] * kps3d_mask
+            kps3d[..., :3] = self.factor * kps3d[..., :3]
             keypoints3d.set_keypoints(kps3d)
             mscene_list.append(keypoints3d)
         self.gt3d = mscene_list

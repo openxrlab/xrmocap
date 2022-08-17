@@ -14,7 +14,7 @@ kps2d_estimator = dict(
         config='config/human_detection/mmpose_hrnet_w48_' +
         'coco_wholebody_384x288_dark_plus.py',
         device='cuda'))
-metric_unit = 'millimeter'
+
 batch_size = 1000
 scene_names = [
     '160422_ultimatum1', '160224_haggling1', '160226_haggling1',

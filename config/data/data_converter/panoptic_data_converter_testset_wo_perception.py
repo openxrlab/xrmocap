@@ -2,7 +2,7 @@ type = 'PanopticDataCovnerter'
 data_root = 'panoptic-toolbox'
 bbox_detector = None
 kps2d_estimator = None
-metric_unit = 'millimeter'
+
 batch_size = 1000
 scene_names = [
     '160906_pizza1', '160422_haggling1', '160906_ian5', '160906_band4'
