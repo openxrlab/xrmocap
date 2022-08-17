@@ -32,8 +32,7 @@ class ShelfDataCovnerter(CampusDataCovnerter):
 
         Args:
             data_root (str):
-                Path to the Campus dataset.
-                Typically it is the path to CampusSeq1.
+                Path to the Shelf dataset.
             bbox_detector (Union[dict, None]):
                 A human bbox_detector, or its config, or None.
                 If None, converting perception 2d will be skipped.

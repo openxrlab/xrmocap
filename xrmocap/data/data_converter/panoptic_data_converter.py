@@ -20,11 +20,6 @@ from .base_data_converter import BaseDataCovnerter
 
 # yapf: enable
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 
 class PanopticDataCovnerter(BaseDataCovnerter):
 
@@ -36,8 +31,6 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                  view_idxs: Union[str, List[int]] = 'all',
                  scene_range: Union[str, List[List[int]]] = 'all',
                  frame_period: int = 1,
-                 metric_unit: Literal['meter', 'centimeter',
-                                      'millimeter'] = 'meter',
                  batch_size: int = 500,
                  meta_path: str = 'xrmocap_meta',
                  dataset_name: str = 'panoptic',
@@ -50,8 +43,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
 
         Args:
             data_root (str):
-                Path to the Campus dataset.
-                Typically it is the path to CampusSeq1.
+                Path to the CMU Panoptic dataset.
             bbox_detector (Union[dict, None]):
                 A human bbox_detector, or its config, or None.
                 If None, converting perception 2d will be skipped.
@@ -79,9 +71,6 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                 Sample rate of this converter. This converter will
                 select one frame data from every frame_period frames.
                 Defaults to 1.
-            metric_unit (Literal[
-                    'meter', 'centimeter', 'millimeter'], optional):
-                Metric unit of gt3d and camera parameters. Defaults to 'meter'.
             batch_size (int, optional):
                 How many frames are loaded at the same time. Defaults to 500.
             meta_path (str, optional):
@@ -136,7 +125,6 @@ class PanopticDataCovnerter(BaseDataCovnerter):
             self.kps2d_estimator = build_detector(kps2d_estimator)
         else:
             self.kps2d_estimator = kps2d_estimator
-        self.metric_unit = metric_unit
         self.frame_period = frame_period
         self.visualize = visualize
         if self.visualize:
@@ -171,8 +159,6 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                   'w') as f_write:
             f_write.write(f'{self.dataset_name}')
         for scene_idx in range(len(self.scene_range)):
-            if scene_idx != 7:
-                continue
             scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
             os.makedirs(scene_dir, exist_ok=True)
             self.covnert_video_frames(scene_idx)
@@ -335,15 +321,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
             fisheye_param.set_resolution(
                 width=panoptic_cam_dict['resolution'][0],
                 height=panoptic_cam_dict['resolution'][1])
-            if self.metric_unit == 'meter':
-                translation = np.array(panoptic_cam_dict['t']) / 100.0
-            elif self.metric_unit == 'centimeter':
-                translation = np.array(panoptic_cam_dict['t'])
-            elif self.metric_unit == 'millimeter':
-                translation = np.array(panoptic_cam_dict['t']) * 10.0
-            else:
-                self.logger.error(f'Wrong metric unit: {self.metric_unit}')
-                raise ValueError
+            translation = np.array(panoptic_cam_dict['t']) / 100.0
             fisheye_param.set_KRT(
                 K=panoptic_cam_dict['K'],
                 R=panoptic_cam_dict['R'],
@@ -408,15 +386,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                         kps3d_arr[mapped_idx, person_id, ...] = np.array(
                             person_dict['joints19']).reshape(n_kps, 4)
                         kps3d_mask[mapped_idx, person_id, ...] = 1
-        if self.metric_unit == 'meter':
-            factor = 0.01
-        elif self.metric_unit == 'centimeter':
-            factor = 1.0
-        elif self.metric_unit == 'millimeter':
-            factor = 10.0
-        else:
-            self.logger.error(f'Wrong metric unit: {self.metric_unit}')
-            raise ValueError
+        factor = 0.01  # convert panoptic values to meter
         kps3d_arr[..., :3] *= factor
         keypoints3d = Keypoints(
             kps=kps3d_arr,
