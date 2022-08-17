@@ -1,8 +1,13 @@
 aniposelib @ git+https://github.com/liruilong940607/aniposelib.git
 filterpy
+h5py
 mmdet @ git+https://github.com/open-mmlab/mmdetection.git
 mmhuman3d @ git+https://github.com/open-mmlab/mmhuman3d.git
 mmpose @ git+https://github.com/open-mmlab/mmpose.git
+mmtrack @ git+https://github.com/open-mmlab/mmtracking.git
+numpy
 pre-commit
 prettytable
 scipy
+smplx
+tqdm
