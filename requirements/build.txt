@@ -1,4 +1,8 @@
 filterpy
+numpy
+opencv-python-headless
 pre-commit
 prettytable
 scipy
+smplx
+tqdm
