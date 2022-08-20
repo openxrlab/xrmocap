@@ -2,15 +2,13 @@ import numpy as np
 import torch
 
 
-def unfold_camera_param(camera: dict, device='cpu'):
+def unfold_camera_param(camera: dict):
     """This function is to extract camera extrinsic, intrinsic and distorsion
     parameters from dictionary.
 
     Args:
         camera (dict):
             Dictionary to store the camera parameters.
-        device (str, optional):
-            Device of input and output. Defaults to 'cpu'.
 
     Returns:
         R(Union[np.ndarray, torch.Tensor]):
@@ -29,46 +27,55 @@ def unfold_camera_param(camera: dict, device='cpu'):
 
     R = camera['R']
     T = camera['T']
-    fx = camera['fx']
-    fy = camera['fy']
-    cx = camera['cx']
-    cy = camera['cy']
-    k = camera['k']
-    p = camera['p']
+    K = camera['K']
+    dist_coeff = camera['dist_coeff']
 
-    if device == 'cpu':
+    if not hasattr(R, 'device'):
+        fx = K[0, 0]
+        fy = K[1, 1]
+        cx = K[0, 2]
+        cy = K[1, 2]
+        k = dist_coeff[[0, 1, 4]]
+        p = dist_coeff[[2, 3]]
         f = np.array([[fx], [fy]]).reshape(-1, 1)
         c = np.array([[cx], [cy]]).reshape(-1, 1)
         return R, T, f, c, k, p
 
     else:
+        device = R.device
         R = torch.as_tensor(R, dtype=torch.float, device=device)
         T = torch.as_tensor(T, dtype=torch.float, device=device)
-        fx = torch.as_tensor(fx, dtype=torch.float, device=device)
-        fy = torch.as_tensor(fy, dtype=torch.float, device=device)
-        cx = torch.as_tensor(cx, dtype=torch.float, device=device)
-        cy = torch.as_tensor(cy, dtype=torch.float, device=device)
-        k = torch.as_tensor(k, dtype=torch.float, device=device)
-        p = torch.as_tensor(p, dtype=torch.float, device=device)
+        K = torch.as_tensor(K, dtype=torch.float, device=device)
+        dist_coeff = torch.as_tensor(
+            dist_coeff, dtype=torch.float, device=device)
 
         if R.ndim == 3:  # [bs, (cam_param)]
             R = R.reshape(3, 3)
             T = T.reshape(3, 1)
-            k = k.reshape(3, 1)
-            p = p.reshape(2, 1)
-            f = torch.tensor([fx, fy], dtype=torch.float,
+            K = K.reshape(3, 3)
+            dist_coeff = dist_coeff.reshape(8, 1)
+            k = dist_coeff[[0, 1, 4]]
+            p = dist_coeff[[2, 3]]
+            f = torch.tensor([K[0, 0], K[1, 1]],
+                             dtype=torch.float,
                              device=device).reshape(2, 1)
-            c = torch.as_tensor([[cx], [cy]], dtype=torch.float,
+            c = torch.as_tensor([[K[0, 2]], [K[1, 2]]],
+                                dtype=torch.float,
                                 device=device).reshape(2, 1)
             return R, T, f, c, k, p
 
         elif R.ndim == 4:  # [bs, n_views, (cam_param)]
             batch_size, n_views = R.shape[:2]
+            k = dist_coeff[:, :, [0, 1, 4], None]
+            p = dist_coeff[:, :, [2, 3], None]
+
             f = torch.tensor(
-                torch.stack([fx, fy], dim=2), dtype=torch.float,
+                torch.stack([K[:, :, 0, 0], K[:, :, 1, 1]], dim=2),
+                dtype=torch.float,
                 device=device).view(batch_size, n_views, 2, 1)
             c = torch.as_tensor(
-                torch.stack([cx, cy], dim=2), dtype=torch.float,
+                torch.stack([K[:, :, 0, 2], K[:, :, 1, 2]], dim=2),
+                dtype=torch.float,
                 device=device).view(batch_size, n_views, 2, 1)
             return R, T, f, c, k, p
 
@@ -76,7 +83,7 @@ def unfold_camera_param(camera: dict, device='cpu'):
             raise ValueError(f'Invalid camera parameter shape: {R.shape}')
 
 
-def project_point_radial(x, R, T, f, c, k, p, device):
+def project_point_radial(x, R, T, f, c, k, p):
     """This function is to project a point in 3D space to 2D pixel space with
     given camera parameters.
 
@@ -92,7 +99,7 @@ def project_point_radial(x, R, T, f, c, k, p, device):
     Returns
         ypixel.T: Nx2 points in pixel space
     """
-    if device == 'cpu':
+    if not hasattr(x, 'device'):
         n = x.shape[0]
         x_cam = R.dot(x.T - T)
         y = x_cam[:2] / (x_cam[2] + 1e-5)
@@ -147,6 +154,5 @@ def project_point_radial(x, R, T, f, c, k, p, device):
 
 
 def project_pose(x, camera):
-    device = x.device if hasattr(x, 'device') else 'cpu'
-    R, T, f, c, k, p = unfold_camera_param(camera, device=device)
-    return project_point_radial(x, R, T, f, c, k, p, device=device)
+    R, T, f, c, k, p = unfold_camera_param(camera)
+    return project_point_radial(x, R, T, f, c, k, p)

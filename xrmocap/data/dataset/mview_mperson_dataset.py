@@ -125,7 +125,9 @@ class MviewMpersonDataset(BaseDataset):
         self.load_image_list()
         self.init_index_mapping()
         self.load_ground_truth_3d()
-        self.load_perception_2d()
+        if self.bbox_convention is not None or \
+                self.kps2d_convention is not None:
+            self.load_perception_2d()
 
     def __getitem__(
         self, index: int

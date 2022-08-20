@@ -1,4 +1,5 @@
 # using cam3, cam12, cam23
+# yapf: disable
 
 __dataset__ = 'panoptic'
 __train_dataset__ = __dataset__
@@ -13,7 +14,6 @@ __space_center__ = [0.0, -500.0, 800.0]
 __decoder_size__ = 256
 __projattn_pose_embed_mode__ = 'use_rayconv'
 __pred_conf_threshold__ = 0.5
-__root_idx__ = 2
 
 model = 'multi_view_pose_transformer'
 output_dir = 'output'
@@ -41,36 +41,48 @@ trainer_setup = dict(
     test_model_file='model_best.pth.tar',
     clip_max_norm=0.1,
     print_freq=100,
-    normalize=dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     cudnn_setup=dict(
         benchmark=True,
         deterministic=False,
         enable=True,
     ),
     dataset_setup=dict(
-        n_max_person=__n_instance__,
-        target_type='gaussian',
-        image_size=__image_size__,
-        heatmap_size=[240, 128],
-        use_different_kps_weight=False,
-        space_size=__space_size__,
-        space_center=__space_center__,
-        initial_cube_size=[24, 32, 16],
-        color_rgb=True,
-        dataset=__dataset__,
-        test_subset='validation',
-        train_subset='train',
-        data_format='jpg',
-        data_augmentation=False,
-        flip=False,
-        root='data/panoptic',
-        rot_factor=45,
-        scale_factor=0.35,
-        root_idx=__root_idx__,
-        n_cameras=__n_cameras__,
-        n_kps=15,
-        pesudo_gt=None,
-        sigma=3,
+        train_dataset_setup=dict(
+            type='MVPDataset',
+            test_mode=False,
+            meta_path='./xrmocap_data/meta/panoptic/xrmocap_meta_trainset_3cam',  # noqa E501
+        ),
+        test_dataset_setup=dict(
+            type='MVPDataset',
+            test_mode=True,
+            meta_path='./xrmocap_data/meta/panoptic/xrmocap_meta_testset_3cam',
+        ),
+        base_dataset_setup=dict(
+            dataset=__dataset__,
+            data_root='./xrmocap_data/panoptic',
+            img_pipeline=[
+                dict(type='LoadImageCV2'),
+                dict(type='BGR2RGB'),
+                dict(
+                    type='WarpAffine',
+                    image_size=__image_size__,
+                    flag='inter_linear'),
+                dict(type='ToTensor'),
+                dict(
+                    type='Normalize',
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])
+            ],
+            image_size=__image_size__,
+            heatmap_size=[240, 128],
+            metric_unit='millimeter',
+            root_kp='pelvis_openpose',
+            shuffled=False,
+            gt_kps3d_convention='panoptic',
+            cam_world2cam=True,
+            n_max_person=__n_instance__,
+            n_views=__n_cameras__,
+            n_kps=__n_kps__),
     ),
     mvp_setup=dict(
         type='MviewPoseTransformer',
@@ -141,7 +153,6 @@ trainer_setup = dict(
             n_person=__n_instance__,
             loss_kp_type='l1',
             focal_alpha=0.25,
-            root_idx=__root_idx__,
             space_size=__space_size__,
             space_center=__space_center__,
             use_loss_pose_perprojection=True,
