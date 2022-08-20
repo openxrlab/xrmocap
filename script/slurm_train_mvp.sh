@@ -2,10 +2,10 @@
 
 set -x
 
-# CFG_FILE="config/mvp/campus_config/mvp_campus.py"
+CFG_FILE="config/mvp/campus_config/mvp_campus.py"
 # CFG_FILE="config/mvp/shelf_config/mvp_shelf.py"
 # CFG_FILE="config/mvp/panoptic_config/mvp_panoptic.py"
-CFG_FILE="config/mvp/panoptic_config/mvp_panoptic_3cam.py"
+# CFG_FILE="config/mvp/panoptic_config/mvp_panoptic_3cam.py"
 
 PARTITION=$1
 JOB_NAME=mvp_train

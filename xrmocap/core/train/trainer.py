@@ -10,17 +10,15 @@ import torch.distributed as dist
 import torch.optim as optim
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.transforms as transforms
 from mmcv.runner import get_dist_info, load_checkpoint
 from prettytable import PrettyTable
 from torch.utils.data import DistributedSampler
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
+from xrmocap.data.dataset.builder import build_dataset
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.dataset.campus import Campus as campus  # noqa F401
-from xrmocap.dataset.panoptic import Panoptic as panoptic  # noqa F401
-from xrmocap.dataset.shelf import Shelf as shelf  # noqa F401
+from xrmocap.evaluation.builder import build_evaluation
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.utils.distribute_utils import (
     collect_results, get_rank, is_main_process, time_synchronized,
@@ -48,7 +46,6 @@ class MVPTrainer():
                  pretrained_backbone: str,
                  finetune_model: Union[None, str],
                  resume: bool,
-                 normalize: dict,
                  final_output_dir: str,
                  lr_decay_epoch: list,
                  test_model_file: str,
@@ -94,8 +91,6 @@ class MVPTrainer():
                 Path to a pretrained model weights to be finetuned.
             resume (bool):
                 If auto resume from checkpoints is used.
-            normalize (dict):
-                Normalization mean and std for datasets.
             final_output_dir (str):
                 Path to output folder.
             lr_decay_epoch (list):
@@ -142,7 +137,7 @@ class MVPTrainer():
         self.seed = seed
         self.distributed = distributed
         self.model_path = model_path
-        self.gpu_dix = gpu_idx
+        self.gpu_idx = gpu_idx
 
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
@@ -164,7 +159,6 @@ class MVPTrainer():
         self.print_freq = print_freq
         self.workers = workers
         self.final_output_dir = final_output_dir
-        self.normalize = normalize
 
         self.cudnn_setup = cudnn_setup
         self.dataset_setup = dataset_setup
@@ -214,67 +208,15 @@ class MVPTrainer():
         if is_main_process():
             self.logger.info('Loading data ..')
 
-        normalize = transforms.Normalize(**self.normalize)
+        train_dataset_cfg = dict(type='MVPDataset', logger=self.logger)
+        train_dataset_cfg.update(self.dataset_setup.train_dataset_setup)
+        train_dataset_cfg.update(self.dataset_setup.base_dataset_setup)
+        train_dataset = build_dataset(train_dataset_cfg)
 
-        train_dataset = eval(self.train_dataset)(
-            is_train=True,
-            image_set=self.dataset_setup.train_subset,
-            n_kps=self.dataset_setup.n_kps,
-            n_max_person=self.dataset_setup.n_max_person,
-            dataset_root=self.dataset_setup.root,
-            root_idx=self.dataset_setup.root_idx,
-            dataset=self.dataset_setup.dataset,
-            data_format=self.dataset_setup.data_format,
-            data_augmentation=self.dataset_setup.data_augmentation,
-            n_cameras=self.dataset_setup.n_cameras,
-            scale_factor=self.dataset_setup.scale_factor,
-            rot_factor=self.dataset_setup.rot_factor,
-            flip=self.dataset_setup.flip,
-            color_rgb=self.dataset_setup.color_rgb,
-            target_type=self.dataset_setup.target_type,
-            heatmap_size=self.dataset_setup.heatmap_size,
-            image_size=self.dataset_setup.image_size,
-            use_different_kps_weight=self.dataset_setup.
-            use_different_kps_weight,
-            space_size=self.dataset_setup.space_size,
-            space_center=self.dataset_setup.space_center,
-            initial_cube_size=self.dataset_setup.initial_cube_size,
-            pesudo_gt=self.dataset_setup.pesudo_gt,
-            sigma=self.dataset_setup.sigma,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize,
-            ]))
-
-        test_dataset = eval(self.test_dataset)(
-            is_train=False,
-            image_set=self.dataset_setup.test_subset,
-            n_kps=self.dataset_setup.n_kps,
-            n_max_person=self.dataset_setup.n_max_person,
-            dataset_root=self.dataset_setup.root,
-            root_idx=self.dataset_setup.root_idx,
-            dataset=self.dataset_setup.dataset,
-            data_format=self.dataset_setup.data_format,
-            data_augmentation=self.dataset_setup.data_augmentation,
-            n_cameras=self.dataset_setup.n_cameras,
-            scale_factor=self.dataset_setup.scale_factor,
-            rot_factor=self.dataset_setup.rot_factor,
-            flip=self.dataset_setup.flip,
-            color_rgb=self.dataset_setup.color_rgb,
-            target_type=self.dataset_setup.target_type,
-            heatmap_size=self.dataset_setup.heatmap_size,
-            image_size=self.dataset_setup.image_size,
-            use_different_kps_weight=self.dataset_setup.
-            use_different_kps_weight,
-            space_size=self.dataset_setup.space_size,
-            space_center=self.dataset_setup.space_center,
-            initial_cube_size=self.dataset_setup.initial_cube_size,
-            pesudo_gt=self.dataset_setup.pesudo_gt,
-            sigma=self.dataset_setup.sigma,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize,
-            ]))
+        test_dataset_cfg = dict(type='MVPDataset', logger=self.logger)
+        test_dataset_cfg.update(self.dataset_setup.test_dataset_setup)
+        test_dataset_cfg.update(self.dataset_setup.base_dataset_setup)
+        test_dataset = build_dataset(test_dataset_cfg)
 
         n_views = train_dataset.n_views
 
@@ -322,7 +264,7 @@ class MVPTrainer():
             if is_main_process():
                 self.logger.info('Distributed ..')
             model = torch.nn.parallel.\
-                DistributedDataParallel(model, device_ids=[self.gpu_dix],
+                DistributedDataParallel(model, device_ids=[self.gpu_idx],
                                         find_unused_parameters=True)
             model_without_ddp = model.module
 
@@ -400,13 +342,14 @@ class MVPTrainer():
                 self.final_output_dir,
                 self.clip_max_norm,
                 self.print_freq,
-                n_views=n_views)
+                n_views=n_views,
+                device=self.device)
 
             lr_scheduler.step()
 
             inference_conf_thr = self.inference_conf_thr
             for thr in inference_conf_thr:
-                preds_single, meta_image_files_single, _ = validate_3d(
+                preds_single, _ = validate_3d(
                     model,
                     test_loader,
                     self.logger,
@@ -433,7 +376,7 @@ class MVPTrainer():
                                    [f'{re * 100:.2f}' for re in recs])
                         tb.add_row(['recall@500mm'] +
                                    [f'{recall500 * 100:.2f}' for re in recs])
-                        self.logger.info(tb)
+                        self.logger.info('\n' + tb.get_string())
                         self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
                         precision = np.mean(aps[0])
 
@@ -499,37 +442,10 @@ class MVPTrainer():
         if is_main_process():
             self.logger.info('Loading data ..')
 
-        normalize = transforms.Normalize(**self.normalize)
-
-        test_dataset = eval(self.test_dataset)(
-            is_train=False,
-            image_set=self.dataset_setup.test_subset,
-            n_kps=self.dataset_setup.n_kps,
-            n_max_person=self.dataset_setup.n_max_person,
-            dataset_root=self.dataset_setup.root,
-            root_idx=self.dataset_setup.root_idx,
-            dataset=self.dataset_setup.dataset,
-            data_format=self.dataset_setup.data_format,
-            data_augmentation=self.dataset_setup.data_augmentation,
-            n_cameras=self.dataset_setup.n_cameras,
-            scale_factor=self.dataset_setup.scale_factor,
-            rot_factor=self.dataset_setup.rot_factor,
-            flip=self.dataset_setup.flip,
-            color_rgb=self.dataset_setup.color_rgb,
-            target_type=self.dataset_setup.target_type,
-            heatmap_size=self.dataset_setup.heatmap_size,
-            image_size=self.dataset_setup.image_size,
-            use_different_kps_weight=self.dataset_setup.
-            use_different_kps_weight,
-            space_size=self.dataset_setup.space_size,
-            space_center=self.dataset_setup.space_center,
-            initial_cube_size=self.dataset_setup.initial_cube_size,
-            pesudo_gt=self.dataset_setup.pesudo_gt,
-            sigma=self.dataset_setup.sigma,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize,
-            ]))
+        test_dataset_cfg = dict(type='MVPDataset', logger=self.logger)
+        test_dataset_cfg.update(self.dataset_setup.test_dataset_setup)
+        test_dataset_cfg.update(self.dataset_setup.base_dataset_setup)
+        test_dataset = build_dataset(test_dataset_cfg)
 
         if self.distributed:
             rank, world_size = get_dist_info()
@@ -563,7 +479,7 @@ class MVPTrainer():
 
         if self.distributed:
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[self.gpu_dix], find_unused_parameters=True)
+                model, device_ids=[self.gpu_idx], find_unused_parameters=True)
 
         if self.model_path is not None:
             if is_main_process():
@@ -588,7 +504,7 @@ class MVPTrainer():
             raise ValueError('Check the model file for testing!')
 
         for thr in self.inference_conf_thr:
-            preds_single, meta_image_files_single, kps3d = validate_3d(
+            preds_single, kps3d = validate_3d(
                 model,
                 test_loader,
                 self.logger,
@@ -602,21 +518,30 @@ class MVPTrainer():
                 if 'panoptic' in self.test_dataset:
                     tb = PrettyTable()
                     mpjpe_threshold = np.arange(25, 155, 25)
+
+                    eval_cfg = dict(
+                        type='MVPEvaluation', dataset=test_loader.dataset)
+                    evaluator = build_evaluation(eval_cfg)
                     aps, recs, mpjpe, recall500 = \
-                        test_loader.dataset.evaluate(preds)
+                        evaluator.evaluate_map(preds)
+
                     tb.field_names = ['Threshold/mm'] + \
                                      [f'{i}' for i in mpjpe_threshold]
                     tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
                     tb.add_row(['Recall'] + [f'{re * 100:.2f}' for re in recs])
                     tb.add_row(['recall@500mm'] +
                                [f'{recall500 * 100:.2f}' for re in recs])
-                    self.logger.info(tb)
+                    self.logger.info('\n' + tb.get_string())
                     self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
 
                 elif 'campus' in self.test_dataset \
                         or 'shelf' in self.test_dataset:
-                    actor_pcp, avg_pcp, _, recall = \
-                        test_loader.dataset.evaluate(preds)
+
+                    eval_cfg = dict(
+                        type='MVPEvaluation', dataset=test_loader.dataset)
+                    evaluator = build_evaluation(eval_cfg)
+                    actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
+                        preds, recall_threshold=500, alpha=0.5)
 
                     tb = PrettyTable()
                     tb.field_names = [
@@ -628,7 +553,7 @@ class MVPTrainer():
                         f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
                     ])
                     self.logger.info('\n' + tb.get_string())
-                    self.logger.info(f'Recall@500mm: {recall:.4f}')
+                    self.logger.info(f'Recall@500mm: {recall500:.4f}')
 
 
 def train_3d(model,
@@ -639,7 +564,8 @@ def train_3d(model,
              output_dir: str,
              clip_max_norm: float,
              print_freq: int,
-             n_views: int = 5):
+             n_views: int = 5,
+             device: str = 'cuda'):
     """Train one epoch.
 
     Args:
@@ -660,8 +586,9 @@ def train_3d(model,
             Printing frequency during training.
         n_views (int, optional):
             Number of views. Defaults to 5.
+        device (str, optional):
+            Device name. Defaults to 'cuda'.
     """
-    device = model.device
     logger = get_logger(logger)
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -678,7 +605,9 @@ def train_3d(model,
         model.module.backbone.eval()
 
     end = time.time()
-    for i, (inputs, meta) in enumerate(loader):
+    for i, (inputs, meta, skip) in enumerate(loader):
+        if skip[-1] == 1:
+            continue
         assert len(inputs) == n_views
         inputs = [i.to(device) for i in inputs]
         meta = [{
@@ -690,8 +619,7 @@ def train_3d(model,
 
         out, loss_dict, losses = model(views=inputs, meta=meta)
 
-        gt_kps3d = meta[0]['kps3d'].float()
-        n_kps = gt_kps3d.shape[2]
+        n_kps = loader.dataset.n_kps
         bs, n_queries = out['pred_logits'].shape[:2]
 
         src_poses = out['pred_poses']['outputs_coord']. \
@@ -783,8 +711,6 @@ def validate_3d(model,
     Returns:
         preds(torch.Tensor):
             Predicted results of all the keypoints.
-        meta_image_files(dict):
-            A dictionary contains all the meta information.
         keypoints3d(Keypoints):
             An instance of class keypoints.
     """
@@ -795,18 +721,17 @@ def validate_3d(model,
     model.eval()
 
     preds = []
-    meta_image_files = []
     keypoints3d = None
     with torch.no_grad():
         end = time.time()
         kps3d_pred = []
         n_max_person = 0
-        for i, (inputs, meta) in enumerate(loader):
+        for i, (inputs, meta, skip) in enumerate(loader):
+
             data_time.update(time.time() - end)
             assert len(inputs) == n_views
             output = model(views=inputs, meta=meta)
 
-            meta_image_files.append(meta[0]['image'])
             gt_kps3d = meta[0]['kps3d'].float()
             n_kps = gt_kps3d.shape[2]
             bs, n_queries = output['pred_logits'].shape[:2]
@@ -860,4 +785,4 @@ def validate_3d(model,
                 logger.info(f'Saving 3D keypoints to: {kps3d_file}')
             keypoints3d.dump(kps3d_file)
 
-    return preds, meta_image_files, keypoints3d
+    return preds, keypoints3d

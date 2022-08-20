@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from abc import ABCMeta
 from torch.nn.init import constant_, normal_, xavier_uniform_
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
@@ -14,6 +15,7 @@ from xrmocap.model.loss.builder import build_loss
 from xrmocap.model.mvp.builder import build_model
 from xrmocap.model.mvp.position_encoding import get_2d_coords, get_rays
 from xrmocap.utils.mvp_utils import absolute2norm, get_clones, inverse_sigmoid
+from .base_architecture import BaseArchitecture
 
 try:
     from xrmocap.model.deformable.modules import ProjAttn
@@ -32,7 +34,7 @@ except (ImportError, ModuleNotFoundError):
 # yapf: enable
 
 
-class MviewPoseTransformer(nn.Module):
+class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
     """Multi-view Pose Transformer Module.
 
     Modified from DETR and Deformable Detr
@@ -290,10 +292,10 @@ class MviewPoseTransformer(nn.Module):
         batch, _, imageh, imagew = views[0].shape
         n_view = len(views)
 
-        # read form FisheyeCameraParameter
-        cam_R = torch.stack([m['camera_R'] for m in meta], dim=1)
-        cam_T = torch.stack([m['camera_standard_T'] for m in meta], dim=1)
-        cam_K = torch.stack([m['camera_Intri'] for m in meta], dim=1)
+        cam_R = torch.stack([m['camera']['R'] for m in meta], dim=1)
+        cam_T = torch.stack([m['camera']['camera_standard_T'] for m in meta],
+                            dim=1)
+        cam_K = torch.stack([m['camera']['K'] for m in meta], dim=1)
 
         affine_trans = torch.stack([m['affine_trans'] for m in meta], dim=1)
         cam_K_crop = \
@@ -443,10 +445,6 @@ class MviewPoseTransformer(nn.Module):
 
         if self.training and 'kps3d' in meta[0] \
                 and 'kps3d_vis' in meta[0]:
-            meta[0]['roots_kps3d_norm'] = \
-                absolute2norm(meta[0]['roots_kps3d'].float(),
-                              self.grid_size,
-                              self.grid_center)
             meta[0]['kps3d_norm'] = \
                 absolute2norm(meta[0]['kps3d'].float(),
                               self.grid_size,
@@ -455,3 +453,21 @@ class MviewPoseTransformer(nn.Module):
             return out, loss_dict, loss_value
 
         return out
+
+    def forward_train(self, **kwargs):
+        """Forward train function for general training.
+
+        For multi_view_pose transformer estimation, we do not use this
+        interface.
+        """
+        raise NotImplementedError('This interface should not be used in '
+                                  'current training schedule.')
+
+    def forward_test(self, x: torch.Tensor, **kwargs):
+        """Forward test function for general training.
+
+        For multi_view_pose transformer estimation, we do not use this
+        interface.
+        """
+        raise NotImplementedError('This interface should not be used in '
+                                  'current training schedule.')

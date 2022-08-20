@@ -159,7 +159,8 @@ def project_3dpts(X, K, R, t, Kd):
     or cv2.projectPoints
     """
 
-    x = np.dot(R, X) + t
+    x = torch.mm(R, X) + t
+    # x = np.dot(R, X) + t
 
     x[0:2, :] = x[0:2, :] / (x[2, :] + 1e-5)
 

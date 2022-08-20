@@ -4,7 +4,6 @@ from torch import nn
 
 import xrmocap.utils.camera_utils as cameras
 from xrmocap.transform.point import affine_transform_pts
-from xrmocap.utils.geometry import get_affine_transform as get_transform
 from xrmocap.utils.mvp_utils import get_clones, inverse_sigmoid, norm2absolute
 
 try:
@@ -208,8 +207,7 @@ class MvPDecoderLayer(nn.Module):
             for v in range(n_views):
                 temp.append(
                     torch.as_tensor(
-                        get_transform(meta[v]['center'][i],
-                                      meta[v]['scale'][i], 0, self.img_size),
+                        meta[v]['affine_trans'][0, 0:2, :],
                         dtype=torch.float,
                         device=device))
             trans_batch.append(torch.stack(temp))

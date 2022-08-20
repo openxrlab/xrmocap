@@ -260,8 +260,7 @@ class SetCriterion(nn.Module):
                  use_loss_pose_perprojection: bool,
                  loss_pose_normalize: bool,
                  pred_conf_threshold: list,
-                 focal_alpha: float = 0.25,
-                 root_idx: Union[list, int] = 2):
+                 focal_alpha: float = 0.25):
         """Create the criterion.
 
         Args:
@@ -293,8 +292,6 @@ class SetCriterion(nn.Module):
                 List of confidence threshold to filter non-human keypoints.
             focal_alpha (float, optional): Alpha in Focal Loss.
                 Defaults to 0.25.
-            root_idx (Union[list, int], optional):
-                Index of the root keypoint. Defaults to 2.
         """
 
         super().__init__()
@@ -306,7 +303,6 @@ class SetCriterion(nn.Module):
         self.losses = losses
         self.focal_alpha = focal_alpha
         self.img_size = np.array(image_size)
-        self.root_idx = root_idx
         self.grid_size = torch.tensor(space_size)
         self.grid_center = torch.tensor(space_center)
         self.loss_pose_normalize = loss_pose_normalize
@@ -416,7 +412,7 @@ class SetCriterion(nn.Module):
                        for t, (_, i) in
                        zip(meta[0]['kps3d_norm'], indexes)], dim=0)
 
-        weights_kps3d = meta[0]['kps3d_vis'][idx_target][:, :, 0:1].float()
+        weights_kps3d = meta[0]['kps3d_vis'][idx_target].float()
 
         if not self.loss_pose_normalize:
             target_poses = norm2absolute(target_poses, self.grid_size,
@@ -439,9 +435,10 @@ class SetCriterion(nn.Module):
         if self.use_loss_pose_perprojection:
             idx_target = [idx_target] * len(meta)
             weights_2d = [
-                meta_view['kps2d_vis'][idx_view][:, :, 0:1]
+                meta_view['kps2d_vis'][idx_view]
                 for meta_view, idx_view in zip(meta, idx_target)
             ]
+
             cameras = [meta_view['camera'] for meta_view in meta]
 
             if self.loss_pose_normalize:
