@@ -132,5 +132,20 @@ smplify = dict(
 
 kps3d_optimizers = [
     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
-    dict(type='NanInterpolation', verbose=verbose, logger=logger)
+    dict(type='NanInterpolation', verbose=verbose, logger=logger),
+    dict(
+        type='SMPLShapeAwareOptimizer',
+        smplify=smplify,
+        body_model=smplify['body_model'],
+        projector=dict(type='PytorchProjector', camera_parameters=[]),
+        iteration=1,
+        refine_threshold=1,
+        kps2d_conf_threshold=0.97,
+        use_percep2d_optimizer=False,
+        verbose=verbose,
+        logger=logger),
+    # After SMPL shape-aware optimizer, the keypoints are not very stable,
+    # so trajectory optimization is added.
+    dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
+    dict(type='NanInterpolation', verbose=verbose, logger=logger),
 ]

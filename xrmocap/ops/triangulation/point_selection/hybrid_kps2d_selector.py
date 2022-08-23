@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Union
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
-from xrmocap.matching.pictorial import (
+from xrmocap.ops.top_down_association.matching.pictorial import (
     get_conns, get_struct, infer_kps3d_max_product,
 )
 from xrmocap.ops.triangulation.builder import build_triangulator
@@ -233,7 +233,7 @@ class HybridKps2dSelector(BaseSelector):
                 [kps3d, np.ones(kps3d.shape[-1]).reshape(1, -1)])
             kps2d_homo = (Pi @ kps3d_homo).T.reshape(n_kps2d, -1, 3)
             proj_kps2d = kps2d_homo[..., :2] / (
-                kps2d_homo[..., 2].reshape(n_kps2d, -1, 1) + 10e-6)
+                kps2d_homo[..., 2].reshape(n_kps2d, -1, 1) + 1e-5)
 
             if not use_heatmap:
                 for kps_idx, kp2d in enumerate(kps2d):
@@ -241,12 +241,12 @@ class HybridKps2dSelector(BaseSelector):
                         proj_kp2d = proj_kps2d[kps_idx, j]
                         # we use gaussian to approx the heatmap
                         if np.isnan(kp2d).any():
-                            unary_i = 10e-6
+                            unary_i = 1e-5
                         else:
                             pixel_distance = ((kp2d - proj_kp2d)**2).sum()
                             unary_i = np.exp(
                                 -pixel_distance / 625) * kps2d_conf[kps_idx]
-                            unary_i = np.clip(unary_i, 10e-6, 1)
+                            unary_i = np.clip(unary_i, 1e-5, 1)
 
                         unary[kps_idx, j] = unary[kps_idx, j] * unary_i
             else:
@@ -260,7 +260,7 @@ class HybridKps2dSelector(BaseSelector):
                             kp2d_in_heatmap[0] < 0 or kp2d_in_heatmap[
                                 1] > heatmap_.shape[0] or kp2d_in_heatmap[
                                     1] < 0:
-                            unary_i = 10e-6
+                            unary_i = 1e-5
                         else:
                             unary_i = heatmap_[int(kp2d_in_heatmap[1]),
                                                int(kp2d_in_heatmap[0])]

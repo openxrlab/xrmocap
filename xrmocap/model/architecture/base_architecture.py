@@ -1,8 +1,5 @@
 # copy from mmhuman3d
-import torch
-import torch.distributed as dist
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
 from mmcv.runner import BaseModule
 
 
@@ -31,28 +28,7 @@ class BaseArchitecture(BaseModule, metaclass=ABCMeta):
                 which may be a weighted sum of all losses, log_vars contains \
                 all the variables to be sent to the logger.
         """
-        log_vars = OrderedDict()
-        for loss_name, loss_value in losses.items():
-            if isinstance(loss_value, torch.Tensor):
-                log_vars[loss_name] = loss_value.mean()
-            elif isinstance(loss_value, list):
-                log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value)
-            else:
-                raise TypeError(
-                    f'{loss_name} is not a tensor or list of tensors')
-
-        loss = sum(_value for _key, _value in log_vars.items()
-                   if 'loss' in _key)
-
-        log_vars['loss'] = loss
-        for loss_name, loss_value in log_vars.items():
-            # reduce loss when distributed training
-            if dist.is_available() and dist.is_initialized():
-                loss_value = loss_value.data.clone()
-                dist.all_reduce(loss_value.div_(dist.get_world_size()))
-            log_vars[loss_name] = loss_value.item()
-
-        return loss, log_vars
+        pass
 
     def train_step(self, data, optimizer):
         """The iteration step during training.
@@ -77,13 +53,7 @@ class BaseArchitecture(BaseModule, metaclass=ABCMeta):
                   DDP, it means the batch size on each GPU), which is used for
                   averaging the logs.
         """
-        losses = self(**data)
-        loss, log_vars = self._parse_losses(losses)
-
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
-
-        return outputs
+        pass
 
     def val_step(self, data, optimizer=None):
         """The iteration step during validation.
@@ -92,13 +62,7 @@ class BaseArchitecture(BaseModule, metaclass=ABCMeta):
         during val epochs. Note that the evaluation after training epochs is
         not implemented with this method, but an evaluation hook.
         """
-        losses = self(**data)
-        loss, log_vars = self._parse_losses(losses)
-
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
-
-        return outputs
+        pass
 
     def forward(self, **kwargs):
         if self.training:

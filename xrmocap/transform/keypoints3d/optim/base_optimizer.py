@@ -23,12 +23,12 @@ class BaseOptimizer:
         self.verbose = verbose
         self.logger = get_logger(logger)
 
-    def optimize_keypoints3d(self, keypoints: Keypoints,
+    def optimize_keypoints3d(self, keypoints3d: Keypoints,
                              **kwargs: dict) -> Keypoints:
         """Forward function of keypoints3d optimizer.
 
         Args:
-            keypoints (Keypoints): Input keypoints3d.
+            keypoints3d (Keypoints): Input keypoints3d.
         kwargs:
             Redundant keyword arguments to be
             ignored, including:

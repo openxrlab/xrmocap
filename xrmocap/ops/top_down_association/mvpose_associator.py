@@ -11,10 +11,12 @@ from xrprimer.data_structure.camera import (
 )
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.body_tracking.builder import build_kalman_tracking
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.matching.builder import build_matching
 from xrmocap.model.architecture.builder import build_architecture
+from xrmocap.ops.top_down_association.body_tracking.builder import (
+    build_kalman_tracking,
+)
+from xrmocap.ops.top_down_association.matching.builder import build_matching
 from xrmocap.ops.triangulation.builder import (
     BaseTriangulator, build_triangulator,
 )
@@ -38,6 +40,7 @@ class MvposeAssociator:
                  checkpoint_path: str = None,
                  best_distance: int = 600,
                  interval: int = 5,
+                 bbox_thr: float = 0.9,
                  device: str = 'cuda',
                  logger: Union[None, str, logging.Logger] = None) -> None:
 
@@ -96,6 +99,7 @@ class MvposeAssociator:
         ])
         self.best_distance = best_distance
         self.interval = interval
+        self.bbox_thr = bbox_thr
         self.counter = 0
         self.device = device
         self.n_views = -1
@@ -155,10 +159,11 @@ class MvposeAssociator:
         not_matched_idx = None
         self.kps_convention = mview_keypoints2d[0].get_convention()
         for bbox2d_i in mview_bbox2d:
-            person_id = np.array(
-                [i for i, data in enumerate(bbox2d_i) if data[-1] > 0.9])
+            person_id = np.array([
+                i for i, data in enumerate(bbox2d_i)
+                if data[-1] > self.bbox_thr
+            ])
             mview_person_id.append(person_id)
-
         image_tensor, kps2d, dim_group, n_kps2d, bbox2d = self.process_data(
             mview_person_id, mview_img_arr, mview_bbox2d, mview_keypoints2d)
         image_tensor = image_tensor.to(self.device)
@@ -227,8 +232,15 @@ class MvposeAssociator:
 
         if self.kalman_tracking is not None and kalman_tracking_requires_init:
             self.kalman_tracking.set_init_kps3d(state_kps3d=multi_kps3d)
-        keypoints3d, identities = self.assign_identities_frame(multi_kps3d)
-        self.last_multi_kps3d = keypoints3d.get_keypoints()[0, ..., :3]
+        if len(multi_kps3d) > 0:
+            keypoints3d, identities = self.assign_identities_frame(multi_kps3d)
+            self.last_multi_kps3d = keypoints3d.get_keypoints()[0, ..., :3]
+        else:
+            keypoints3d = Keypoints()
+            identities = []
+            self.counter = 0
+            kalman_tracking_requires_init = False
+
         return multi_kps2d_idx, keypoints3d, identities
 
     def tracking_frame(
@@ -289,7 +301,9 @@ class MvposeAssociator:
                 cropped_img.append(
                     self.test_transformer(
                         Image.fromarray(data.transpose(1, 2, 0))))
-            kps2d.append(mview_keypoints2d[view].get_keypoints()[0][person_id])
+            if len(person_id) > 0:
+                kps2d.append(
+                    mview_keypoints2d[view].get_keypoints()[0][person_id])
 
             n_person = len(person_id)
             cnt += n_person

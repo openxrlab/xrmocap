@@ -1,7 +1,13 @@
 type = 'TopDownAssociationEvaluation'
+
+__data_root__ = './xrmocap_data/CampusSeq1'
+__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
+__bbox_thr__ = 0.9
+
 logger = None
 output_dir = './output/campus'
 pred_kps3d_convention = 'coco'
+eval_kps3d_convention = 'campus'
 selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
     'left_forearm', 'right_forearm', 'left_thigh', 'right_thigh'
@@ -43,23 +49,24 @@ associator = dict(
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
     best_distance=100,
     interval=5,
+    bbox_thr=__bbox_thr__,
     device='cuda',
     logger=logger,
 )
 
 dataset = dict(
     type='MviewMpersonDataset',
-    data_root='./xrmocap_data/CampusSeq1',
+    data_root=__data_root__,
     img_pipeline=[
         dict(type='LoadImagePIL'),
         dict(type='ToTensor'),
         dict(type='BGR2RGB'),
     ],
-    meta_path='./xrmocap_data/CampusSeq1/xrmocap_meta_testset',
+    meta_path=__meta_path__,
     test_mode=True,
     shuffled=False,
     bbox_convention='xyxy',
-    bbox_thr=0.9,
+    bbox_thr=__bbox_thr__,
     kps2d_convention=pred_kps3d_convention,
     gt_kps3d_convention='campus',
     cam_world2cam=False,
@@ -67,11 +74,11 @@ dataset = dict(
 
 dataset_visualization = dict(
     type='MviewMpersonDataVisualization',
-    data_root='./xrmocap_data/CampusSeq1',
+    data_root=__data_root__,
     output_dir=output_dir,
-    meta_path='./xrmocap_data/CampusSeq1/xrmocap_meta_testset',
+    meta_path=__meta_path__,
     pred_kps3d_paths=None,
-    bbox_thr=0.96,
+    bbox_thr=__bbox_thr__,
     vis_percep2d=False,
     kps2d_convention=None,
     vis_gt_kps3d=False,

@@ -24,8 +24,8 @@ from xrmocap.transform.convention.keypoints_convention import (
 from xrmocap.transform.limbs import get_limbs_from_keypoints
 from xrmocap.utils.geometry import compute_similarity_transform
 from xrmocap.utils.mvpose_utils import (
-    add_campus_jaw_headtop, check_limb_is_correct, compute_mpjpe,
-    vectorize_distance,
+    add_campus_jaw_headtop, add_campus_jaw_headtop_mask, check_limb_is_correct,
+    compute_mpjpe, vectorize_distance,
 )
 
 # yapf: enable
@@ -42,6 +42,7 @@ class TopDownAssociationEvaluation:
                  dataset_visualization: Union[None, dict,
                                               BaseDataVisualization] = None,
                  pred_kps3d_convention: str = 'coco',
+                 eval_kps3d_convention: str = 'campus',
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Top-down association evaluation.
 
@@ -58,6 +59,8 @@ class TopDownAssociationEvaluation:
                 Defaults to None.
             pred_kps3d_convention (str, optional): Target convention of
                 keypoints3d, Defaults to 'coco'.
+            eval_kps3d_convention (str, optional): the convention of
+                keypoints3d for evaluation, Defaults to 'campus'.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -65,6 +68,7 @@ class TopDownAssociationEvaluation:
 
         self.output_dir = output_dir
         self.pred_kps3d_convention = pred_kps3d_convention
+        self.eval_kps3d_convention = eval_kps3d_convention
         self.additional_limbs_names = additional_limbs_names
         self.selected_limbs_name = selected_limbs_name
         self.logger = get_logger(logger)
@@ -104,8 +108,7 @@ class TopDownAssociationEvaluation:
         end_of_clip_idxs = []
         identities = []
         for frame_idx, frame_item in enumerate(tqdm(self.dataset)):
-            mview_img_tensor, k_tensor, r_tensor,\
-                t_tensor, kps3d, end_of_clip, kw_data = frame_item
+            mview_img_tensor, _, _, _, kps3d, end_of_clip, kw_data = frame_item
             if end_of_clip:
                 end_of_clip_idxs.append(frame_idx)
             fisheye_list = self.dataset.fisheye_params[0]
@@ -154,6 +157,7 @@ class TopDownAssociationEvaluation:
             else:
                 gt_kps3d = np.concatenate(
                     (gt_kps3d, kps3d.numpy()[np.newaxis]), axis=0)
+
         pred_keypoints3d = Keypoints(
             dtype='numpy',
             kps=pred_kps3d,
@@ -166,28 +170,36 @@ class TopDownAssociationEvaluation:
             mask=gt_kps3d[..., -1] > 0,
             convention=self.dataset.gt_kps3d_convention,
             logger=self.logger)
+
+        mscene_keypoints_paths = []
+        scene_start_idx = 0
+        for scene_idx, scene_end_idx in enumerate(end_of_clip_idxs):
+            scene_keypoints = pred_keypoints3d.clone()
+            kps3d = scene_keypoints.get_keypoints()[
+                scene_start_idx:scene_end_idx + 1, ...]
+            mask = scene_keypoints.get_mask()[scene_start_idx:scene_end_idx +
+                                              1, ...]
+            scene_keypoints.set_keypoints(kps3d)
+            scene_keypoints.set_mask(mask)
+            npz_path = osp.join(self.output_dir,
+                                f'scene{scene_idx}_pred_keypoints3d.npz')
+            scene_keypoints.dump(npz_path)
+            scence_matched_kps2d_idx = matched_kps2d_idx[
+                scene_start_idx:scene_end_idx + 1]
+            np.save(
+                osp.join(self.output_dir,
+                         f'scene{scene_idx}_matched_kps2d_idx.npy'),
+                scence_matched_kps2d_idx)
+            mscene_keypoints_paths.append(npz_path)
+            scene_start_idx = scene_end_idx + 1
+
         pred_keypoints3d_, gt_keypoints3d_, limbs = self.align_keypoints3d(
             pred_keypoints3d, gt_keypoints3d)
         self.calc_limbs_accuracy(pred_keypoints3d_, gt_keypoints3d_, limbs)
         pck_50, pck_100, mpjpe, pa_mpjpe = self.evaluate(
             pred_keypoints3d_, gt_keypoints3d_)
 
-        mscene_keypoints_paths = []
-        scene_start_idx = 0
         if self.dataset_visualization is not None:
-            for scene_idx, scene_end_idx in enumerate(end_of_clip_idxs):
-                scene_keypoints = pred_keypoints3d.clone()
-                kps3d = scene_keypoints.get_keypoints()[
-                    scene_start_idx:scene_end_idx + 1, ...]
-                mask = scene_keypoints.get_mask()[
-                    scene_start_idx:scene_end_idx + 1, ...]
-                scene_keypoints.set_keypoints(kps3d)
-                scene_keypoints.set_mask(mask)
-                scene_start_idx = scene_end_idx + 1
-                npz_path = osp.join(self.output_dir,
-                                    f'scene{scene_idx}_pred_keypoints3d.npz')
-                scene_keypoints.dump(npz_path)
-                mscene_keypoints_paths.append(npz_path)
             self.dataset_visualization.pred_kps3d_paths = \
                 mscene_keypoints_paths
             self.dataset_visualization.run(overwrite=overwrite)
@@ -200,17 +212,24 @@ class TopDownAssociationEvaluation:
                  scale=1000.) -> dict:
         # There must be no np.nan in the pred_keypoints3d
         mpjpe, pa_mpjpe, pck_50, pck_100 = [], [], [], []
-        n_frame = pred_keypoints3d.get_frame_number()
+        n_frame = gt_keypoints3d.get_frame_number()
         gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
         gt_kps3d_mask = gt_keypoints3d.get_mask()
         pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
         pred_kps3d_mask = pred_keypoints3d.get_mask()
-        for idx in range(n_frame):
-            gt_kps3d_idxs = np.where(np.sum(gt_kps3d_mask[idx], axis=1) > 0)[0]
+        pred_kps3d_convention = pred_keypoints3d.get_convention()
+        gt_kps3d_convention = gt_keypoints3d.get_convention()
+        for frame_idx in range(n_frame):
+            if not gt_kps3d_mask[frame_idx].any():
+                continue
+            gt_kps3d_idxs = np.where(
+                np.sum(gt_kps3d_mask[frame_idx], axis=1) > 0)[0]
             for gt_kps3d_idx in gt_kps3d_idxs:
-                f_gt_kps3d = gt_kps3d[idx][gt_kps3d_idx]
-                f_pred_kps3d = pred_kps3d[idx][
-                    np.sum(pred_kps3d_mask[idx], axis=1) > 0]
+                f_gt_kps3d = gt_kps3d[frame_idx][gt_kps3d_idx]
+                f_pred_kps3d = pred_kps3d[frame_idx][
+                    np.sum(pred_kps3d_mask[frame_idx], axis=1) > 0]
+                if len(f_pred_kps3d) == 0:
+                    continue
 
                 dist = vectorize_distance(f_gt_kps3d[np.newaxis], f_pred_kps3d)
                 f_pred_kps3d = f_pred_kps3d[np.argmin(dist[0])]
@@ -219,15 +238,32 @@ class TopDownAssociationEvaluation:
                     continue
 
                 # MPJPE
+                f_pred_keypoints = Keypoints(
+                    kps=np.concatenate(
+                        (f_pred_kps3d, np.ones_like(f_pred_kps3d[..., 0:1])),
+                        axis=-1),
+                    convention=pred_kps3d_convention)
+                f_gt_keypoints = Keypoints(
+                    kps=np.concatenate(
+                        (f_gt_kps3d, np.ones_like(f_gt_kps3d[..., 0:1])),
+                        axis=-1),
+                    convention=gt_kps3d_convention)
                 mpjpe.append(
-                    compute_mpjpe(f_pred_kps3d, f_gt_kps3d, align=True))
+                    compute_mpjpe(
+                        f_pred_keypoints, f_gt_keypoints, align=True))
 
                 # PA-MPJPE
                 _, _, rotation, scaling, transl = compute_similarity_transform(
                     f_gt_kps3d, f_pred_kps3d, compute_optimal_scale=True)
                 pred_kps3d_pa = (scaling * f_pred_kps3d.dot(rotation)) + transl
+
+                pred_keypoints_pa = Keypoints(
+                    kps=np.concatenate(
+                        (pred_kps3d_pa, np.ones_like(pred_kps3d_pa[..., 0:1])),
+                        axis=-1),
+                    convention=pred_kps3d_convention)
                 pa_mpjpe_i = compute_mpjpe(
-                    pred_kps3d_pa, f_gt_kps3d, align=True)
+                    pred_keypoints_pa, f_gt_keypoints, align=True)
                 pa_mpjpe.append(pa_mpjpe_i)
 
                 pck_50.append(np.mean(pa_mpjpe_i <= (pck_50_thres / scale)))
@@ -248,20 +284,30 @@ class TopDownAssociationEvaluation:
     def align_keypoints3d(self, pred_keypoints3d: Keypoints,
                           gt_keypoints3d: Keypoints):
         ret_limbs = []
+        gt_nose = None
+        pred_nose = None
         pred_kps3d_convention = pred_keypoints3d.get_convention()
+        gt_kps3d_convention = gt_keypoints3d.get_convention()
+        if gt_kps3d_convention == 'panoptic':
+            gt_nose_index = get_keypoint_idx(
+                name='nose_openpose', convention=gt_kps3d_convention)
+            gt_nose = gt_keypoints3d.get_keypoints()[:, :, gt_nose_index, :3]
 
-        try:
+        if pred_kps3d_convention == 'coco':
             pred_nose_index = get_keypoint_idx(
                 name='nose', convention=pred_kps3d_convention)
             pred_nose = pred_keypoints3d.get_keypoints()[:, :,
                                                          pred_nose_index, :3]
-        except NotImplementedError:
-            raise 'This convention has not implemented'
 
-        if pred_kps3d_convention != self.dataset.gt_kps3d_convention:
+        if pred_kps3d_convention != self.eval_kps3d_convention:
             pred_keypoints3d = convert_keypoints(
                 keypoints=pred_keypoints3d,
-                dst=self.dataset.gt_kps3d_convention,
+                dst=self.eval_kps3d_convention,
+                approximate=True)
+        if gt_kps3d_convention != self.eval_kps3d_convention:
+            gt_keypoints3d = convert_keypoints(
+                keypoints=gt_keypoints3d,
+                dst=self.eval_kps3d_convention,
                 approximate=True)
 
         limbs = get_limbs_from_keypoints(
@@ -278,38 +324,34 @@ class TopDownAssociationEvaluation:
 
         for conn_names in self.additional_limbs_names:
             kps_idx_0 = get_keypoint_idx(
-                name=conn_names[0],
-                convention=self.dataset.gt_kps3d_convention)
+                name=conn_names[0], convention=self.eval_kps3d_convention)
             kps_idx_1 = get_keypoint_idx(
-                name=conn_names[1],
-                convention=self.dataset.gt_kps3d_convention)
+                name=conn_names[1], convention=self.eval_kps3d_convention)
             ret_limbs.append(np.array([kps_idx_0, kps_idx_1], dtype=np.int32))
         pred_kps3d_mask = pred_keypoints3d.get_mask()
         pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
+        if pred_nose is not None:
+            pred_kps3d = add_campus_jaw_headtop(pred_nose, pred_kps3d)
+            pred_kps3d_mask = add_campus_jaw_headtop_mask(pred_kps3d_mask)
+
         gt_kps3d_mask = gt_keypoints3d.get_mask()
         gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
-        pred_kps3d = add_campus_jaw_headtop(pred_nose, pred_kps3d)
-        assert pred_kps3d.shape[0] == gt_kps3d.shape[0]
-        mask = np.zeros_like(pred_kps3d_mask[:, :, -2:])
-        for i, f_pred_kps3d_mask in enumerate(pred_kps3d_mask):
-            kps3d_idx = np.sum(f_pred_kps3d_mask, axis=1) > 0
-            n_person = len(np.where(kps3d_idx)[0])
-            mask[i][kps3d_idx] = np.ones((n_person, 2), dtype=np.uint8)
-        pred_kps3d_mask = np.concatenate((pred_kps3d_mask[:, :, :-2], mask),
-                                         axis=-1)
+        if gt_nose is not None:
+            gt_kps3d = add_campus_jaw_headtop(gt_nose, gt_kps3d)
+            gt_kps3d_mask = add_campus_jaw_headtop_mask(gt_kps3d_mask)
 
         pred_kps3d = np.concatenate(
             (pred_kps3d, pred_kps3d_mask[..., np.newaxis]), axis=-1)
         pred_keypoints3d = Keypoints(
             kps=pred_kps3d,
             mask=pred_kps3d_mask,
-            convention=self.dataset.gt_kps3d_convention)
+            convention=self.eval_kps3d_convention)
         gt_kps3d = np.concatenate((gt_kps3d, gt_kps3d_mask[..., np.newaxis]),
                                   axis=-1)
         gt_keypoints3d = Keypoints(
             kps=gt_kps3d,
             mask=gt_kps3d_mask,
-            convention=self.dataset.gt_kps3d_convention)
+            convention=self.eval_kps3d_convention)
 
         return pred_keypoints3d, gt_keypoints3d, ret_limbs
 
@@ -318,7 +360,7 @@ class TopDownAssociationEvaluation:
                             gt_keypoints3d,
                             limbs,
                             dump_dir=None) -> Tuple[np.ndarray, list]:
-        n_frame = pred_keypoints3d.get_frame_number()
+        n_frame = gt_keypoints3d.get_frame_number()
         n_gt_person = gt_keypoints3d.get_person_number()
         gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
         gt_kps3d_mask = gt_keypoints3d.get_mask()
@@ -330,11 +372,15 @@ class TopDownAssociationEvaluation:
         error_cnt = 0
 
         for idx in range(n_frame):
+            if not gt_kps3d_mask[idx].any():
+                continue
             gt_kps3d_idxs = np.where(np.sum(gt_kps3d_mask[idx], axis=1) > 0)[0]
             for gt_kps3d_idx in gt_kps3d_idxs:
                 f_gt_kps3d = gt_kps3d[idx][gt_kps3d_idx]
                 f_pred_kps3d = pred_kps3d[idx][
                     np.sum(pred_kps3d_mask[idx], axis=1) > 0]
+                if len(f_pred_kps3d) == 0:
+                    continue
 
                 dist = vectorize_distance(f_gt_kps3d[np.newaxis], f_pred_kps3d)
                 f_pred_kps3d = f_pred_kps3d[np.argmin(dist[0])]

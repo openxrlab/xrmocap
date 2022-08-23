@@ -56,12 +56,12 @@ class MedianSmooth(BaseOptimizer):
             raise ValueError
         self.kernel_size = kernel_size
 
-    def optimize_keypoints3d(self, keypoints: Keypoints,
+    def optimize_keypoints3d(self, keypoints3d: Keypoints,
                              **kwargs: dict) -> Keypoints:
         """Forward function of keypoints3d optimizer.
 
         Args:
-            keypoints (Keypoints): Input keypoints3d.
+            keypoints3d (Keypoints): Input keypoints3d.
         kwargs:
             Redundant keyword arguments to be
             ignored.
@@ -69,19 +69,19 @@ class MedianSmooth(BaseOptimizer):
         Returns:
             Keypoints: The optimized keypoints3d.
         """
-        if keypoints.dtype == 'numpy':
-            keypoints_np = keypoints
+        if keypoints3d.dtype == 'numpy':
+            keypoints3d_np = keypoints3d
         else:
-            keypoints_np = keypoints.to_numpy()
+            keypoints3d_np = keypoints3d.to_numpy()
             self.logger.warning(
                 'MedianFilter only support numpy kps for now,' +
                 ' the input kps has been converted to numpy.')
-        ret_keypoints = keypoints_np.clone()
-        ret_kps_arr = ret_keypoints.get_keypoints()
-        for person_idx in range(keypoints_np.get_person_number()):
-            kps_arr = keypoints_np.get_keypoints()[:, person_idx, ...]
+        ret_keypoints3d = keypoints3d_np.clone()
+        ret_kps_arr = ret_keypoints3d.get_keypoints()
+        for person_idx in range(keypoints3d_np.get_person_number()):
+            kps_arr = keypoints3d_np.get_keypoints()[:, person_idx, ...]
             kps_interp = median_filter_data(
                 kps_arr, kernel_size=self.kernel_size)
             ret_kps_arr[:, person_idx, ...] = kps_interp
-        ret_keypoints.set_keypoints(ret_kps_arr)
-        return ret_keypoints
+        ret_keypoints3d.set_keypoints(ret_kps_arr)
+        return ret_keypoints3d
