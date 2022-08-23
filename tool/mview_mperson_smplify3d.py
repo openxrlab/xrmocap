@@ -5,15 +5,14 @@ import glob
 import mmcv
 import numpy as np
 import os
-import torch
 from mmhuman3d.core.visualization.visualize_smpl import (
     visualize_smpl_calibration,
 )
+from typing import List
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.estimation.builder import build_estimator
-from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 
 # yapf: enable
@@ -21,26 +20,49 @@ from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 
 def main(args):
     keypoints3d = Keypoints.fromfile(npz_path=args.keypoints3d_path)
+    fisheye_param_paths = sorted(
+        glob.glob(os.path.join(args.fisheye_param_dir, 'fisheye_param_*')))
+    fisheye_params = load_camera_parameters(fisheye_param_paths)
     os.makedirs(args.output_dir, exist_ok=True)
+    perception2d_dict = dict(
+        np.load(args.perception2d_path, allow_pickle=True))
+    matched_list = np.load(args.matched_list_path, allow_pickle=True)
     estimator_config = dict(mmcv.Config.fromfile(args.estimator_config))
+    smpl_estimator = build_estimator(estimator_config)
 
-    mview_mperson_smpl_estimator = build_estimator(estimator_config)
-    smpl_data_list = mview_mperson_smpl_estimator.estimate_smpl(
-        keypoints3d=keypoints3d)
-    body_model = build_body_model(estimator_config['smplify']['body_model'])
-    kps3d_list = []
+    keypoints2d_list = []
+    mview_person_id = []
+    for path in fisheye_param_paths:
+        idx = int(path[-7:-5])
+        bbox2d_arr = perception2d_dict[f'bbox2d_view_{idx:02d}']
+        kps2d = perception2d_dict[f'kps2d_view_{idx:02d}']
+        kps2d_mask = perception2d_dict[f'kps2d_mask_view_{idx:02d}']
+        kps2d_convention = perception2d_dict['kps2d_convention'].item()
+        person_id_list = []
+        for f_bbox2d in bbox2d_arr:
+            mview_kps2d_id = np.array([
+                i for i, data in enumerate(f_bbox2d)
+                if data[-1] > args.bbox_thr
+            ])
+            person_id_list.append(mview_kps2d_id)
+        keypoints2d = Keypoints(
+            kps=kps2d, mask=kps2d_mask, convention=kps2d_convention)
+        if kps2d_convention != 'coco':
+            keypoints2d = convert_keypoints(
+                keypoints2d, dst='coco', approximate=True)
+        keypoints2d_list.append(keypoints2d)
+        mview_person_id.append(person_id_list)
+
+    optim_kwargs = dict(
+        keypoints2d=keypoints2d_list,
+        mview_person_id=mview_person_id,
+        matched_list=matched_list,
+        cam_params=fisheye_params)
+    keypoints3d = smpl_estimator.optimize_keypoints3d(keypoints3d,
+                                                      **optim_kwargs)
+    smpl_data_list = smpl_estimator.estimate_smpl(keypoints3d=keypoints3d)
     for i, smpl_data in enumerate(smpl_data_list):
-        smpl_data.dump(f'smpl_{i}.npz')
-        body_model_kwargs = smpl_data.to_tensor_dict()
-        body_model_output = body_model(**body_model_kwargs)
-        model_joints = body_model_output['joints']
-        kps3d_list.append(model_joints)
-    kps3d = torch.stack(kps3d_list, dim=1).detach().numpy()
-    kps3d_ones = np.ones_like(kps3d[..., 0:1])
-    kps3d = np.concatenate((kps3d, kps3d_ones), axis=-1)
-    keypoints = Keypoints(kps=kps3d, convention='smpl_45')
-    dst_keypoints = convert_keypoints(keypoints, 'coco', approximate=True)
-    dst_keypoints.dump(os.path.join(args.output_dir, 'smplify_new.npz'))
+        smpl_data.dump(os.path.join(args.output_dir, f'smpl_{i}.npz'))
 
     if args.visualize:
         n_frame = args.end_frame - args.start_frame
@@ -65,7 +87,6 @@ def main(args):
             model_path='xrmocap_data/body_models',
             batch_size=1)
         # prepare camera
-        fisheye_params = load_camera_parameters(args.fisheye_param_dir)
         k_list = []
         r_list = []
         t_list = []
@@ -104,17 +125,11 @@ def main(args):
                 overwrite=True)
 
 
-def load_camera_parameters(fisheye_param_dir: str):
+def load_camera_parameters(fisheye_param_paths: List[str]):
     """Load multi-scene fisheye parameters."""
-
-    camera_names = glob.glob(
-        os.path.join(fisheye_param_dir, 'fisheye_param_*'))
-    n_view = len(camera_names)
     mview_list = []
-    for view_idx in range(n_view):
-        fisheye_param = FisheyeCameraParameter.fromfile(
-            os.path.join(fisheye_param_dir,
-                         f'fisheye_param_{view_idx:02d}.json'))
+    for path in fisheye_param_paths:
+        fisheye_param = FisheyeCameraParameter.fromfile(path)
         if fisheye_param.world2cam:
             fisheye_param.inverse_extrinsic()
         mview_list.append(fisheye_param)
@@ -129,24 +144,34 @@ def setup_parser():
         '--image_dir',
         help='Path to the directory containing image',
         default='./data/shelf/img')
+    parser.add_argument('--start_frame', type=int, default=300)
+    parser.add_argument('--end_frame', type=int, default=600)
+    parser.add_argument('--bbox_thr', type=float, default=0.9)
     parser.add_argument(
         '--keypoints3d_path',
         type=str,
         help='Path to input keypoints3d file',
-        default='./output/shelf/scene0_pred_keypoints3d.npz')
+        default='./output/shelf/init/scene0_pred_keypoints3d.npz')
     parser.add_argument(
         '--fisheye_param_dir',
         type=str,
         help='Path to camera parameter',
         default='./xrmocap_data/Shelf/xrmocap_meta_testset/'
         'scene_0/camera_parameters')
-    parser.add_argument('--start_frame', type=int, default=300)
-    parser.add_argument('--end_frame', type=int, default=600)
+    parser.add_argument(
+        '--perception2d_path',
+        type=str,
+        default='./xrmocap_data/Shelf/xrmocap_meta_testset/'
+        'scene_0/perception_2d.npz')
+    parser.add_argument(
+        '--matched_list_path',
+        type=str,
+        default='./output/shelf/init/matched_kps2d_idx.npy')
     parser.add_argument(
         '--output_dir',
         type=str,
         help='Path to the directory saving',
-        default='./output/shelf')
+        default='./output/shelf/smpl')
     parser.add_argument(
         '--estimator_config',
         help='Config file for MultiViewMultiPersonSMPLEstimator',

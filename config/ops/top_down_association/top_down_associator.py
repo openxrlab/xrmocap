@@ -1,11 +1,11 @@
 type = 'TopDownAssociationEvaluation'
 
-__data_root__ = './xrmocap_data/CMU-panoptic'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
-__bbox_thr__ = 0.99
+__data_root__ = 'test/data/data/test_dataset/Shelf_unittest'
+__meta_path__ = __data_root__ + '/xrmocap_meta_perception2d'
+__bbox_thr__ = 0.9
 
 logger = None
-output_dir = './output/cmu-panoptic'
+output_dir = 'test/data/output/keypoints3d_estimation/shelf'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -40,14 +40,14 @@ associator = dict(
     kalman_tracking=dict(type='KalmanTracking', n_cam_min=3, logger=logger),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',
-        tracking_distance=1.5,
+        tracking_distance=0.7,
         tracking_kps3d_convention=pred_kps3d_convention,
         tracking_kps3d_name=[
             'left_shoulder', 'right_shoulder', 'left_hip_extra',
             'right_hip_extra'
         ]),
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
-    best_distance=1800,
+    best_distance=600,
     interval=5,
     bbox_thr=__bbox_thr__,
     device='cuda',
@@ -68,19 +68,8 @@ dataset = dict(
     bbox_convention='xyxy',
     bbox_thr=__bbox_thr__,
     kps2d_convention=pred_kps3d_convention,
-    gt_kps3d_convention='panoptic',
+    gt_kps3d_convention='campus',
     cam_world2cam=False,
 )
 
-dataset_visualization = dict(
-    type='MviewMpersonDataVisualization',
-    data_root=__data_root__,
-    output_dir=output_dir,
-    meta_path=__meta_path__,
-    pred_kps3d_paths=None,
-    bbox_thr=__bbox_thr__,
-    vis_percep2d=False,
-    kps2d_convention=None,
-    vis_gt_kps3d=False,
-    gt_kps3d_convention=None,
-)
+dataset_visualization = None

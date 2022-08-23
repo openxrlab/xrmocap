@@ -65,6 +65,21 @@ class MultiViewMultiPersonSMPLEstimator(BaseEstimator):
                     kps3d_optim = build_keypoints3d_optimizer(kps3d_optim)
                 self.kps3d_optimizers.append(kps3d_optim)
 
+    def optimize_keypoints3d(self, keypoints3d: Keypoints,
+                             **optim_kwargs) -> Keypoints:
+        """Optimize keypoints3d.
+
+        Args:
+            keypoints3d (Keypoints): A keypoints3d Keypoints instance
+        Returns:
+            Keypoints: The optimized keypoints3d.
+        """
+        if self.kps3d_optimizers is not None:
+            for optimizer in self.kps3d_optimizers:
+                keypoints3d = optimizer.optimize_keypoints3d(
+                    keypoints3d, **optim_kwargs)
+        return keypoints3d
+
     def estimate_smpl(self, keypoints3d: Keypoints) -> SMPLData:
         """Estimate smpl parameters according to keypoints3d.
 
@@ -80,9 +95,6 @@ class MultiViewMultiPersonSMPLEstimator(BaseEstimator):
         """
         self.logger.info('Estimating SMPL.')
         working_convention = 'smpl'
-        if self.kps3d_optimizers is not None:
-            for optimizer in self.kps3d_optimizers:
-                keypoints3d = optimizer.optimize_keypoints3d(keypoints3d)
 
         n_frame = keypoints3d.get_frame_number()
         n_person = keypoints3d.get_person_number()
@@ -97,6 +109,8 @@ class MultiViewMultiPersonSMPLEstimator(BaseEstimator):
 
         smpl_data_list = []
         for person in range(n_person):
+            if person_mask[:, person].sum() == 0:
+                continue
             global_orient = torch.zeros((n_frame, 3)).to(self.smplify.device)
             transl = torch.full((n_frame, 3), 1000.0).to(self.smplify.device)
             body_pose = torch.zeros((n_frame, 69)).to(self.smplify.device)

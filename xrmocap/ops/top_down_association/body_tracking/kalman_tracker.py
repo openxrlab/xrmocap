@@ -9,7 +9,6 @@ class KalmanJointTracker(object):
     state model: x, y, z, dx, dy, dz observation model: x, y, z As implemented
     in https://github.com/abewley/sort, but with some modifications.
     """
-    count = 0
 
     def __init__(self, kps3d: np.ndarray):
         """Initialises a tracker using initial body keypoints3d.
@@ -34,30 +33,11 @@ class KalmanJointTracker(object):
             kf.x[:3] = np.expand_dims(kps3d[i], -1)
             self.kf.append(kf)
 
-        self.time_since_update = 0
-        self.id = KalmanJointTracker.count
-        KalmanJointTracker.count += 1
-
-        # records prediction, clear after update
-        self.history = []
-        # times of update
-        self.hits = 0
-        # times of consecutive updates
-        self.hit_streak = 0
-        # times of prediction
-        self.age = 0
-
     def predict(self):
         """Advances the state vector and returns the predicted body keypoints3d
         estimate."""
         for i in range(self.n_kps3d):
             self.kf[i].predict()
-        self.age += 1
-        if self.time_since_update > 0:
-            self.hit_streak = 0
-        self.time_since_update += 1
-        self.history.append(self.get_state())
-        return self.history[-1]
 
     def update(self, kps3d: np.ndarray):
         """Updates the state vector with observed body keypoints3d.
@@ -65,10 +45,6 @@ class KalmanJointTracker(object):
         Args:
             kps3d (np.ndarray): The measurement 3d keypoints.
         """
-        self.time_since_update = 0
-        self.history = []
-        self.hits += 1
-        self.hit_streak += 1
         for i in range(self.n_kps3d):
             self.kf[i].update(kps3d[i].reshape(-1, 1))
 

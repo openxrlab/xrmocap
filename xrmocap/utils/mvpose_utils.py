@@ -322,29 +322,45 @@ def add_campus_jaw_headtop(nose, kps3d_campus):
     return kps3d_campus
 
 
-def align_by_right_ankle(kps, convention: str = 'campus'):
-    index = get_keypoint_idx(name='right_ankle', convention=convention)
+def add_campus_jaw_headtop_mask(kps3d_mask):
+    mask = np.zeros_like(kps3d_mask[:, :, -2:])
+    for i, f_kps3d_mask in enumerate(kps3d_mask):
+        kps3d_idx = np.sum(f_kps3d_mask, axis=1) > 0
+        n_person = len(np.where(kps3d_idx)[0])
+        mask[i][kps3d_idx] = np.ones((n_person, 2), dtype=np.uint8)
+    ret_kps3d_mask = np.concatenate((kps3d_mask[:, :, :-2], mask), axis=-1)
+    return ret_kps3d_mask
+
+
+def align_by_keypoint(keypoints: Keypoints, keypoint_name='right_ankle'):
+    convention = keypoints.get_convention()
+    index = get_keypoint_idx(name=keypoint_name, convention=convention)
     if index == -1:
         raise ValueError('Check the convention of kps3d!')
+    kps = keypoints.get_keypoints()[0, 0, :, :3]
     root = kps[index, :]
     return kps - root
 
 
-def compute_mpjpe(pred: np.ndarray, gt: np.ndarray, align=False):
+def compute_mpjpe(pred_keypoints: Keypoints,
+                  gt_keypoints: Keypoints,
+                  align=False):
     """Compute MPJPE given prediction and ground-truth.
 
     Args:
-        pred (np.ndarray): points with shape Nx3,
-            N means the number of keypoints.
-        gt (np.ndarray): points with shape Nx3
+        pred_keypoints (Keypoints)
+        gt_keypoints (Keypoints)
         align (bool, optional): boolean value that determines whether to align
                                 with the root. Defaults to False.
 
     Returns:
-        MPJPE of the input keypoints
+        MPJPE of the input keypoints.
     """
     if align:
-        pred = align_by_right_ankle(pred)
-        gt = align_by_right_ankle(gt)
+        pred = align_by_keypoint(pred_keypoints, 'right_ankle')
+        gt = align_by_keypoint(gt_keypoints, 'right_ankle')
+    else:
+        pred = pred_keypoints.get_keypoints()[..., :3]
+        gt = gt_keypoints.get_keypoints()[..., :3]
     mpjpe = np.sqrt(np.sum(np.square(pred - gt), axis=-1))
     return mpjpe

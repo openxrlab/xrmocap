@@ -28,11 +28,12 @@ def reranking(query_features, k1=20, k2=6, lamda_value=0.3):
 
     dist = torch.pow(feat, 2).sum(dim=1, keepdim=True).expand(n_all, n_all)
     dist = dist + dist.t()
-    dist.addmm_(1, -2, feat, feat.t())
+    dist.addmm_(feat, feat.t(), beta=1, alpha=-2)
 
-    original_dist = dist.numpy()
+    original_dist = dist.cpu().numpy()
     n_all = original_dist.shape[0]
-    original_dist = np.transpose(original_dist / np.max(original_dist, axis=0))
+    original_dist = np.transpose(original_dist /
+                                 np.max(original_dist, axis=0) + 1e-9)
     V = np.zeros_like(original_dist).astype(np.float16)
     initial_rank = np.argsort(original_dist).astype(np.int32)
 
@@ -88,6 +89,7 @@ def reranking(query_features, k1=20, k2=6, lamda_value=0.3):
 
     final_dist = jaccard_dist * (1 - lamda_value) + original_dist * lamda_value
     final_dist = final_dist[:n_query, n_query:]
+    final_dist = torch.from_numpy(final_dist)
     return final_dist
 
 

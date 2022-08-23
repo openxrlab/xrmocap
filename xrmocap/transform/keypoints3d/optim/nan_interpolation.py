@@ -72,12 +72,12 @@ class NanInterpolation(BaseOptimizer):
         """
         super().__init__(verbose=verbose, logger=logger)
 
-    def optimize_keypoints3d(self, keypoints: Keypoints,
+    def optimize_keypoints3d(self, keypoints3d: Keypoints,
                              **kwargs: dict) -> Keypoints:
         """Forward function of keypoints3d optimizer.
 
         Args:
-            keypoints (Keypoints): Input keypoints3d.
+            keypoints3d (Keypoints): Input keypoints3d.
         kwargs:
             Redundant keyword arguments to be
             ignored.
@@ -85,20 +85,20 @@ class NanInterpolation(BaseOptimizer):
         Returns:
             Keypoints: The optimized keypoints3d.
         """
-        if keypoints.dtype == 'numpy':
-            keypoints_np = keypoints
+        if keypoints3d.dtype == 'numpy':
+            keypoints3d_np = keypoints3d
         else:
-            keypoints_np = keypoints.to_numpy()
+            keypoints3d_np = keypoints3d.to_numpy()
             self.logger.warning(
                 'NanInterpolation only support numpy kps for now,' +
                 ' the input kps has been converted to numpy.')
         total_nan_count = 0
         interp_nan_count = 0
-        ret_keypoints = keypoints_np.clone()
-        ret_kps_arr = ret_keypoints.get_keypoints()
-        for person_idx in range(keypoints_np.get_person_number()):
-            kps_arr = keypoints_np.get_keypoints()[:, person_idx, ...]
-            mask = keypoints_np.get_mask()[:, person_idx, ...]
+        ret_keypoints3d = keypoints3d_np.clone()
+        ret_kps_arr = ret_keypoints3d.get_keypoints()
+        for person_idx in range(keypoints3d_np.get_person_number()):
+            kps_arr = keypoints3d_np.get_keypoints()[:, person_idx, ...]
+            mask = keypoints3d_np.get_mask()[:, person_idx, ...]
             kps_interp = interpolate_np_data(kps_arr)
             ret_kps_arr[:, person_idx, ...] = kps_interp
             # record nan
@@ -106,9 +106,9 @@ class NanInterpolation(BaseOptimizer):
             output_nan_count = count_masked_nan(kps_interp, mask)
             total_nan_count += input_nan_count
             interp_nan_count += input_nan_count - output_nan_count
-        ret_keypoints.set_keypoints(ret_kps_arr)
+        ret_keypoints3d.set_keypoints(ret_kps_arr)
         if self.verbose:
             self.logger.info(
                 f'\nHow many nans are found after mask: {total_nan_count}' +
                 f'\nHow many nans are interpolated: {interp_nan_count}')
-        return ret_keypoints
+        return ret_keypoints3d

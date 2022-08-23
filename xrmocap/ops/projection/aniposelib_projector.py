@@ -25,11 +25,13 @@ class AniposelibProjector(BaseProjector):
     def __init__(self,
                  camera_parameters: List[FisheyeCameraParameter],
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """BaseProjector for points projection.
+        """AniposelibProjector for points projection.
 
         Args:
             camera_parameters (List[FisheyeCameraParameter]):
                 A list of FisheyeCameraParameter.
+            logger (Union[None, str, logging.Logger], optional):
+                Defaults to None.
         """
         BaseProjector.__init__(self, camera_parameters)
         self.logger = get_logger(logger)
@@ -37,17 +39,6 @@ class AniposelibProjector(BaseProjector):
             self.logger.error(import_exception)
             raise ModuleNotFoundError(
                 'Please install aniposelib to run triangulation.')
-
-    def set_cameras(self,
-                    camera_parameters: List[FisheyeCameraParameter]) -> None:
-        """Set cameras for this projector.
-
-        Args:
-            camera_parameters (List[FisheyeCameraParameter]):
-                A list of FisheyeCameraParameter, or a list
-                of paths to dumped FisheyeCameraParameter.
-        """
-        super().set_cameras(camera_parameters=camera_parameters)
 
     def project(
             self,

@@ -50,7 +50,7 @@ class KalmanTracking:
         """Predict next state (prior) using the Kalman filter state propagation
         equations."""
         for tracker in self.tracker_list:
-            _ = tracker.predict()
+            tracker.predict()
 
     def update(self, measurement_kps3d: np.ndarray) -> np.ndarray:
         """Updates the state vector with measurement body keypoints3d.
@@ -182,8 +182,8 @@ class KalmanTracking:
                 sub_imgid2cam[person]] = measurement_kps2d[person]
             matched_mview_kps2d_mask[sub_imgid2cam[person]] = np.ones_like(
                 measurement_kps2d[person][..., 0:1])
-            matched_mview_kps2d_conf[sub_imgid2cam[
-                person]] = measurement_kps2d_conf[sub_imgid2cam[person]]
+            matched_mview_kps2d_conf[
+                sub_imgid2cam[person]] = measurement_kps2d_conf[person]
 
             selected_mask = kps2d_selector.get_selection_mask(
                 np.concatenate((matched_mview_kps2d, matched_mview_kps2d_conf),

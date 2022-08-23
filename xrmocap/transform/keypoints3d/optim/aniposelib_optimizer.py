@@ -35,14 +35,14 @@ class AniposelibOptimizer(BaseOptimizer):
         else:
             self.triangulator = triangulator
 
-    def optimize_keypoints3d(self, keypoints: Keypoints,
+    def optimize_keypoints3d(self, keypoints3d: Keypoints,
                              mview_kps2d: np.ndarray,
                              mview_kps2d_mask: np.ndarray,
                              **kwargs: dict) -> Keypoints:
         """Forward function of keypoints3d optimizer.
 
         Args:
-            keypoints (Keypoints): Input keypoints3d.
+            keypoints3d (Keypoints): Input keypoints3d.
             mview_kps2d (np.ndarray):
                 Multi-view keypoints2d array for triangulation,
                 in shape [n_view, n_frame, n_person, n_kps, 2+n],
@@ -58,15 +58,15 @@ class AniposelibOptimizer(BaseOptimizer):
         Returns:
             Keypoints: The optimized keypoints3d.
         """
-        if keypoints.dtype == 'numpy':
-            keypoints_np = keypoints
+        if keypoints3d.dtype == 'numpy':
+            keypoints3d_np = keypoints3d
         else:
-            keypoints_np = keypoints.to_numpy()
+            keypoints3d_np = keypoints3d.to_numpy()
             self.logger.warning('AniposelibOptimizer only support numpy kps,' +
                                 ' the input kps has been converted to numpy.')
-        limbs = get_limbs_from_keypoints(keypoints)
-        n_person = keypoints.get_person_number()
-        kps3d_src = keypoints.get_keypoints()
+        limbs = get_limbs_from_keypoints(keypoints3d)
+        n_person = keypoints3d.get_person_number()
+        kps3d_src = keypoints3d.get_keypoints()
         kps3d_dst = kps3d_src.copy()
         ignore_idxs = np.where(mview_kps2d_mask != 1)
         mview_kps2d[ignore_idxs[0], ignore_idxs[1], ignore_idxs[2],
@@ -82,6 +82,6 @@ class AniposelibOptimizer(BaseOptimizer):
                 constraints=connections,
                 verbose=self.verbose,
             )
-        ret_keypoints = keypoints_np.clone()
-        ret_keypoints.set_keypoints(kps3d_dst)
-        return ret_keypoints
+        ret_keypoints3d = keypoints3d_np.clone()
+        ret_keypoints3d.set_keypoints(kps3d_dst)
+        return ret_keypoints3d

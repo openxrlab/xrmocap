@@ -1,6 +1,6 @@
 PANOPTIC_KEYPOINTS = [
-    'nose_openpose',
     'neck_openpose',
+    'nose_openpose',
     'pelvis_openpose',
     'left_shoulder_openpose',
     'left_elbow_openpose',
