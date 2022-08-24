@@ -17,11 +17,22 @@ class AniposelibOptimizer(BaseOptimizer):
 
     def __init__(self,
                  triangulator: Union[AniposelibTriangulator, dict],
+                 smooth_weight: float = 4.0,
+                 bone_length_weight: float = 2.0,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """...
+        """Call optim_points in aniposelib to apply smooth and constraint on a
+        keypoints3d instance.
 
         Args:
+            triangulator (Union[AniposelibTriangulator, dict]):
+                Triangulator or config dict.
+            smooth_weight (float, optional):
+                Weight of smooth optimization.
+                Defaults to 4.0.
+            bone_length_weight (float, optional):
+                Weight of bone length optimization.
+                Defaults to 2.0.
             verbose (bool, optional):
                 Whether to log info.
                 Defaults to True.
@@ -30,6 +41,8 @@ class AniposelibOptimizer(BaseOptimizer):
                 Defaults to None.
         """
         super().__init__(verbose=verbose, logger=logger)
+        self.smooth_weight = smooth_weight
+        self.bone_length_weight = bone_length_weight
         if isinstance(triangulator, dict):
             self.triangulator = build_triangulator(triangulator)
         else:
@@ -79,6 +92,8 @@ class AniposelibOptimizer(BaseOptimizer):
             kps3d_dst[:, person_idx, :, :3] = camera_group.optim_points(
                 kps2d,
                 kps3d,
+                scale_smooth=self.smooth_weight,
+                scale_length=self.bone_length_weight,
                 constraints=connections,
                 verbose=self.verbose,
             )

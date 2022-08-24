@@ -107,7 +107,7 @@ venv.bak/
 .mypy_cache/
 
 # custom
-test/data/
+tests/data/
 # data folder
 xrmocap_data/
 output/

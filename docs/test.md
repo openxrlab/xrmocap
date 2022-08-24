@@ -7,7 +7,7 @@
 
 ## Data Preparation
 
-Download data from the file server, and extract files to `test/data`.
+Download data from the file server, and extract files to `tests/data`.
 
 ```
 sh script/download_test_data.sh

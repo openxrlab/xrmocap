@@ -45,7 +45,8 @@ test:
     - unset https_proxy
     - unset HTTP_PROXY
     - unset HTTPS_PROXY
-    - sh script/download_test_data.sh
+    - sh scripts/download_test_data.sh
+    - sh scripts/download_weight.sh
     - echo "Start testing..."
-    - coverage run --source xrmocap -m pytest -s test/
+    - coverage run --source xrmocap -m pytest -s tests/
     - coverage report -m

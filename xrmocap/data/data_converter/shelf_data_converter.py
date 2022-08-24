@@ -5,8 +5,8 @@ import os
 from typing import List, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.transform.convention.camera import convert_camera_parameter
+from xrprimer.utils.path_utils import Existence, check_path_existence
 
-from xrmocap.utils.path_utils import Existence, check_path_existence
 from .campus_data_converter import CampusDataCovnerter
 
 # yapf: enable

@@ -5,12 +5,12 @@ import os
 from scipy.io import loadmat
 from typing import List, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_visualization import MviewMpersonDataVisualization
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.human_detection.builder import MMtrackDetector, build_detector
+from xrmocap.human_perception.builder import MMtrackDetector, build_detector
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
-from xrmocap.utils.path_utils import Existence, check_path_existence
 from .base_data_converter import BaseDataCovnerter
 
 # yapf: enable
