@@ -1,12 +1,16 @@
+# yapf: disable
 import json
 import logging
 import numpy as np
-from typing import Tuple, Union
-from xrprimer.data_structure.camera import \
-    FisheyeCameraParameter  # Camera with distortion
+from scipy.spatial.transform import Rotation as scipy_Rotation
+from typing import List, Tuple, Union
+from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.transform.camera.extrinsic import rotate_camera
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.smc_reader import SMCReader
+
+# yapf: enable
 
 try:
     from typing import Literal
@@ -68,6 +72,7 @@ def get_color_camera_parameter_from_smc(
         smc_reader: SMCReader,
         camera_type: Literal['kinect', 'iphone'],
         camera_id: int,
+        align_floor: bool = True,
         logger: Union[None, str,
                       logging.Logger] = None) -> FisheyeCameraParameter:
     """Get an RGB FisheyeCameraParameter from an smc reader.
@@ -80,6 +85,11 @@ def get_color_camera_parameter_from_smc(
             Which type of camera to get.
         camera_id (int):
             ID of the selected camera.
+        align_floor (bool):
+            Whether to rotate camera extrinsics, makes the xOz
+            plane parallel to floor calibrated by Kinect_0's
+            depth camera.
+            Defaults to True.
         logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -120,4 +130,59 @@ def get_color_camera_parameter_from_smc(
     else:
         logger.error('Choose camera_type from [\'kinect\', \'iphone\'].')
         raise KeyError('Wrong camera_type.')
+    if align_floor:
+        floor_dict = smc_reader.get_depth_floor(0)
+        calib_space_normal = np.array(floor_dict['normal']).reshape((3))
+        opencv_space_normal = np.asarray([0, -1, 0])
+        rotation = scipy_Rotation.align_vectors(
+            np.expand_dims(opencv_space_normal, 0),
+            np.expand_dims(calib_space_normal, 0))[0]
+        cam_rot_mat = rotation.as_matrix()
+        cam_param = rotate_camera(cam_param, cam_rot_mat)
     return cam_param
+
+
+def get_all_color_kinect_parameter_from_smc(
+    smc_reader: SMCReader,
+    align_floor: bool = True,
+    logger: Union[None, str, logging.Logger] = None
+) -> List[FisheyeCameraParameter]:
+    """Get an RGB FisheyeCameraParameter from an smc reader.
+
+    Args:
+        smc_reader (SMCReader):
+            An SmcReader instance containing kinect
+            and iphone camera parameters.
+        align_floor (bool):
+            Whether to rotate camera extrinsics, makes the xOz
+            plane parallel to floor calibrated by Kinect_0's
+            depth camera.
+            Defaults to True.
+        logger (Union[None, str, logging.Logger], optional):
+                Logger for logging. If None, root logger will be selected.
+                Defaults to None.
+
+    Returns:
+        List[FisheyeCameraParameter]
+    """
+    logger = get_logger(logger)
+    ret_list = []
+    for kinect_index in range(smc_reader.num_kinects):
+        cam_param = get_color_camera_parameter_from_smc(
+            smc_reader=smc_reader,
+            camera_type='kinect',
+            camera_id=kinect_index,
+            align_floor=False,
+            logger=logger)
+        ret_list.append(cam_param)
+    if align_floor:
+        floor_dict = smc_reader.get_depth_floor(0)
+        calib_space_normal = np.array(floor_dict['normal']).reshape((3))
+        opencv_space_normal = np.asarray([0, -1, 0])
+        rotation = scipy_Rotation.align_vectors(
+            np.expand_dims(opencv_space_normal, 0),
+            np.expand_dims(calib_space_normal, 0))[0]
+        cam_rot_mat = rotation.as_matrix()
+        for kinect_index, cam_param in enumerate(ret_list):
+            ret_list[kinect_index] = rotate_camera(cam_param, cam_rot_mat)
+    return ret_list

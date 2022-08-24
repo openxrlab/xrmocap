@@ -1,8 +1,7 @@
 import logging
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
-
-from xrmocap.utils.path_utils import prepare_output_path
+from xrprimer.utils.path_utils import prepare_output_path
 
 
 class BaseDataCovnerter:

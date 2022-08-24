@@ -16,9 +16,9 @@ from torch.utils.data import DistributedSampler
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
+from xrmocap.core.evaluation.builder import build_evaluation
 from xrmocap.data.dataset.builder import build_dataset
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.evaluation.builder import build_evaluation
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.utils.distribute_utils import (
     collect_results, get_rank, is_main_process, time_synchronized,

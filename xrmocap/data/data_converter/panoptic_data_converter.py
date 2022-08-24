@@ -14,7 +14,7 @@ from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_visualization import MviewMpersonDataVisualization
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.human_detection.builder import MMtrackDetector, build_detector
+from xrmocap.human_perception.builder import MMtrackDetector, build_detector
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .base_data_converter import BaseDataCovnerter
 
@@ -98,7 +98,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
             self.view_idxs = [i for i in range(31)]
         else:
             self.view_idxs = view_idxs
-        self.n_view = len(view_idxs)
+        self.n_view = len(self.view_idxs)
         # index: scene idx, value: (start_frame_idx, end_frame_idx)
         if scene_names == 'all':
             self.scene_names = self.list_scene_names()

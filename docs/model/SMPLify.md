@@ -25,7 +25,7 @@
 from xrmocap.model.registrant.builder import build_registrant
 
 smplify_config = dict(
-        mmcv.Config.fromfile('config/model/registrant/smplify.py'))
+        mmcv.Config.fromfile('configs/modules/model/registrant/smplify.py'))
 smplify = build_registrant(smplify_config)
 ```
 
