@@ -1,6 +1,12 @@
 # Multi-view single-person SMPL Estimator
 
-[TOC]
+- [Overview](#overview)
+- [Arguments](#arguments)
+- [Run](#run)
+  - [Step0: estimate_keypoints2d](#step0-estimate_keypoints2d)
+  - [Step1: estimate_keypoints3d](#step1-estimate_keypoints3d)
+  - [Step2: estimate_smpl](#step2-estimate_smpl)
+- [Example](#example)
 
 ### Overview
 

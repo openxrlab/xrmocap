@@ -1,6 +1,10 @@
 # Dataset preparation
 
-[TOC]
+- [Overview](#overview)
+- [Supported datasets](#supported-datasets)
+- [Convert a dataset manually](#convert-a-dataset-manually)
+- [Download converted meta-data](#download-converted-meta-data)
+- [Validate converted meta-data by visualization](#validate-converted-meta-data-by-visualization)
 
 ### Overview
 
@@ -8,11 +12,11 @@ Our data pipeline converts original dataset to our unified meta-data, with data 
 
 ### Supported datasets
 
-| Dataset name | Dataset page                                               | Download from public                                         | Download from OpenXRLab                                      |
-| ------------ | ---------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Campus       | [Home page](https://campar.in.tum.de/Chair/MultiHumanPose) | [CampusSeq1.tar.bz2](https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/CampusSeq1.tar.bz2) | [CampusSeq1.tar.bz2](http://10.4.11.59:18080/resources/XRlab/dataset/CampusSeq1.tar.bz2) |
-| Shelf        | [Home page](https://campar.in.tum.de/Chair/MultiHumanPose) | [Shelf.tar.bz2](https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2) | [Shelf.tar.bz2](http://10.4.11.59:18080/resources/XRlab/dataset/Shelf.tar.bz2) |
-| CMU Panoptic | [Home page](http://domedb.perception.cs.cmu.edu/)          | By [official script](https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox/blob/master/scripts/getData.sh) | N/A                                                          |
+| Dataset name | Dataset page                                               | Download                                                     |
+| ------------ | ---------------------------------------------------------- | ------------------------------------------------------------ |
+| Campus       | [Home page](https://campar.in.tum.de/Chair/MultiHumanPose) | [CampusSeq1.tar.bz2](https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/CampusSeq1.tar.bz2) |
+| Shelf        | [Home page](https://campar.in.tum.de/Chair/MultiHumanPose) | [Shelf.tar.bz2](https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2) |
+| CMU Panoptic | [Home page](http://domedb.perception.cs.cmu.edu/)          | By [official script](https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox/blob/master/scripts/getData.sh) |
 
 ### Convert a dataset manually
 
