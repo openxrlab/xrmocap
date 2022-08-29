@@ -2,10 +2,10 @@ type = 'TopDownAssociationEvaluation'
 
 __data_root__ = './xrmocap_data/CMU-panoptic'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
-__bbox_thr__ = 0.95
+__bbox_thr__ = 0.99
 
 logger = None
-output_dir = './output/mvpose_tracking/cmu-panoptic'
+output_dir = './output/cmu-panoptic'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [

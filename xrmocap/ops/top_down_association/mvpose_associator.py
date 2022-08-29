@@ -166,7 +166,8 @@ class MvposeAssociator:
             mview_person_id.append(person_id)
         image_tensor, kps2d, dim_group, n_kps2d, bbox2d = self.process_data(
             mview_person_id, mview_img_arr, mview_bbox2d, mview_keypoints2d)
-        if len(kps2d) > 0 and self.kalman_tracking is not None:
+        image_tensor = image_tensor.to(self.device)
+        if self.kalman_tracking is not None:
             if self.counter == 0:
                 kalman_tracking_requires_init = True
             else:
@@ -186,7 +187,6 @@ class MvposeAssociator:
         if len(kps2d) > 0:  # detect the person
             kps2d_conf = kps2d[..., 2:3]
             kps2d = kps2d[..., :2]
-            image_tensor = image_tensor.to(self.device)
             matched_list, sub_imgid2cam = self.multi_way_matching(
                 kps2d, image_tensor, self.affinity_estimator,
                 self.fundamental_mat, affinity_type, n_kps2d, dim_group,
@@ -309,9 +309,8 @@ class MvposeAssociator:
             cnt += n_person
             this_dim.append(cnt)
         dim_group = torch.Tensor(this_dim).long()
-        if not (dim_group == 0).all():
-            cropped_img = torch.stack(cropped_img)
-            kps2d = np.concatenate(kps2d, axis=0)
+        cropped_img = torch.stack(cropped_img)
+        kps2d = np.concatenate(kps2d, axis=0)
         n_kps2d = mview_keypoints2d[0].get_keypoints_number()
         ret_bbox2d = np.concatenate(ret_bbox2d, axis=0)
 
