@@ -24,6 +24,7 @@ concurrency:
 
 jobs:
   build_cuda102:
+    runs-on: ubuntu-18.04
     container:
       image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
       credentials:
