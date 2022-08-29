@@ -103,4 +103,3 @@ Or pull a built image from docker hub.
 docker pull openxrlab/xrmocap_runtime
 docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data openxrlab/xrmocap_runtime
 ```
-
