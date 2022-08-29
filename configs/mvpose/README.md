@@ -1,5 +1,9 @@
 # MVPose (Single frame)
 
+- [Introduction](#introduction)
+- [Prepare models and datasets](#prepare-models-and-datasets)
+- [Results and Models](#results-and-models)
+
 ## Introduction
 
 We provide the config files for MVPose (Single frame): [Fast and robust multi-person 3d pose estimation from multiple views](https://zju3dv.github.io/mvpose/).
@@ -15,12 +19,25 @@ We provide the config files for MVPose (Single frame): [Fast and robust multi-pe
   year={2019}
 }
 ```
+## Prepare models and datasets
+
+- **Prepare models**:
+Download weight and run
+```
+sh scripts/download_weight.sh
+```
+You can find CamStyle model in `weight` file.
+
+- **Prepare the datasets**:
+
+Convert original dataset to our unified meta-data, with data converters controlled by configs,
+you can find more details in [dataset_preparation.md](../../docs/en/dataset_preparation.md).
 
 ## Results and Models
 
 We evaluate MVPose (Single frame) on 3 popular benchmarks.
 
-[Explain common setting and metrics]
+You can find the recommended configs in `configs/mvpose/*/eval_keypoints3d.py`.
 
 ### Campus
 
@@ -28,7 +45,7 @@ We evaluate MVPose (Single frame) on 3 popular benchmarks.
 
 | Config | Campus  | Download |
 |:------:|:-------:|:--------:|
-| - | - | [model]() &#124; [log]() |
+| [eval_keypoints3d.py](./campus_config/eval_keypoints3d.py) | - | [model](../../weight/resnet50_reid_camstyle.pth.tar) &#124; [log]() |
 
 
 ### Shelf
@@ -37,7 +54,7 @@ We evaluate MVPose (Single frame) on 3 popular benchmarks.
 
 | Config | Shelf  | Download |
 |:------:|:-------:|:--------:|
-| - | - | [model]() &#124; [log]() |
+| [eval_keypoints3d.py](./shelf_config/eval_keypoints3d.py) | - | [model](../../weight/resnet50_reid_camstyle.pth.tar) &#124; [log]() |
 
 
 ### CMU Panoptic
@@ -46,4 +63,4 @@ We evaluate MVPose (Single frame) on 3 popular benchmarks.
 
 | Config | AP25 | MPJPE(mm) | Download |
 |:------:|:----:|:---------:|:--------:|
-| - | - | - | [model]() &#124; [log]() |
+| [eval_keypoints3d.py](./panoptic_config/eval_keypoints3d.py) | - | - | [model](../../weight/resnet50_reid_camstyle.pth.tar) &#124; [log]() |

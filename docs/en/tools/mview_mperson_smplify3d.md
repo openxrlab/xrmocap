@@ -1,6 +1,8 @@
 # Multi-view Multi-person SMPLify3D
 
-[TOC]
+- [Overview](#overview)
+- [Argument](#argument)
+- [Example](#example)
 
 ## Overview
 
@@ -19,6 +21,9 @@ This tool could generate multi-view multi-person SMPLData from keypoints3d.
 
 - **bbox_thr**:
 `bbox_thr` is the threshold of the 2d bbox, which should be the same as the threshold used to generate the keypoints3d.
+
+- **enable_log_file**
+By default, enable_log_file is False and the tool will only print log to console. Add `--enable_log_file` makes it True and a log file named `{smc_file_name}_{time_str}.txt` will be written.
 
 - **keypoints3d_path**:
 `keypoints3d_path` is the path to the keypoints3d file.
@@ -47,15 +52,16 @@ By default, visualize is False. Add `--visualize` makes it True and the tool wil
 Run the tool with visualization.
 
 ```bash
-python tool/mview_mperson_smplify3d.py \
+python tools/mview_mperson_smplify3d.py \
       --image_dir 'xrmocap_data/Shelf' \
       --start_frame 300 \
       --end_frame 600 \
-      --keypoints3d_path 'output/Shelf/scene0_pred_keypoints3d.npz' \
+      --keypoints3d_path 'output/mvpose_tracking/shelf/scene0_pred_keypoints3d.npz' \
       --fisheye_param_dir 'xrmocap_data/Shelf/xrmocap_meta_test/scene_0/camera_parameters' \
       --perception2d_path 'xrmocap_data/Shelf/xrmocap_meta_test/scene_0/perception_2d.npz' \
-      --matched_list_path 'output/Shelf/scene0_matched_kps2d_idx.npy' \
-      --output_dir 'output/Shelf' \
+      --matched_list_path 'output/mvpose_tracking/shelf/scene0_matched_kps2d_idx.npy' \
+      --output_dir 'output/mvpose_tracking/shelf/smpl' \
       --estimator_config 'configs/modules/core/estimation/mview_mperson_smpl_estimator.py' \
-      --visualize
+      --visualize \
+      --enable_log_file
 ```
