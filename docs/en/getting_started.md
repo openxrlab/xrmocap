@@ -50,7 +50,7 @@ We assume that the cameras have been calibrated. If you want to know more about 
 ```
 sh scripts/download_weight.sh
 ```
-You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You could find `resnet50_reid_camstyle.pth.tar` in `weight` file.
 
 ### Single Person
 
