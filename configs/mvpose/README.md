@@ -41,7 +41,6 @@ We evaluate MVPose (Single frame) on 3 popular benchmarks, and you can find the 
 
 ### Campus
 
-[Explain specific setting, metrics and other details]
 
 | Config | Accuracy (PCP)  | Download |
 |:------:|:-------:|:--------:|
@@ -50,11 +49,10 @@ We evaluate MVPose (Single frame) on 3 popular benchmarks, and you can find the 
 
 ### Shelf
 
-[Explain specific setting, metrics and other details]
 
 | Config | Accuracy (PCP)  | Download |
 |:------:|:-------:|:--------:|
-| [eval_keypoints3d.py](./shelf_config/eval_keypoints3d.py) | - | [model]() &#124; [log]() |
+| [eval_keypoints3d.py](./shelf_config/eval_keypoints3d.py) | 96.49 | [model]() &#124; [log]() |
 
 
 ### CMU Panoptic
