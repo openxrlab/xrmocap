@@ -37,21 +37,24 @@ jobs:
         - /workspace/xrmocap_container:/home/runner/work/xrmocap/xrmocap
     steps:
       - uses: actions/checkout@v2
-      - name: Source bashrc
+      - name: Show conda env
         run: |
-          source /root/.bashrc
-      - name: Activate conda env
-        run: |
+          source /root/.bashrc && conda info -e
           conda activate openxrlab
+          conda list | grep torch
+          conda list | grep mmcv
       - name: Prepare test data
         run: |
           sh scripts/download_test_data.sh
       - name: Build and install
         run: |
           rm -rf xrmocap.egg-info
+          source /root/.bashrc && conda activate openxrlab
+          pip install xrprimer
           pip install -e .
       - name: Run unittests and generate coverage report
         run: |
+          source /root/.bashrc && conda activate openxrlab
           coverage run --source xrmocap -m pytest tests/
           coverage xml
           coverage report -m
