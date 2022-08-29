@@ -5,7 +5,7 @@ __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 __bbox_thr__ = 0.9
 
 logger = None
-output_dir = './output/shelf'
+output_dir = './output/mvpose_tracking/shelf/'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -48,7 +48,7 @@ associator = dict(
         ]),
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
     best_distance=600,
-    interval=5,
+    interval=10,
     bbox_thr=__bbox_thr__,
     device='cuda',
     logger=logger,
