@@ -25,12 +25,24 @@ concurrency:
 jobs:
   build_cuda102:
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        shell: bash -l {0}
     container:
       image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
       credentials:
-        username: openxrlab
+        username: ${{secrets.DOCKERHUB_USERNAME}}
         password: ${{secrets.DOCKERHUB_PWD}}
+      volumes:
+        - /workspace/xrmocap_container:/home/runner/work/xrmocap/xrmocap
     steps:
+      - uses: actions/checkout@v2
+      - name: Source bashrc
+        run: |
+          source /root/.bashrc
+      - name: Activate conda env
+        run: |
+          conda activate openxrlab
       - name: Prepare test data
         run: |
           sh scripts/download_test_data.sh
