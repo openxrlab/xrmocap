@@ -46,11 +46,7 @@ We assume that the cameras have been calibrated. If you want to know more about 
 ### Perception Model
 
  -  **Prepare CamStyle models**:
-
-```
-sh scripts/download_weight.sh
-```
-You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You can find CamStyle model in `weight` file
 
 ### Single Person
 
@@ -66,10 +62,10 @@ The above code is supposed to run successfully upon you finish the installation.
 
 #### Optimization-based methods
 
-For optimization-based approaches, it does not require any pretrained model. Taking [MVPose](https://zju3dv.github.io/mvpose/) as an example, it can be run as
+For optimization-based approaches, it does not require any pretrained model. Taking [MVPose]() as an example, it can be run as
 
 ```bash
-Coming soon!
+# @jq
 ```
 
 Some useful configs are explained here:
@@ -92,22 +88,17 @@ We provide pretrained models in the respective method folders in [config](config
 
 #### Optimization-based methods
 
-Evaluate on the Shelf/Campus/CMU Panoptic datasets
+To evaluate optimization-based methods,
 
-- Evaluate on the Shelf dataset and run the tool without tracking.
-
-```bash
-python tools/mview_mperson_evaluation.py \
-      --enable_log_file \
-      --evaluation_config configs/mvpose/shelf_config/eval_keypoints3d.py
+```shell
+# @jq
 ```
 
-- Evaluate on the Shelf dataset and run the tool with tracking.
+Evaluate on the Shelf/Campus/CMU Panoptic datasets
 
-```bash
-python tools/mview_mperson_evaluation.py \
-      --enable_log_file \
-      --evaluation_config configs/mvpose_tracking/shelf_config/eval_keypoints3d.py
+Example:
+```shell
+# @jq
 ```
 
 #### Learning-based methods
