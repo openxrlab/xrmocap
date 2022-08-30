@@ -1,15 +1,15 @@
 # Triangulation
 
 - Triangulation
-  - [Prepare camera parameters](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/python/triangulation.md#prepare-camera-parameters)
-  - [Build a triangulator](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/python/triangulation.md#build-a-triangulator)
+  - [Prepare camera parameters](https://github.com/openxrlab/xrprimer/blob/main/docs/en/ops/triangulator.md#prepare-camera-parameters)
+  - [Build a triangulator](https://github.com/openxrlab/xrprimer/blob/main/docs/en/ops/triangulator.md#build-a-triangulator)
   - [Triangulate points from 2D to 3D](#triangulate-points-from-2d-to-3d)
-  - [Get reprojection error](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/python/triangulation.md#get-reprojection-error)
-  - [Camera selection](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/python/triangulation.md#camera-selection)
+  - [Get reprojection error](https://github.com/openxrlab/xrprimer/blob/main/docs/en/ops/triangulator.md#get-reprojection-error)
+  - [Camera selection](https://github.com/openxrlab/xrprimer/blob/main/docs/en/ops/triangulator.md#camera-selection)
 
 ### Overview
 
-Triangulators in XRMoCap are sub-classes of XRPrimer triangulator. For basic usage of triangulators, please refer to [xrprimer doc](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/python/triangulation.md#triangulate-points-from-2d-to-3d).
+Triangulators in XRMoCap are sub-classes of XRPrimer triangulator. For basic usage of triangulators, please refer to [xrprimer doc](https://github.com/openxrlab/xrprimer/blob/main/docs/en/ops/triangulator.md#triangulate-points-from-2d-to-3d).
 
 ## Triangulate points from 2D to 3D
 

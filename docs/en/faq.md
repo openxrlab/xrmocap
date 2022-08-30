@@ -6,11 +6,11 @@ We list some common troubles faced by many users and their corresponding solutio
 
 - 'ImportError: libpng16.so.16: cannot open shared object file: No such file or directory'
 
-  Please refer to [xrprimer faq](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/faq.md).
+  Please refer to [xrprimer faq](https://github.com/openxrlab/xrprimer/blob/main/docs/en/faq.md).
 
 - 'ImportError: liblapack.so.3: cannot open shared object file: No such file or directory'
 
-  Please refer to [xrprimer faq](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/faq.md).
+  Please refer to [xrprimer faq](https://github.com/openxrlab/xrprimer/blob/main/docs/en/faq.md).
 
 - 'ModuleNotFoundError: No module named 'mmhuman3d.core.conventions.joints_mapping''
 

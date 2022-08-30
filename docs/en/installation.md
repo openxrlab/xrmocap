@@ -14,7 +14,7 @@
 - PyTorch 1.6.0, 1.7.0, 1.7.1, 1.8.0, 1.8.1, 1.9.0 or 1.9.1.
 - CUDA 9.2+
 - GCC 5+
-- [XRPrimer](https://gitlab.bj.sensetime.com/openxrlab/xrprimer)
+- [XRPrimer](https://github.com/openxrlab/xrprimer)
 - [MMHuman3D](https://github.com/open-mmlab/mmhuman3d)
 - [MMCV](https://github.com/open-mmlab/mmcv)
 
@@ -40,7 +40,7 @@ conda activate xrmocap
 
 Important: Make sure that your compilation CUDA version and runtime CUDA version match.
 
-##### c. Install XRPrimer following the [official instructions](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
+##### c. Install XRPrimer following the [official instructions](https://github.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
 
 ##### d. Install XRMoCap to virtual environment,  in editable mode.
 
