@@ -41,6 +41,7 @@ xrmocap
 
 We provide a demo script to estimate SMPL parameters for single-person or multi-person from multi-view synchronized input images or videos. With this demo script, you only need to choose a method, we currently support two types of methods, namely, optimization-based approaches and end-to-end learning algorithms, specify a few arguments, and then you can get the estimated results.
 
+
 We assume that the cameras have been calibrated. If you want to know more about camera calibration, refer to [XRPrimer]() for more details.
 
 ### Perception Model
@@ -59,6 +60,8 @@ xxx
 The above code is supposed to run successfully upon you finish the installation.
 
 ### Multiple Persons
+
+A small test dataset for quick inference and demo can be downloaded from [here](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
 
 For optimization-based approaches, it does not require any pretrained model. With downloaded datasets, it can be run as
 
