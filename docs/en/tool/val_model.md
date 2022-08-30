@@ -31,16 +31,30 @@ Modify the config files in `ROOT/configs/mvp` if needed. Make sure the directori
 
 Start evaluation with 8 GPUs with provided config file and pre-trained weights for Shelf dataset:
 
-```
+```shell
 python -m torch.distributed.launch \
     --nproc_per_node=8 \
-    --use_env tool/val_model.py \
+    --use_env tools/val_model.py \
     --cfg configs/mvp/shelf_config/mvp_shelf.py \
     --model_path weight/xrmocap_mvp_shelf.pth.tar
 ```
 
-or directly run the script:
+Alternatively, you can also run the script directly:
 
+```shell
+sh ROOT/scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
-sh ROOT/scripts/val_mvp.sh 8
+
+Example:
+```shell
+sh ROOT/scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+```
+
+If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script:
+```shell
+sh ROOT/scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
+```
+Example:
+```shell
+sh ROOT/scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```

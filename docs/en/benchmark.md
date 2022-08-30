@@ -20,4 +20,4 @@ TBA
 
 ### MvP
 
-Please refer to [MvP](../../configs/mvp/README.md) for details.
+Please refer to [MvP benchmarks](../../configs/mvp/README.md) for details.

@@ -58,7 +58,7 @@ xxx
 
 The above code is supposed to run successfully upon you finish the installation.
 
-### Multiple persons
+### Multiple Persons
 
 For optimization-based approaches, it does not require any pretrained model. With downloaded datasets, it can be run as
 
@@ -70,11 +70,19 @@ Some useful configs are explained here:
 
  - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` to True in config file.
 
-For learning-based methods, we provide pretrained models in [model_zoo](), it can be downloaded and run the script as below.
+For learning-based methods, we provide model checkpoints for MvP in [model_zoo](./benchmark.md). For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tool/train_model.md) and [evaluation tutorial](./tool/val_model.md).
 
-```bash
-sh script/eval_mvp.sh
+With the downloaded pretrained MvP models:
+
+```shell
+sh ./scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
+
+Example:
+```shell
+sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+```
+
 
 ## Evaluation
 
@@ -96,22 +104,30 @@ Example:
 python xrmocap/core/evaluation/evaluate_keypoints3d.py --config ./config/kps3d_estimation/eval_kps3d_estimation.py
 ```
 
-For learning-based methods, with the downloaded pretrained models from [model_zoo]():
+For learning-based methods, more details about dataset preparation, model weights and checkpoints download can be found at [evaluation tutorial](./tool/val_model.md).
 
-```bash
-sh script/slurm_eval_mvp.sh
+With the downloaded pretrained MvP models from [model_zoo](./benchmark.md):
+
+```shell
+sh ./scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
+
+Example:
+```shell
+sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+```
+
 
 ### Evaluate with slurm
 
-If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `slurm_test.sh`.
+If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `scripts/slurm_eval_mvp.sh`.
 
 ```shell
-./tools/slurm_test.sh ${PARTITION} ${JOB_NAME} ${CONFIG} ${WORK_DIR} ${CHECKPOINT} --metrics ${METRICS}
+sh ./scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
 Example:
 ```shell
-./tools/slurm_test.sh my_partition test_hmr configs/hmr/resnet50_hmr_pw3d.py work_dirs/hmr work_dirs/hmr/latest.pth 8 --metrics pa-mpjpe mpjpe
+sh ./scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
 
 
@@ -119,12 +135,15 @@ Example:
 
 ### Training with a single / multiple GPUs
 
-```shell
-python tools/train.py ${CONFIG_FILE} ${WORK_DIR} --no-validate
+To train the learning-based model, such as a MvP model, follow the [training tutorial](./tool/train_model.md) to prepare the datasets and pre-trained weights:
+
 ```
-Example: using 1 GPU to train HMR.
-```shell
-python tools/train.py ${CONFIG_FILE} ${WORK_DIR} --gpus 1 --no-validate
+sh ./scripts/train_mvp.sh ${NUM_GPUS} ${CFG_FILE}
+```
+Example:
+
+```
+sh ./scripts/train_mvp.sh 8 configs/mvp/campus_config/mvp_campus.py
 ```
 
 ### Training with Slurm
@@ -132,7 +151,11 @@ python tools/train.py ${CONFIG_FILE} ${WORK_DIR} --gpus 1 --no-validate
 If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `slurm_train.sh`.
 
 ```shell
-./tools/slurm_train.sh ${PARTITION} ${JOB_NAME} ${CONFIG_FILE} ${WORK_DIR} ${GPU_NUM} --no-validate
+sh ./scripts/slurm_train_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE}
+```
+Example:
+```shell
+sh ./scripts/slurm_train_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py
 ```
 
 

@@ -33,11 +33,25 @@ Start training with 8 GPUs with provided config file for Campus dataset:
 ```bash
 python -m torch.distributed.launch \
         --nproc_per_node= 8 \
-        --use_env tool/train_model.py \
+        --use_env tools/train_model.py \
         --cfg configs/mvp/campus_config/mvp_campus.py \
 ```
 
-or directly run the script:
+Alternatively, you can also run the script directly:
 
 ```
-sh ROOT/scripts/train_mvp.sh 8
+sh ROOT/scripts/train_mvp.sh ${NUM_GPUS} ${CFG_FILE}
+```
+Example:
+
+```
+sh ROOT/scripts/train_mvp.sh 8 configs/mvp/campus_config/mvp_campus.py
+```
+If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script:
+```shell
+sh ROOT/scripts/slurm_train_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE}
+```
+Example:
+```shell
+sh ROOT/scripts/slurm_train_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py
+```
