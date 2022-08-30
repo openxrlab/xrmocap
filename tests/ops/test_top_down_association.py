@@ -16,6 +16,8 @@ def fixture():
     os.makedirs(output_dir, exist_ok=False)
 
 
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_build_mvpose_associator():
     associator_cfg = dict(
         mmcv.Config.fromfile('configs/modules/ops/' + 'top_down_association/' +

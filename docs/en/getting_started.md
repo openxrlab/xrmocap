@@ -1,4 +1,4 @@
-# Get started
+# Getting started
 
 ## Installation
 
@@ -23,7 +23,7 @@ Download the above resources and arrange them in the following file structure:
 
 ```text
 xrmocap
-├── xrmoccap
+├── xrmocap
 ├── docs
 ├── tests
 ├── tools
@@ -41,37 +41,41 @@ xrmocap
 
 We provide a demo script to estimate SMPL parameters for single-person or multi-person from multi-view synchronized input images or videos. With this demo script, you only need to choose a method, we currently support two types of methods, namely, optimization-based approaches and end-to-end learning algorithms, specify a few arguments, and then you can get the estimated results.
 
+We assume that the cameras have been calibrated. If you want to know more about camera calibration, refer to [XRPrimer](https://github.com/openxrlab/xrprimer/blob/main/docs/en/tool/calibrate_pinhole_cameras.md) for more details.
 
-We assume that the cameras have been calibrated. If you want to know more about camera calibration, refer to [XRPrimer]() for more details.
 
 ### Perception Model
 
  -  **Prepare CamStyle models**:
-You can find CamStyle model in `weight` file
+```
+sh scripts/download_weight.sh
+```
+You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
 
 ### Single Person
 
 Currently, we only provide optimization-based method for single person estimation.
 
 ```bash
-xxx
+# @gy
 ```
 
 The above code is supposed to run successfully upon you finish the installation.
 
-### Multiple Persons
+
+### Multiple People
 
 A small test dataset for quick inference and demo can be downloaded from [here](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
 
-For optimization-based approaches, it does not require any pretrained model. With downloaded datasets, it can be run as
+#### Optimization-based methods
+
+For optimization-based approaches, it does not require any pretrained model. Taking [MVPose](https://zju3dv.github.io/mvpose/) as an example, it can be run as
 
 ```bash
-python tool/estimate_keypoints3d.py --config ./config/kps3d_estimation/shelf_config/estimate_kps3d.py
+Coming soon!
 ```
 
-Some useful configs are explained here:
-
- - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` to True in config file.
+#### Learning-based methods
 
 For learning-based methods, we provide model checkpoints for MvP in [model_zoo](./benchmark.md). For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tool/train_model.md) and [evaluation tutorial](./tool/val_model.md).
 
@@ -93,19 +97,23 @@ We provide pretrained models in the respective method folders in [config](config
 
 ### Evaluate with a single GPU / multiple GPUs
 
-For optimization-based methods,
-
-```shell
-# better to provide a script like beloew
-# python tools/test.py ${CONFIG} --work-dir=${WORK_DIR} ${CHECKPOINT} --metrics=${METRICS}
-```
+#### Optimization-based methods
 
 Evaluate on the Shelf/Campus/CMU Panoptic datasets
 
-Example:
-```shell
-python xrmocap/core/evaluation/evaluate_keypoints3d.py --config ./config/kps3d_estimation/eval_kps3d_estimation.py
+```bash
+python tools/mview_mperson_evaluation.py \
+      --enable_log_file \
+      --evaluation_config configs/mvpose/shelf_config/eval_keypoints3d.py
 ```
+
+```bash
+python tools/mview_mperson_evaluation.py \
+      --enable_log_file \
+      --evaluation_config configs/mvpose_tracking/shelf_config/eval_keypoints3d.py
+```
+
+#### Learning-based methods
 
 For learning-based methods, more details about dataset preparation, model weights and checkpoints download can be found at [evaluation tutorial](./tool/val_model.md).
 
@@ -128,6 +136,7 @@ If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.c
 ```shell
 sh ./scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
+
 Example:
 ```shell
 sh ./scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
@@ -135,6 +144,8 @@ sh ./scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.
 
 
 ## Training
+
+Training is only applicable to learning-based methods.
 
 ### Training with a single / multiple GPUs
 
@@ -147,6 +158,7 @@ Example:
 
 ```
 sh ./scripts/train_mvp.sh 8 configs/mvp/campus_config/mvp_campus.py
+
 ```
 
 ### Training with Slurm

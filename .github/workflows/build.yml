@@ -23,50 +23,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build_cuda101:
+  build_cuda102:
     runs-on: ubuntu-18.04
-    strategy:
-      matrix:
-        python-version: [3.7]
-        torch: [1.7.0, 1.8.0]
-        include:
-          - torch: 1.7.0
-            torchvision: 0.8.1
-          - torch: 1.8.0
-            torchvision: 0.9.0
     defaults:
       run:
         shell: bash -l {0}
-
+    container:
+      image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
+      credentials:
+        username: ${{secrets.DOCKERHUB_USERNAME}}
+        password: ${{secrets.DOCKERHUB_PWD}}
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: xrmocap_env
-          python-version: ${{matrix.python-version}}
-          auto-activate-base: false
+      - name: Show conda env
+        run: |
+          source /root/miniconda3/etc/profile.d/conda.sh && conda deactivate
+          conda info -e
+          conda activate openxrlab
+          conda list | grep torch
+          conda list | grep mmcv
       - name: Prepare test data
         run: |
-          # TODO: prepare test data or remove this step
-      - name: Upgrade pip
-        run: pip install pip --upgrade
-      - name: Install ffmpeg
+          sh scripts/download_test_data.sh
+      - name: Prepare weight
         run: |
-          conda install ffmpeg
-          ffmpeg -version
-      - name: Install PyTorch
-        run: |
-          conda install pytorch==${{matrix.torch}} torchvision==${{matrix.torchvision}} cudatoolkit=10.1 -c pytorch
-      - name: Install MMCV
-        run: |
-          pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${{matrix.torch}}/index.html
-          python -c 'import mmcv; print(mmcv.__version__)'
-      - name: Install other dependencies
-        run: pip install -r requirements.txt
+          sh scripts/download_test_data.sh
+          mkdir weight
+          cd weight
+          wget https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+          wget https://download.openmmlab.com/mmpose/top_down/hrnet/hrnet_w48_coco_wholebody_384x288_dark-f5726563_20200918.pth
+          wget https://download.openmmlab.com/mmtracking/mot/faster_rcnn/faster-rcnn_r50_fpn_4e_mot17-half-64ee2ed4.pth
+          wget https://download.openmmlab.com/mmtracking/mot/reid/tracktor_reid_r50_iter25245-a452f51f.pth
+          cd ..
       - name: Build and install
-        run: rm -rf .eggs && pip install -e .
+        run: |
+          rm -rf xrmocap.egg-info
+          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
+          pip install xrprimer
+          pip install -e .
       - name: Run unittests and generate coverage report
         run: |
+          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           coverage run --source xrmocap -m pytest tests/
           coverage xml
           coverage report -m

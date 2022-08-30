@@ -19,6 +19,7 @@ from xrmocap.transform.image.color import bgr2rgb
 
 input_dir = 'tests/data/human_perception/test_bbox_detection'
 output_dir = 'tests/data/output/human_perception/test_bbox_detection'
+device = 'cpu' if not torch.cuda.is_available() else 'cuda'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -29,7 +30,7 @@ def fixture():
     smc_reader = SMCReader('tests/data/p000103_a000011_tiny.smc')
     single_image_array = smc_reader.get_kinect_color(kinect_id=0, frame_id=0)
     single_image_array = bgr2rgb(single_image_array)
-    image_array = single_image_array.repeat(4, axis=0)
+    image_array = single_image_array.repeat(2, axis=0)
     image_dir = os.path.join(output_dir, 'rgb_frames')
     array_to_images(
         image_array=image_array, output_folder=image_dir, disable_log=True)
@@ -42,17 +43,16 @@ def test_mmdet_detector_build():
     detector_config = dict(
         mmcv.Config.fromfile('configs/modules/human_perception/' +
                              'mmdet_faster_rcnn_detector.py'))
+    detector_config['mmdet_kwargs']['device'] = device
     # test init
     _ = build_detector(detector_config)
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_mmdet_detector_infer():
     detector_config = dict(
         mmcv.Config.fromfile('configs/modules/human_perception/' +
                              'mmdet_faster_rcnn_detector.py'))
-    detector_config['mmdet_kwargs']['device'] = 'cuda:0'
+    detector_config['mmdet_kwargs']['device'] = device
     # test init
     mmdet_detector = build_detector(detector_config)
     # test infer frames
@@ -114,17 +114,16 @@ def test_mmtrack_detector_build():
     detector_config = dict(
         mmcv.Config.fromfile('configs/modules/human_perception/' +
                              'mmtrack_faster_rcnn_detector.py'))
+    detector_config['mmtrack_kwargs']['device'] = device
     # test init
     _ = build_detector(detector_config)
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_mmtrack_detector_infer():
     detector_config = dict(
         mmcv.Config.fromfile('configs/modules/human_perception/' +
                              'mmtrack_faster_rcnn_detector.py'))
-    detector_config['mmtrack_kwargs']['device'] = 'cuda:0'
+    detector_config['mmtrack_kwargs']['device'] = device
     # test init
     mmtrack_detector = build_detector(detector_config)
     # test infer frames

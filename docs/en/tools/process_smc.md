@@ -1,6 +1,11 @@
 # Tool process_smc
 
-[TOC]
+- [Overview](#overview)
+- [Argument: estimator_config](#argument-estimator_config)
+- [Argument: output_dir](#argument-output_dir)
+- [Argument: disable_log_file](#argument-disable_log_file)
+- [Argument: visualize](#argument-visualize)
+- [Example](#example)
 
 ### Overview
 

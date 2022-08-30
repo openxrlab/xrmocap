@@ -1,14 +1,10 @@
 # Installation
 
-<!-- TOC -->
-
 - [Installation](#installation)
   - [Requirements](#requirements)
   - [Prepare environment](#prepare-environment)
   - [A from-scratch setup script](#a-from-scratch-setup-script)
   - [Run with docker image](#run-with-docker-image)
-
-<!-- TOC -->
 
 ## Requirements
 
@@ -99,4 +95,11 @@ Run it with
 
 ```shell
 docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data xrmocap
+```
+
+Or pull a built image from docker hub.
+
+```shell
+docker pull openxrlab/xrmocap_runtime
+docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data openxrlab/xrmocap_runtime
 ```
