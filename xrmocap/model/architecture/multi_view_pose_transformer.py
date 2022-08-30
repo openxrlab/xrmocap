@@ -14,9 +14,25 @@ from xrprimer.utils.log_utils import get_logger
 from xrmocap.model.loss.builder import build_loss
 from xrmocap.model.mvp.builder import build_model
 from xrmocap.model.mvp.position_encoding import get_2d_coords, get_rays
+from xrmocap.model.mvp.projattn import ProjAttn
 from xrmocap.utils.mvp_utils import absolute2norm, get_clones, inverse_sigmoid
 from .base_architecture import BaseArchitecture
 
+try:
+    import Deformable as DF  # noqa F401
+    has_deformable = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_deformable = False
+    import traceback
+    stack_str = ''
+    for line in traceback.format_stack():
+        if 'frozen' not in line:
+            stack_str += line + '\n'
+    import_exception = traceback.format_exc() + '\n'
+    import_exception = stack_str + import_exception
+
+# yapf: enable
 
 
 class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):

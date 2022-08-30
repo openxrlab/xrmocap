@@ -3,9 +3,9 @@ import torch.nn.functional as F
 from torch import nn
 
 import xrmocap.utils.camera_utils as cameras
+from xrmocap.model.mvp.builder import build_model
 from xrmocap.transform.point import affine_transform_pts
 from xrmocap.utils.mvp_utils import get_clones, inverse_sigmoid, norm2absolute
-from xrmocap.model.mvp.builder import build_model
 
 
 class MvPDecoderLayer(nn.Module):
@@ -69,11 +69,13 @@ class MvPDecoderLayer(nn.Module):
 
         # projective attention
         proj_attn_cfg = dict(type='ProjAttn')
-        proj_attn_cfg.update(dict(d_model=d_model, 
-                                  n_levels=n_feature_levels,
-                                  n_heads=n_heads, 
-                                  n_points=dec_n_points, 
-                                  projattn_posembed_mode=projattn_pose_embed_mode))
+        proj_attn_cfg.update(
+            dict(
+                d_model=d_model,
+                n_levels=n_feature_levels,
+                n_heads=n_heads,
+                n_points=dec_n_points,
+                projattn_posembed_mode=projattn_pose_embed_mode))
         self.proj_attn = build_model(proj_attn_cfg)
 
         self.dropout1 = nn.Dropout(dropout)
