@@ -21,6 +21,7 @@ from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 # yapf: enable
 input_dir = 'tests/data/model/registrant'
 output_dir = 'tests/data/output/model/registrant/test_smplifyxd'
+device = 'cpu' if not torch.cuda.is_available() else 'cuda'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -35,6 +36,7 @@ def test_build():
     smplifyxd_config = dict(
         mmcv.Config.fromfile(
             'configs/modules/model/registrant/smplifyxd_test.py'))
+    smplifyxd_config['device'] = device
     smplifyxd = build_registrant(smplifyxd_config)
     assert smplifyxd is not None
     # build with body_model
@@ -59,11 +61,7 @@ def test_build():
     assert smplifyxd is not None
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_smplifyxd_keypoints3d():
-    device = torch.device(
-        'cuda') if torch.cuda.is_available() else torch.device('cpu')
     keypoints3d_path = os.path.join(input_dir, 'human_data_tri.npz')
     human_data = dict(np.load(keypoints3d_path, allow_pickle=True))
     keypoints3d, keypoints3d_mask = convert_kps_mm(
@@ -80,6 +78,7 @@ def test_smplifyxd_keypoints3d():
     smplifyxd_config = dict(
         mmcv.Config.fromfile('configs/modules/model/' +
                              'registrant/smplifyxd_test.py'))
+    smplifyxd_config['device'] = device
     smplifyxd = build_registrant(smplifyxd_config)
     kp3d_mse_input = Keypoint3dMSEInput(
         keypoints3d=keypoints3d,
