@@ -5,20 +5,7 @@ from torch import nn
 import xrmocap.utils.camera_utils as cameras
 from xrmocap.transform.point import affine_transform_pts
 from xrmocap.utils.mvp_utils import get_clones, inverse_sigmoid, norm2absolute
-
-try:
-    from xrmocap.model.deformable.modules import ProjAttn
-    has_deformable = True
-    import_exception = ''
-except (ImportError, ModuleNotFoundError):
-    has_deformable = False
-    import traceback
-    stack_str = ''
-    for line in traceback.format_stack():
-        if 'frozen' not in line:
-            stack_str += line + '\n'
-    import_exception = traceback.format_exc() + '\n'
-    import_exception = stack_str + import_exception
+from xrmocap.model.mvp.builder import build_model
 
 
 class MvPDecoderLayer(nn.Module):
@@ -81,8 +68,14 @@ class MvPDecoderLayer(nn.Module):
         super().__init__()
 
         # projective attention
-        self.proj_attn = ProjAttn(d_model, n_feature_levels, n_heads,
-                                  dec_n_points, projattn_pose_embed_mode)
+        proj_attn_cfg = dict(type='ProjAttn')
+        proj_attn_cfg.update(dict(d_model=d_model, 
+                                  n_levels=n_feature_levels,
+                                  n_heads=n_heads, 
+                                  n_points=dec_n_points, 
+                                  projattn_posembed_mode=projattn_pose_embed_mode))
+        self.proj_attn = build_model(proj_attn_cfg)
+
         self.dropout1 = nn.Dropout(dropout)
         self.norm1 = nn.LayerNorm(d_model)
 
