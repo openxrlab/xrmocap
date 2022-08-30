@@ -15,7 +15,7 @@ sh ROOT/xrmocap/model/deformable/make.sh
 
 2. Prepare Datasets
 
-Follow the [dataset tool](./prepare_dataset.md) tutorial to prepare the train and test data. Some pre-processed datasets are available for download [here](../dataset_preparation.md). Place the train and test data including meta data under `ROOT/xrmocap_data`.
+Follow the [dataset tool](./prepare_dataset.md) tutorial to prepare the train and test data. Some pre-processed datasets are available for download [here](../dataset_preparation.md). Place the `trainset_pesudo_gt` and `testset` data including meta data under `ROOT/xrmocap_data`.
 
 
 3. Prepare pre-trained model weights and model checkpoints
@@ -25,6 +25,36 @@ Download pre-trained backbone weights or MvP model checkpoints from [here](../..
 4. Prepare config files
 
 Modify the config files in `ROOT/configs/mvp` if needed. Make sure the directories in config files match the directories and file names for your datasets and pre-traind weights.
+
+The final file structure ready for training would be like:
+
+```text
+xrmocap
+├── xrmoccap
+├── tools
+├── configs
+└── weight
+    ├── xrmocap_mvp_campus.pth.tar
+    ├── xrmocap_mvp_shelf.pth.tar
+    ├── xrmocap_mvp_panoptic_5view.pth.tar
+    ├── xrmocap_mvp_panoptic_3view_3_12_23.pth.tar
+    └── xrmocap_pose_resnet50_panoptic.pth.tar
+└── xrmocap_data
+    └── meta  
+        └── shelf
+            ├── xrmocap_meta_testset
+            └── xrmocap_meta_trainset_pesudo_gt
+        ├── campus
+        └── panoptic
+    ├── Shelf
+    ├── CampusSeq1
+    └── panoptic
+        ├── 160906_band4
+        ├── 160906_ian5
+        ├── ...
+        └── 160906_pizza1
+
+```
 
 ## Example
 
