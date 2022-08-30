@@ -2,8 +2,8 @@
 
 ## Overview
 
-## Preparation 
-Download deformable 
+## Preparation
+Download deformable
 
 Download pretrained weights
 

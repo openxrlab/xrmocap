@@ -32,7 +32,7 @@ MvP for Campus was fine-tuned from the weights pre-trained with 3 selected views
 
 ### Shelf
 
-MvP for Shelf was fine-tuned from the weights pre-trained with 5 selected views in CMU Panoptic dataset. The 5 selected views, HD camera view 3, 6, 12, 13 and 23 are the same views used in VoxelPose. 
+MvP for Shelf was fine-tuned from the weights pre-trained with 5 selected views in CMU Panoptic dataset. The 5 selected views, HD camera view 3, 6, 12, 13 and 23 are the same views used in VoxelPose.
 
 | Config | Shelf  | Download |
 |:------:|:-------:|:--------:|
