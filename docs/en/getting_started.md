@@ -148,7 +148,7 @@ sh ./scripts/train_mvp.sh 8 configs/mvp/campus_config/mvp_campus.py
 
 ### Training with Slurm
 
-If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `slurm_train.sh`.
+If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `scripts/slurm_train_mvp.sh`.
 
 ```shell
 sh ./scripts/slurm_train_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE}
