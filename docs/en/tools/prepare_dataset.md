@@ -1,6 +1,11 @@
 # Tool prepare_dataset
 
-[TOC]
+- [Overview](#overview)
+- [Argument: converter_config](#argument-converter_config)
+- [Argument: overwrite](#argument-overwrite)
+- [Argument: disable_log_file](#argument-disable_log_file)
+- [Argument: paths](#argument-paths)
+- [Example](#example)
 
 ### Overview
 

@@ -10,7 +10,7 @@
 Download data from the file server, and extract files to `tests/data`.
 
 ```
-sh script/download_test_data.sh
+sh scripts/download_test_data.sh
 ```
 
 ## Environment Preparation

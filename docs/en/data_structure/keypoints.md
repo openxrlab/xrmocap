@@ -1,8 +1,14 @@
 # Keypoints
 
-[TOC]
-
-
+- [Overview](#overview)
+- [Key/Value definition](#keyvalue-definition)
+- [Attribute definition](#attribute-definition)
+- [Name convention](#name-convention)
+- [Create an instance](#create-an-instance)
+- [Auto-completion](#auto-completion)
+- [Convert between numpy and torch](#convert-between-numpy-and-torch)
+- [File IO](#file-io)
+- [Keypoints convention](#keypoints-convention)
 
 ### Overview
 

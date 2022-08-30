@@ -33,8 +33,6 @@ def fixture():
         image_array=image_array, output_path=video_path, disable_log=True)
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_mmdet_detector():
     empty_bbox = [0.0, 0.0, 0.0, 0.0, 0.0]
     single_person_bbox = np.load(
@@ -44,7 +42,8 @@ def test_mmdet_detector():
     estimator_config = dict(
         mmcv.Config.fromfile(
             'configs/modules/human_perception/mmpose_hrnet_estimator.py'))
-    estimator_config['mmpose_kwargs']['device'] = 'cuda:0'
+    device = 'cpu' if not torch.cuda.is_available() else 'cuda'
+    estimator_config['mmpose_kwargs']['device'] = device
     # test init
     mmpose_estimator = build_detector(estimator_config)
     # test convention

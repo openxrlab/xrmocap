@@ -1,6 +1,7 @@
 # APIs
 
-[TOC]
+- [Multi-view single-person SMPL Estimator](#multi-view-single-person-smpl-estimator)
+- [Multi-view multi-person SMPL Estimator](#multi-view-multi-person-smpl-estimator)
 
 ### Multi-view single-person SMPL Estimator
 
