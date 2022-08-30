@@ -11,6 +11,5 @@ GPUS_PER_NODE=$1
 
 python -m torch.distributed.launch \
         --nproc_per_node=${GPUS_PER_NODE} \
-        --master_port 65520 \
         --use_env tool/train_model.py \
         --cfg ${CFG_FILE} \

@@ -13,18 +13,18 @@ Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) 
 sh ROOT/xrmocap/model/deformable/make.sh
 ```
 
-2. Prepare Dataset
+2. Prepare Datasets
 
-Follow the [Prepare dataset](https://github.com/openxrlab/xrmocap/blob/main/docs/en/tool/prepare_dataset.md) tutorial to prepare the train and test data. Place the train and test data including meta data under `ROOT/xrmocap_data`.
+Follow the [dataset tool](./prepare_dataset.md) tutorial to prepare the train and test data. Some pre-processed datasets are available for download [here](../dataset_preparation.md). Place the train and test data including meta data under `ROOT/xrmocap_data`.
 
 
 3. Prepare pre-trained model weights and model checkpoints
 
-Download pre-trained backbone weights or MvP model checkpoints from [here](https://github.com/openxrlab/xrmocap/blob/mvp_doc_dev/configs/mvp/README.md). Place the model weights under `ROOT/weight`.
+Download pre-trained backbone weights or MvP model checkpoints from [here](../../../configs/mvp/README.md). Place the model weights under `ROOT/weight`.
 
 4. Prepare config files
 
-Modify the config files in `ROOT/configs/mvp` if needed. Make sure the directories in config files match the directories and file names for your dataset and pre-traind weights.
+Modify the config files in `ROOT/configs/mvp` if needed. Make sure the directories in config files match the directories and file names for your datasets and pre-traind weights.
 
 ## Example
 
@@ -40,4 +40,4 @@ python -m torch.distributed.launch \
 or directly run the script:
 
 ```
-sh ROOT/scripts/train_mvp.sh
+sh ROOT/scripts/train_mvp.sh 8
