@@ -6,6 +6,7 @@ name: build
 on:
   push:
     branches:
+     - alpha_test # remove it after public
      - main
     paths-ignore:
       - 'README.md'
@@ -68,8 +69,9 @@ jobs:
           coverage xml
           coverage report -m
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }} # deprecated after public
           files: ./coverage.xml
           flags: unittests
           env_vars: OS,PYTHON
