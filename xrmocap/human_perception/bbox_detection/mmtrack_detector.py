@@ -47,9 +47,6 @@ class MMtrackDetector:
         # build the detector from a config file and a checkpoint file
         self.track_model = init_model(**mmtrack_kwargs)
 
-    def __del__(self):
-        del self.track_model
-
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
                     disable_tqdm: bool = False,
