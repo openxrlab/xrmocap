@@ -1,4 +1,4 @@
-# Learning-based model training
+# Learning-based model evaluation
 
 - [Overview](#overview)
 - [Preparation](#preparation)
@@ -6,11 +6,11 @@
 
 ## Overview
 
-This tool takes a config file and starts trainig MvP model with Shelf, Campus or CMU Panoptic dataset.
+This tool takes a config file and MvP model checkpoints and performs evaluation on Shelf, Campus or CMU Panoptic dataset.
 
 ## Preparation
 
-1. Install `Deformable` package (Skip if you have done this step during model evaluation)
+1. Install `Deformable` package (Skip if you have done this step during model training)
 
 Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) folder, rename and place the folder as `ROOT/xrmocap/model/deformable`. Install `Deformable` by running:
 ```
@@ -28,9 +28,9 @@ Download pre-trained backbone weights or MvP model checkpoints from [here](../..
 
 4. Prepare config files
 
-Modify the config files in `ROOT/configs/mvp` if needed. Make sure the directories in config files match the directories and file names for your datasets and pre-traind weights.
+Modify the config files in `ROOT/configs/mvp` if needed. Make sure the directories in config files match the directories and file names for your datasets and pre-traind model weights.
 
-The final file structure ready for training would be like:
+The final file structure ready for evaluation would be like:
 
 ```text
 xrmocap
@@ -46,8 +46,7 @@ xrmocap
 └── xrmocap_data
     └── meta  
         └── shelf
-            ├── xrmocap_meta_testset
-            └── xrmocap_meta_trainset_pesudo_gt
+            └── xrmocap_meta_testset
         ├── campus
         └── panoptic
     ├── Shelf
@@ -60,32 +59,34 @@ xrmocap
 
 ```
 
-## Example
+### Example
 
-Start training with 8 GPUs with provided config file for Campus dataset:
+Start evaluation with 8 GPUs with provided config file and pre-trained weights for Shelf dataset:
 
-```bash
+```shell
 python -m torch.distributed.launch \
-        --nproc_per_node= 8 \
-        --use_env tools/train_model.py \
-        --cfg configs/mvp/campus_config/mvp_campus.py \
+    --nproc_per_node=8 \
+    --use_env tools/eval_model.py \
+    --cfg configs/mvp/shelf_config/mvp_shelf.py \
+    --model_path weight/xrmocap_mvp_shelf.pth.tar
 ```
 
 Alternatively, you can also run the script directly:
 
+```shell
+sh ROOT/scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
-sh ROOT/scripts/train_mvp.sh ${NUM_GPUS} ${CFG_FILE}
-```
-Example:
 
+Example:
+```shell
+sh ROOT/scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
-sh ROOT/scripts/train_mvp.sh 8 configs/mvp/campus_config/mvp_campus.py
-```
+
 If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script:
 ```shell
-sh ROOT/scripts/slurm_train_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE}
+sh ROOT/scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
 Example:
 ```shell
-sh ROOT/scripts/slurm_train_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py
+sh ROOT/scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```

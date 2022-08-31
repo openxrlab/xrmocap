@@ -43,6 +43,7 @@ We provide a demo script to estimate SMPL parameters for single-person or multi-
 
 We assume that the cameras have been calibrated. If you want to know more about camera calibration, refer to [XRPrimer](https://github.com/openxrlab/xrprimer/blob/main/docs/en/tool/calibrate_pinhole_cameras.md) for more details.
 
+
 ### Perception Model
 
  -  **Prepare CamStyle models**:
@@ -61,7 +62,10 @@ Currently, we only provide optimization-based method for single person estimatio
 
 The above code is supposed to run successfully upon you finish the installation.
 
+
 ### Multiple People
+
+A small test dataset for quick inference and demo can be downloaded from [here](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
 
 #### Optimization-based methods
 
@@ -73,11 +77,19 @@ Coming soon!
 
 #### Learning-based methods
 
-For learning-based methods, we provide pretrained models in [model_zoo](), it can be downloaded and run the script as below.
+For learning-based methods, we provide model checkpoints for MvP in [model_zoo](./benchmark.md). For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tools/train_model.md) and [evaluation tutorial](./tools/eval_model.md).
 
-```bash
-sh script/eval_mvp.sh
+With the downloaded pretrained MvP models:
+
+```shell
+sh ./scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
+
+Example:
+```shell
+sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+```
+
 
 ## Evaluation
 
@@ -103,23 +115,31 @@ python tools/mview_mperson_evaluation.py \
 
 #### Learning-based methods
 
-For learning-based methods, with the downloaded pretrained models from [model_zoo]():
+For learning-based methods, more details about dataset preparation, model weights and checkpoints download can be found at [evaluation tutorial](./tools/eval_model.md).
 
-```bash
-sh script/slurm_eval_mvp.sh
-```
-
-### Evaluate with slurm
-
-If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `slurm_test.sh`.
+With the downloaded pretrained MvP models from [model_zoo](./benchmark.md):
 
 ```shell
-./tools/slurm_test.sh ${PARTITION} ${JOB_NAME} ${CONFIG} ${WORK_DIR} ${CHECKPOINT} --metrics ${METRICS}
+sh ./scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
 
 Example:
 ```shell
-./tools/slurm_test.sh my_partition test_hmr configs/hmr/resnet50_hmr_pw3d.py work_dirs/hmr work_dirs/hmr/latest.pth 8 --metrics pa-mpjpe mpjpe
+sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+```
+
+
+### Evaluate with slurm
+
+If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `scripts/slurm_eval_mvp.sh`.
+
+```shell
+sh ./scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
+```
+
+Example:
+```shell
+sh ./scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
 
 
@@ -129,21 +149,28 @@ Training is only applicable to learning-based methods.
 
 ### Training with a single / multiple GPUs
 
-```shell
-python tools/train.py ${CONFIG_FILE} ${WORK_DIR} --no-validate
-```
+To train the learning-based model, such as a MvP model, follow the [training tutorial](./tools/train_model.md) to prepare the datasets and pre-trained weights:
 
-Example: using 1 GPU to train MvP.
-```shell
-python tools/train.py ${CONFIG_FILE} ${WORK_DIR} --gpus 1 --no-validate
+```
+sh ./scripts/train_mvp.sh ${NUM_GPUS} ${CFG_FILE}
+```
+Example:
+
+```
+sh ./scripts/train_mvp.sh 8 configs/mvp/campus_config/mvp_campus.py
+
 ```
 
 ### Training with Slurm
 
-If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `slurm_train.sh`.
+If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `scripts/slurm_train_mvp.sh`.
 
 ```shell
-./tools/slurm_train.sh ${PARTITION} ${JOB_NAME} ${CONFIG_FILE} ${WORK_DIR} ${GPU_NUM} --no-validate
+sh ./scripts/slurm_train_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE}
+```
+Example:
+```shell
+sh ./scripts/slurm_train_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py
 ```
 
 
