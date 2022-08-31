@@ -48,6 +48,6 @@ MvP for CMU Panoptic trained from stcratch with pre-trained Pose ResNet50 backbo
 | mvp_panoptic.py | 91.5 | 97.9 | 99.85 |16.45 | [model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_5view-1b673cdf_20220831.pth) |
 | mvp_panoptic_3cam.py | 54.7 | 95.1 | 98.83 |30.55 | [model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_3view_3_12_23-4b391740_20220831.pth)  |
 
-### Pose ResNet50 backbone
+### Pose ResNet50 Backbone
 
 All the checkpoints provided above was trained on top of the pre-trained [Pose ResNet50](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_pose_resnet50_panoptic-5a2e53c9_20220831.pth) backbone weights.
