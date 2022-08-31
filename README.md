@@ -70,7 +70,7 @@ Supported datasets:
 
 ## Getting Started
 
-Please see [getting_started.md](docs/getting_started.md) for the basic usage of XRMoCap.
+Please see [getting_started.md](docs/en/getting_started.md) for the basic usage of XRMoCap.
 
 ## License
 

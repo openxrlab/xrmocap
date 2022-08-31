@@ -99,7 +99,7 @@ setup(
     author='',
     author_email='',
     keywords='',
-    url='https://gitlab.bj.sensetime.com/openxrlab/xrmocap',
+    url='https://github.com/openxrlab/xrmocap',
     packages=find_packages(exclude=('configs', 'tools', 'demo')),
     include_package_data=True,
     classifiers=[
