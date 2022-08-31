@@ -36,7 +36,7 @@ def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
     perception2d_dict = dict(
         np.load(args.perception2d_path, allow_pickle=True))
-    matched_list = np.load(args.matched_list_path, allow_pickle=True)
+    matched_list = np.load(args.matched_kps2d_idx, allow_pickle=True)
     estimator_config = dict(mmcv.Config.fromfile(args.estimator_config))
     estimator_config['logger'] = logger
     smpl_estimator = build_estimator(estimator_config)
@@ -108,9 +108,7 @@ def main(args):
             t_np = np.array(fisheye_param.get_extrinsic_t())
             cam_name = fisheye_param.name
             view_name = cam_name.replace('fisheye_param_', '')
-            # frame_list = sorted(
-            #     glob.glob(os.path.join(
-            #         args.image_dir, f'hd_00_{view_name}', '*.jpg')))
+            # You need to change the path of the image according to the dataset
             frame_list = sorted(
                 glob.glob(
                     os.path.join(args.image_dir, f'Camera{int(view_name)}',
@@ -174,7 +172,7 @@ def setup_parser():
         help='Path to input keypoints3d file',
         default='./output/mvpose_tracking/shelf/scene0_pred_keypoints3d.npz')
     parser.add_argument(
-        '--matched_list_path',
+        '--matched_kps2d_idx',
         type=str,
         default='./output/mvpose_tracking/shelf/scene0_matched_kps2d_idx.npy')
     parser.add_argument(

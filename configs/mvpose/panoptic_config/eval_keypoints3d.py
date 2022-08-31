@@ -2,7 +2,7 @@ type = 'TopDownAssociationEvaluation'
 
 __data_root__ = './xrmocap_data/CMU-panoptic'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
-__bbox_thr__ = 0.99
+__bbox_thr__ = 0.9
 
 logger = None
 output_dir = './output/mvpose/cmu-panoptic'

@@ -5,8 +5,17 @@ We incorporate modular and inheritance design into our config system, which is c
 ## Modify config through script arguments
 
 Take MVPose and MVPose tracking as an example
+
+If you want to use tracker, you need to create a variable of dictionary type containing `type='KalmanTracking'` and others needed in `__init__()`. Then you need to build it and will get a Kalman tracking module, otherwise you just need to set `kalman_tracking_config=None`.
+
+Example:
 ```
-# add config content
+kalman_tracking_config=dict(type='KalmanTracking', n_cam_min=2, logger=logger)
+
+if isinstance(kalman_tracking_config, dict):
+      kalman_tracking = build_kalman_tracking(kalman_tracking_config)
+else:
+      kalman_tracking = kalman_tracking_config
 ```
 
 Using trackers

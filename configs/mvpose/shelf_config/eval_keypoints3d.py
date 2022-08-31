@@ -1,11 +1,11 @@
 type = 'TopDownAssociationEvaluation'
 
 __data_root__ = './xrmocap_data/Shelf'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
+__meta_path__ = __data_root__ + '/xrmocap_meta_testset_fasterrcnn'
 __bbox_thr__ = 0.9
 
 logger = None
-output_dir = './output/mvpose/shelf'
+output_dir = './output/mvpose/shelf/fasterrcnn'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
