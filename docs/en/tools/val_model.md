@@ -1,5 +1,9 @@
 # Learning-based model evaluation
 
+- [Overview](#overview)
+- [Preparation](#preparation)
+- [Example](#example)
+
 ## Overview
 
 This tool takes a config file and MvP model checkpoints and performs evaluation on Shelf, Campus or CMU Panoptic dataset.

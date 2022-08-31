@@ -1,5 +1,9 @@
 # Learning-based model training
 
+- [Overview](#overview)
+- [Preparation](#preparation)
+- [Example](#example)
+
 ## Overview
 
 This tool takes a config file and starts trainig MvP model with Shelf, Campus or CMU Panoptic dataset.
