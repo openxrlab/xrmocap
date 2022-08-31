@@ -56,8 +56,22 @@ You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
 
 Currently, we only provide optimization-based method for single person estimation.
 
+1. Download an SMC file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
+2. Extract the 7z file.
+
 ```bash
-# @gy
+7z x p000127_a000007.7z
+```
+
+3. Run [process_smc](./tools/process_smc.md) tool.
+
+```bash
+mkdir xrmocap_data/humman
+python tools/process_smc.py \
+	--estimator_cofig configs/humman_mocap/mview_sperson_smpl_estimator.py \
+	--smc_path p000127_a000007.smc \
+	--output_dir xrmocap_data/humman/p000127_a000007_output \
+	--visualize
 ```
 
 The above code is supposed to run successfully upon you finish the installation.
