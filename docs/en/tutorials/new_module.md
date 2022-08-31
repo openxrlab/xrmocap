@@ -2,7 +2,9 @@
 
 If you want to add a new module, write a class and register it in builder. Here we take triangulator as example.
 
-### Inherit from base class
+### Develop PytorchTriangulator class
+
+1. Inherit from base class
 
 Inherit from `BaseTriangulator` and assign correct values for class attributes.
 
@@ -23,7 +25,7 @@ Complete `__init__` and do not forget to add arguments of super-class.
 
 ```
 
-### Complete necessary methods defined by base class
+2. Complete necessary methods defined by base class
 
 ```python
     def triangulate(
@@ -43,7 +45,7 @@ Complete `__init__` and do not forget to add arguments of super-class.
 
 ```
 
-### Add special methods of this class(Optional)
+3. Add special methods of this class(Optional)
 
 ```python
     def get_device(
@@ -51,7 +53,7 @@ Complete `__init__` and do not forget to add arguments of super-class.
 
 ```
 
-### Register the class in builder
+4. Register the class in builder
 
 Insert the following lines into `xrmocap/ops/triangulation/builder.py`.
 
