@@ -12,7 +12,7 @@ class PytorchTriangulator(BaseTriangulator):
     CAMERA_WORLD2CAM = True
 ```
 
-Complete `__init__` and do not remember arguments of super-class.
+Complete `__init__` and do not forget to add arguments of super-class.
 
 ```python
     def __init__(self,
