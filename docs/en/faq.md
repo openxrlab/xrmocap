@@ -6,13 +6,13 @@ We list some common troubles faced by many users and their corresponding solutio
 
 - 'ImportError: libpng16.so.16: cannot open shared object file: No such file or directory'
 
-  Please refer to [xrprimer faq](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/faq.md).
+  Please refer to [xrprimer faq](https://github.com/openxrlab/xrprimer/blob/main/docs/en/faq.md).
 
 - 'ImportError: liblapack.so.3: cannot open shared object file: No such file or directory'
 
-  Please refer to [xrprimer faq](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/en/faq.md).
+  Please refer to [xrprimer faq](https://github.com/openxrlab/xrprimer/blob/main/docs/en/faq.md).
 
-- 'ModuleNotFoundError: No module named 'mmhuman3d.core.conventions.joints_mapping''
+- 'ModuleNotFoundError: No module named mmhuman3d.core.conventions.joints_mapping'
 
   Package `joints_mapping` actually exists in [github](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/joints_mapping), but it is not installed by pip for absence of `joints_mapping/__init__.py`. Install mmhuman3d from source will solve it:
 
@@ -20,4 +20,12 @@ We list some common troubles faced by many users and their corresponding solutio
   cd PATH_FOR_MMHUMAN3D
   git clone https://github.com/open-mmlab/mmhuman3d.git
   pip install -e ./mmhuman3d
+  ```
+
+- 'BrokenPipeError: ../../lib/python3.8/site-packages/xrprimer/utils/ffmpeg_utils.py:189: BrokenPipeError'
+
+  You've installed a wrong version of ffmpeg. Try to install it by the following command, and do not 	specify any channel:
+
+  ```bash
+  conda install ffmpeg
   ```

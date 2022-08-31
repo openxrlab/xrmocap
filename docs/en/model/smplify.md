@@ -1,6 +1,11 @@
 # SMPLify
 
-[TOC]
+- [Overview](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md#requirements)
+- [Relationships between classes](#relationships-between-classes)
+- [Build a registrant](#build-a-registrant)
+- [Prepare the input and run](#prepare-the-input-and-run)
+- [Develop a new loss](#develop-a-new-loss)
+- [How to write a config file](#how-to-write-a-config-file)
 
 ### Overview
 
@@ -15,7 +20,7 @@
 - loss module:  Sub-classes of `torch.nn.Module`. It has reduction, loss_weight and a forward method.
 
 
-![SMPLify-classes.](http://assets.processon.com/chart_image/62a696db07912939b2288244.png)
+![SMPLify-classes.](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/github_resources/SMPLify_classes.png)
 
 ### Build a registrant
 

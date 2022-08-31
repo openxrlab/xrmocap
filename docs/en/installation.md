@@ -1,14 +1,12 @@
 # Installation
 
-<!-- TOC -->
-
 - [Installation](#installation)
   - [Requirements](#requirements)
   - [Prepare environment](#prepare-environment)
   - [A from-scratch setup script](#a-from-scratch-setup-script)
   - [Run with docker image](#run-with-docker-image)
-
-<!-- TOC -->
+  - [Test environment](#test-environment)
+  - [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Requirements
 
@@ -18,7 +16,7 @@
 - PyTorch 1.6.0, 1.7.0, 1.7.1, 1.8.0, 1.8.1, 1.9.0 or 1.9.1.
 - CUDA 9.2+
 - GCC 5+
-- [XRPrimer](https://gitlab.bj.sensetime.com/openxrlab/xrprimer)
+- [XRPrimer](https://github.com/openxrlab/xrprimer)
 - [MMHuman3D](https://github.com/open-mmlab/mmhuman3d)
 - [MMCV](https://github.com/open-mmlab/mmcv)
 
@@ -33,6 +31,8 @@ Optional:
 
 ## Prepare environment
 
+Here are advanced instructions for environment setup. If you are not so familiar with python environment stuff, please refer to [A from-scratch setup script](#a-from-scratch-setup-script).
+
 ##### a. Create a conda virtual environment and activate it.
 
 ```shell
@@ -40,15 +40,44 @@ conda create -n xrmocap python=3.8 -y
 conda activate xrmocap
 ```
 
-##### b. Install MMHuman3D following the [official instructions](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md).
+##### b. Install MMHuman3D.
 
-Important: Make sure that your compilation CUDA version and runtime CUDA version match.
+Here we take `torch_version=1.8.1` and `cu_version=10.2` as example. For other versions, please follow the [official instructions](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md)
 
-##### c. Install XRPrimer following the [official instructions](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
+```shell
+# install ffmpeg from main channel
+conda install ffmpeg
+# install pytorch
+conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.2 -c pytorch
+# install pytorch3d
+conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+conda install -c bottler nvidiacub -y
+conda install pytorch3d -c pytorch3d
+# install mmcv-full for human_perception
+pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.1/index.html
+# install mmhuman3d
+pip install git+https://github.com/open-mmlab/mmhuman3d.git
+```
+
+**Note1:** Make sure that your compilation CUDA version and runtime CUDA version match.
+
+**Note2:** The package `mmcv-full(gpu)` is essential if you are going to use `human_perception` modules.
+
+**Note3:** Do not install optional requirements of mmhuman3d in this step.
+
+##### c. Install XRPrimer.
+
+```shell
+pip install xrprimer
+```
+
+To edit xrprimer, install it from source following the [official instructions](https://github.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
 
 ##### d. Install XRMoCap to virtual environment,  in editable mode.
 
 ```shell
+# go to the root of this repo
+cd xrmocap
 pip install -r requirements/build.txt
 pip install -r requirements/runtime.txt
 pip install -e .
@@ -100,3 +129,18 @@ Run it with
 ```shell
 docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data xrmocap
 ```
+
+Or pull a built image from docker hub.
+
+```shell
+docker pull openxrlab/xrmocap_runtime
+docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data openxrlab/xrmocap_runtime
+```
+
+### Test environment
+
+To test whether the environment is well installed, please refer to [test doc](./test.md).
+
+### Frequently Asked Questions
+
+If your environment fails, check our [FAQ doc](./faq.md) first, it might be helpful to some typical questions.

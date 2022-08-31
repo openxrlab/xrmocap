@@ -50,9 +50,6 @@ class MMdetDetector:
         self.det_model = init_detector(**mmdet_kwargs)
         self.batch_size = batch_size
 
-    def __del__(self):
-        del self.det_model
-
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
                     disable_tqdm: bool = False,

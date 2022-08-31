@@ -25,6 +25,12 @@ from xrmocap.transform.image.color import bgr2rgb
 
 
 def main(args):
+    # check output path
+    exist_result = check_path_existence(args.output_dir, 'dir')
+    if exist_result == Existence.MissingParent:
+        raise FileNotFoundError
+    elif exist_result == Existence.DirectoryNotExist:
+        os.mkdir(args.output_dir)
     file_name = args.smc_path.rsplit('/', 1)[-1]
     if not args.disable_log_file:
         time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
@@ -36,12 +42,6 @@ def main(args):
     exist_result = check_path_existence(args.smc_path, 'file')
     if exist_result != Existence.FileExist:
         raise FileNotFoundError
-    # check output path
-    exist_result = check_path_existence(args.output_dir, 'dir')
-    if exist_result == Existence.MissingParent:
-        raise FileNotFoundError
-    elif exist_result == Existence.DirectoryNotExist:
-        os.mkdir(args.output_dir)
     # load smc file
     smc_reader = SMCReader(file_path=args.smc_path)
     # build estimator

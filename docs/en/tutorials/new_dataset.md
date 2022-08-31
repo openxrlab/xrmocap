@@ -39,7 +39,7 @@ Dataset_xxx
 
 ##### Camera parameters of our unified format
 
-Each scene has its independent multi-view camera parameters, and each json file is dumped by `class FisheyeCameraParameter` in [XRPrimer](https://gitlab.bj.sensetime.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/python/xrprimer/data_structure/camera/fisheye_camera.py).
+Each scene has its independent multi-view camera parameters, and each json file is dumped by `class FisheyeCameraParameter` in [XRPrimer](https://github.com/openxrlab/xrprimer/blob/main/docs/en/data_structure/camera.md#fisheye).
 
 ##### Image list of our unified format
 
