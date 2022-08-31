@@ -1,5 +1,14 @@
 # Getting started
 
+- [Installation](#installation)
+- [Data Preparation](#data-preparation)
+- [Body Model Preparation (Optional)](#body-model-preparation-optional)
+- [Inference](#inference)
+- [Evaluation](#evaluation)
+- [Training](#training)
+- [More tutorials](#more-tutorials)
+- [](#)
+
 ## Installation
 
 Please refer to [installation.md](./installation.md) for installation.
@@ -37,7 +46,7 @@ xrmocap
             └── SMPL_NEUTRAL.pkl
 ```
 
-## Inference / Demo
+## Inference
 
 We provide a demo script to estimate SMPL parameters for single-person or multi-person from multi-view synchronized input images or videos. With this demo script, you only need to choose a method, we currently support two types of methods, namely, optimization-based approaches and end-to-end learning algorithms, specify a few arguments, and then you can get the estimated results.
 
@@ -46,7 +55,7 @@ We assume that the cameras have been calibrated. If you want to know more about 
 
 ### Perception Model
 
- -  **Prepare CamStyle models**:
+Prepare perceptions models, including detection, 2d pose estimation, tracking and CamStyle models.
 
 ```
 sh scripts/download_weight.sh
@@ -202,3 +211,4 @@ sh ./scripts/slurm_train_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf
 - [Introduction](./tutorials/introduction.md)
 - [Config](./tutorials/config.md)
 - [New dataset](./tutorials/new_dataset.md)
+- [New module](./tutorials/new_module.md)
