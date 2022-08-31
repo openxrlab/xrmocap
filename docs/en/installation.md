@@ -31,6 +31,8 @@ Optional:
 
 ## Prepare environment
 
+Here are advanced instructions for environment setup. If you are not so familiar with python environment stuff, please refer to [A from-scratch setup script](#a-from-scratch-setup-script).
+
 ##### a. Create a conda virtual environment and activate it.
 
 ```shell
