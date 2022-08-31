@@ -63,15 +63,13 @@ TRIANGULATORS.register_module(
 
 ```
 
-### Test building
+### Build and use
 
 Test whether the new module is OK to build.
 
 ```python
 from xrmocap.ops.triangulation.builder import build_triangulator
 
-build_triangulator(dict(
-    type='PytorchTriangulator'
-))
+triangulator = build_triangulator(dict(type='PytorchTriangulator'))
 
 ```
