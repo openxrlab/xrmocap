@@ -30,8 +30,15 @@ def main(args):
     else:
         logger = setup_logger(logger_name=__name__)
     keypoints3d = Keypoints.fromfile(npz_path=args.keypoints3d_path)
-    fisheye_param_paths = sorted(
-        glob.glob(os.path.join(args.fisheye_param_dir, 'fisheye_param_*')))
+    image_dir = []
+    fisheye_param_paths = []
+    with open(args.image_and_camera_param, 'r') as f:
+        for i, line in enumerate(f.readlines()):
+            line = line.strip()
+            if i % 2 == 0:
+                image_dir.append(line)
+            else:
+                fisheye_param_paths.append(line)
     fisheye_params = load_camera_parameters(fisheye_param_paths)
     os.makedirs(args.output_dir, exist_ok=True)
     perception2d_dict = dict(
@@ -102,17 +109,14 @@ def main(args):
             model_path='xrmocap_data/body_models',
             batch_size=1)
         # prepare camera
-        for fisheye_param in fisheye_params:
+        for idx, fisheye_param in enumerate(fisheye_params):
             k_np = np.array(fisheye_param.get_intrinsic(3))
             r_np = np.array(fisheye_param.get_extrinsic_r())
             t_np = np.array(fisheye_param.get_extrinsic_t())
             cam_name = fisheye_param.name
             view_name = cam_name.replace('fisheye_param_', '')
-            # You need to change the path of the image according to the dataset
             frame_list = sorted(
-                glob.glob(
-                    os.path.join(args.image_dir, f'Camera{int(view_name)}',
-                                 '*.png')))
+                glob.glob(os.path.join(image_dir[idx], '*.png')))
             frame_list_start = int(frame_list[0][-10:-4])
             frame_list = frame_list[args.start_frame -
                                     frame_list_start:args.end_frame -
@@ -159,10 +163,6 @@ def setup_parser():
         type=str,
         default='configs/modules/core/estimation/'
         'mview_mperson_smpl_estimator.py')
-    parser.add_argument(
-        '--image_dir',
-        help='Path to the directory containing image',
-        default='xrmocap_data/Shelf')
     parser.add_argument('--start_frame', type=int, default=300)
     parser.add_argument('--end_frame', type=int, default=600)
     parser.add_argument('--bbox_thr', type=float, default=0.9)
@@ -176,11 +176,10 @@ def setup_parser():
         type=str,
         default='./output/mvpose_tracking/shelf/scene0_matched_kps2d_idx.npy')
     parser.add_argument(
-        '--fisheye_param_dir',
-        type=str,
-        help='Path to camera parameter',
-        default='./xrmocap_data/Shelf/xrmocap_meta_testset/'
-        'scene_0/camera_parameters')
+        '--image_and_camera_param',
+        help='A text file contains the image path and the corresponding'
+        'camera parameters',
+        default='./xrmocap_data/Shelf/image_and_camera_param.txt')
     parser.add_argument(
         '--perception2d_path',
         type=str,

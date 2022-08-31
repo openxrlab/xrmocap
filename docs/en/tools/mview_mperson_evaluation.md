@@ -20,7 +20,7 @@ Also, you can find our prepared config files at `configs/mvpose/*/eval_keypoints
 
 ## Example
 
-Run the tool without tracking.
+Evaluate on the Shelf dataset and run the tool without tracking.
 
 ```bash
 python tools/mview_mperson_evaluation.py \
@@ -28,7 +28,7 @@ python tools/mview_mperson_evaluation.py \
       --evaluation_config configs/mvpose/shelf_config/eval_keypoints3d.py
 ```
 
-Run the tool with tracking.
+Evaluate on the Shelf dataset and run the tool with tracking.
 
 ```bash
 python tools/mview_mperson_evaluation.py \

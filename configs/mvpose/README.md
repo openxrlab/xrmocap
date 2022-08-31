@@ -68,7 +68,7 @@ xrmocap
 
 We evaluate MVPose (Single frame) on 3 popular benchmarks, report the Percentage of Correct Parts (PCP) on Shelf/Campus/CMU-Panoptic datasets.
 
-You can find the recommended configs in `configs/mvpose/*/eval_keypoints3d.py`, where `__bbox_thr__` is the threshold of bbox2d, you can set a high threshold to ignore incorrect 2D perception data, `n_cam_min` is the amount of keypoints2d required for triangulation, which defaults to 2.
+You can find the recommended configs in `configs/mvpose/*/eval_keypoints3d.py`, where `__bbox_thr__` is the threshold of bbox2d, you can set a high threshold to ignore incorrect 2D perception data, `n_cam_min` is the amount of views required for triangulation, which defaults to 2.
 
 
 ### Campus

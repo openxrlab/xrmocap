@@ -67,7 +67,7 @@ xrmocap
 
 We evaluate MVPose (Temporal tracking and filtering) on 3 popular benchmarks, report the Percentage of Correct Parts (PCP) on Shelf/Campus/CMU-Panoptic datasets.
 
-You can find the recommended configs in `configs/mvpose_tracking/*/eval_keypoints3d.py`, where `interval` is the global matching interval, that is, the maximum number of frames for Kalman filtering. If the interval is set too large, the accuracy of the estimation will be degraded, so we recommen within 50 frames. `__bbox_thr__` is the threshold of bbox2d, you can set a high threshold to ignore incorrect 2D perception data, and we recommen setting it to 0.9. `best_distance` is the threshold at which the current-frame keypoints2d successfully matches the last-frame keypoints2d, for the different dataset, it needs to be adjusted. `n_cam_min` is the amount of keypoints2d required for triangulation, which defaults to 2.
+You can find the recommended configs in `configs/mvpose_tracking/*/eval_keypoints3d.py`, where `interval` is the global matching interval, that is, the maximum number of frames for Kalman filtering. If the interval is set too large, the accuracy of the estimation will be degraded, so we recommen within 50 frames. `__bbox_thr__` is the threshold of bbox2d, you can set a high threshold to ignore incorrect 2D perception data, and we recommen setting it to 0.9. `best_distance` is the threshold at which the current-frame keypoints2d successfully matches the last-frame keypoints2d, for the different dataset, it needs to be adjusted. `n_cam_min` is the amount of views required for triangulation, which defaults to 2.
 
 ### Campus
 
