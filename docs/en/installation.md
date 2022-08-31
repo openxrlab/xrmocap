@@ -71,7 +71,7 @@ pip install git+https://github.com/open-mmlab/mmhuman3d.git
 pip install xrprimer
 ```
 
-To edit xrprimer, install it from source following the [official instructions](https://github.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
+To edit xrprimer, install it from source following the [official instructions](https://github.com/openxrlab/xrprimer/).
 
 ##### d. Install XRMoCap to virtual environment,  in editable mode.
 
@@ -104,7 +104,7 @@ conda install -y pytorch3d -c pytorch3d
 pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.8.1/index.html
 
 # install xrprimer
-pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
+pip install xrprimer
 
 # install requirements for build
 pip install -r requirements/build.txt

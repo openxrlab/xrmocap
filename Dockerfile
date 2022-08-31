@@ -42,7 +42,7 @@ RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
     pip install pre-commit interrogate coverage pytest && \
     pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.1/index.html && \
-    pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple && \
+    pip install xrprimer && \
     pip cache purge
 
 # Install build requirements
