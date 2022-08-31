@@ -47,10 +47,11 @@ We assume that the cameras have been calibrated. If you want to know more about 
 ### Perception Model
 
  -  **Prepare CamStyle models**:
+
 ```
 sh scripts/download_weight.sh
 ```
-You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You could find `resnet50_reid_camstyle.pth.tar` in `weight` file.
 
 ### Single Person
 
@@ -74,6 +75,10 @@ For optimization-based approaches, it does not require any pretrained model. Tak
 ```bash
 Coming soon!
 ```
+
+Some useful configs are explained here:
+
+ - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` to True in config file.
 
 #### Learning-based methods
 
@@ -101,11 +106,15 @@ We provide pretrained models in the respective method folders in [config](config
 
 Evaluate on the Shelf/Campus/CMU Panoptic datasets
 
+- Evaluate on the Shelf dataset and run the tool without tracking.
+
 ```bash
 python tools/mview_mperson_evaluation.py \
       --enable_log_file \
       --evaluation_config configs/mvpose/shelf_config/eval_keypoints3d.py
 ```
+
+- Evaluate on the Shelf dataset and run the tool with tracking.
 
 ```bash
 python tools/mview_mperson_evaluation.py \
