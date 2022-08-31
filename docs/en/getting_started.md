@@ -77,7 +77,7 @@ Coming soon!
 
 #### Learning-based methods
 
-For learning-based methods, we provide model checkpoints for MvP in [model_zoo](./benchmark.md). For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tool/train_model.md) and [evaluation tutorial](./tool/val_model.md).
+For learning-based methods, we provide model checkpoints for MvP in [model_zoo](./benchmark.md). For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tools/train_model.md) and [evaluation tutorial](./tools/eval_model.md).
 
 With the downloaded pretrained MvP models:
 
@@ -115,7 +115,7 @@ python tools/mview_mperson_evaluation.py \
 
 #### Learning-based methods
 
-For learning-based methods, more details about dataset preparation, model weights and checkpoints download can be found at [evaluation tutorial](./tool/val_model.md).
+For learning-based methods, more details about dataset preparation, model weights and checkpoints download can be found at [evaluation tutorial](./tools/eval_model.md).
 
 With the downloaded pretrained MvP models from [model_zoo](./benchmark.md):
 
@@ -149,7 +149,7 @@ Training is only applicable to learning-based methods.
 
 ### Training with a single / multiple GPUs
 
-To train the learning-based model, such as a MvP model, follow the [training tutorial](./tool/train_model.md) to prepare the datasets and pre-trained weights:
+To train the learning-based model, such as a MvP model, follow the [training tutorial](./tools/train_model.md) to prepare the datasets and pre-trained weights:
 
 ```
 sh ./scripts/train_mvp.sh ${NUM_GPUS} ${CFG_FILE}

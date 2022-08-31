@@ -34,7 +34,7 @@ The final file structure ready for evaluation would be like:
 
 ```text
 xrmocap
-├── xrmoccap
+├── xrmocap
 ├── tools
 ├── configs
 └── weight
@@ -66,7 +66,7 @@ Start evaluation with 8 GPUs with provided config file and pre-trained weights f
 ```shell
 python -m torch.distributed.launch \
     --nproc_per_node=8 \
-    --use_env tools/val_model.py \
+    --use_env tools/eval_model.py \
     --cfg configs/mvp/shelf_config/mvp_shelf.py \
     --model_path weight/xrmocap_mvp_shelf.pth.tar
 ```

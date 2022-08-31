@@ -21,6 +21,6 @@ MODEL_PATH=$3
 
 python -m torch.distributed.launch \
     --nproc_per_node=${GPUS_PER_NODE} \
-    --use_env tools/val_model.py \
+    --use_env tools/eval_model.py \
     --cfg ${CFG_FILE} \
     --model_path ${MODEL_PATH}

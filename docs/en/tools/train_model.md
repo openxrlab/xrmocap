@@ -34,7 +34,7 @@ The final file structure ready for training would be like:
 
 ```text
 xrmocap
-├── xrmoccap
+├── xrmocap
 ├── tools
 ├── configs
 └── weight
