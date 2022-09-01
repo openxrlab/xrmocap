@@ -1,5 +1,5 @@
 # Changelog
 
-### v0.5.0 (22/08/2022/)
+### v0.5.0 (01/09/2022/)
 
 write main features

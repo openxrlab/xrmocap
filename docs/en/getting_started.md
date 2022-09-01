@@ -7,7 +7,6 @@
 - [Evaluation](#evaluation)
 - [Training](#training)
 - [More tutorials](#more-tutorials)
-- [](#)
 
 ## Installation
 
@@ -119,13 +118,9 @@ sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_m
 
 ## Evaluation
 
-We provide pretrained models in the respective method folders in [config](config).
-
 ### Evaluate with a single GPU / multiple GPUs
 
 #### Optimization-based methods
-
-Evaluate on the Shelf/Campus/CMU Panoptic datasets
 
 - Evaluate on the Shelf dataset and run the tool without tracking.
 
@@ -169,7 +164,7 @@ sh ./scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH
 
 Example:
 ```shell
-sh ./scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+sh ./scripts/slurm_eval_mvp.sh ${PARTITION} 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
 
 
@@ -200,7 +195,7 @@ sh ./scripts/slurm_train_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE}
 ```
 Example:
 ```shell
-sh ./scripts/slurm_train_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py
+sh ./scripts/slurm_train_mvp.sh ${PARTITION} 8 configs/mvp/shelf_config/mvp_shelf.py
 ```
 
 
