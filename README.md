@@ -17,7 +17,7 @@ XRMoCap is an open-source PyTorch-based codebase for the use of multi-view motio
 
 If you are interested in single-view motion capture, please refer to [mmhuman3d](https://github.com/open-mmlab/mmhuman3d) for more details.
 
-https://user-images.githubusercontent.com/4398342/187503187-8e34bdd4-9322-4734-a6a0-75c04c14b7f3.mp4
+https://user-images.githubusercontent.com/26729379/187710195-ba4660ce-c736-4820-8450-104f82e5cc99.mp4
 
 A detailed introduction can be found in [introduction.md](./docs/en/tutorials/introduction.md).
 

@@ -1,9 +1,8 @@
 # Running Tests
 
-- [Running Tests](#running-tests)
-  - [Data Preparation](#data-preparation)
-  - [Environment Preparation](#environment-preparation)
-  - [Running tests through pytest](#running-tests-through-pytest)
+- [Data Preparation](#data-preparation)
+- [Environment Preparation](#environment-preparation)
+- [Running tests through pytest](#running-tests-through-pytest)
 
 ## Data Preparation
 
@@ -24,7 +23,7 @@ sh scripts/download_weight.sh
 Install packages for test.
 
 ```
-pip install -r requirements/tests.txt
+pip install -r requirements/test.txt
 ```
 
 ## Running tests through pytest

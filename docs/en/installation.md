@@ -1,12 +1,11 @@
 # Installation
 
-- [Installation](#installation)
-  - [Requirements](#requirements)
-  - [Prepare environment](#prepare-environment)
-  - [A from-scratch setup script](#a-from-scratch-setup-script)
-  - [Run with docker image](#run-with-docker-image)
-  - [Test environment](#test-environment)
-  - [Frequently Asked Questions](#frequently-asked-questions)
+- [Requirements](#requirements)
+- [A from-scratch setup script](#a-from-scratch-setup-script)
+- [Prepare environment](#prepare-environment)
+- [Run with docker image](#run-with-docker-image)
+- [Test environment](#test-environment)
+- [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Requirements
 
@@ -29,18 +28,54 @@ Optional:
 | [MMTracking](https://github.com/open-mmlab/mmtracking)   | Multiple object tracking. | Install `mmcv-full`, instead of `mmcv`.                      |
 | [Aniposelib](https://github.com/google/aistplusplus_api) | Triangulation.            | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
 
+## A from-scratch setup script
+
+```shell
+conda create -n xrmocap python=3.8
+source activate xrmocap
+
+# install ffmpeg for video and images
+conda install -y ffmpeg
+
+# install pytorch
+conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.1 -c pytorch
+
+# install pytorch3d
+conda install -y -c fvcore -c iopath -c conda-forge fvcore iopath
+conda install -y -c bottler nvidiacub
+conda install -y pytorch3d -c pytorch3d
+
+# install mmcv-full
+pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.8.1/index.html
+
+# install xrprimer
+pip install xrprimer
+
+# clone xrmocap
+git clone https://github.com/openxrlab/xrmocap.git
+cd xrmocap
+
+# install requirements for build
+pip install -r requirements/build.txt
+# install requirements for runtime
+pip install -r requirements/runtime.txt
+
+# install xrmocap
+rm -rf .eggs && pip install -e .
+```
+
 ## Prepare environment
 
-Here are advanced instructions for environment setup. If you are not so familiar with python environment stuff, please refer to [A from-scratch setup script](#a-from-scratch-setup-script).
+Here are advanced instructions for environment setup. If you have run [A from-scratch setup script](#a-from-scratch-setup-script) successfully, please skip this.
 
-##### a. Create a conda virtual environment and activate it.
+#### a. Create a conda virtual environment and activate it.
 
 ```shell
 conda create -n xrmocap python=3.8 -y
 conda activate xrmocap
 ```
 
-##### b. Install MMHuman3D.
+#### b. Install MMHuman3D.
 
 Here we take `torch_version=1.8.1` and `cu_version=10.2` as example. For other versions, please follow the [official instructions](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md)
 
@@ -65,55 +100,27 @@ pip install git+https://github.com/open-mmlab/mmhuman3d.git
 
 **Note3:** Do not install optional requirements of mmhuman3d in this step.
 
-##### c. Install XRPrimer.
+#### c. Install XRPrimer.
 
 ```shell
 pip install xrprimer
 ```
 
-To edit xrprimer, install it from source following the [official instructions](https://github.com/openxrlab/xrprimer/-/blob/xrprimer_ee_dev/docs/python/install.md).
+If you want to edit xrprimer, please follow the [official instructions](https://github.com/openxrlab/xrprimer/) to install it from source.
 
-##### d. Install XRMoCap to virtual environment,  in editable mode.
+#### d. Install XRMoCap to virtual environment,  in editable mode.
 
 ```shell
-# go to the root of this repo
+git clone https://github.com/openxrlab/xrmocap.git
 cd xrmocap
 pip install -r requirements/build.txt
 pip install -r requirements/runtime.txt
 pip install -e .
 ```
 
-## A from-scratch setup script
+#### e. Run unittests or demos
 
-```shell
-conda create -n xrmocap python=3.8
-source activate xrmocap
-
-# install ffmpeg for video and images
-conda install -y ffmpeg
-
-# install pytorch
-conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.1 -c pytorch
-
-# install pytorch3d
-conda install -y -c fvcore -c iopath -c conda-forge fvcore iopath
-conda install -y -c bottler nvidiacub
-conda install -y pytorch3d -c pytorch3d
-
-# install mmcv-full
-pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.8.1/index.html
-
-# install xrprimer
-pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple
-
-# install requirements for build
-pip install -r requirements/build.txt
-# install requirements for runtime
-pip install -r requirements/runtime.txt
-
-# install xrmocap
-rm -rf .eggs && pip install -e .
-```
+If everything goes well, try to [run unittest](#test-environment) or go back to [run demos](./getting_started.md#inference)
 
 ### Run with Docker Image
 
@@ -143,4 +150,4 @@ To test whether the environment is well installed, please refer to [test doc](./
 
 ### Frequently Asked Questions
 
-If your environment fails, check our [FAQ doc](./faq.md) first, it might be helpful to some typical questions.
+If your environment fails, check our [FAQ](./faq.md) first, it might be helpful to some typical questions.

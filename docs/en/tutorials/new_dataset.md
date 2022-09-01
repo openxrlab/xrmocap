@@ -12,7 +12,7 @@ For online conversion, program does not write any file to disk. You have to defi
 
 For offline conversion, we convert the origin dataset into annotations in a unified format, save the annotations to disk, before training or evaluation starts. Such a conversion module is called `data_converter` in XRMoCap, and you can find examples in [xrmocap/data/data_converter](../../../xrmocap/data/data_converter).
 
-##### File tree of our unified format
+#### File tree of our unified format
 
 ```
 Dataset_xxx
@@ -37,19 +37,19 @@ Dataset_xxx
         └── ...
 ```
 
-##### Camera parameters of our unified format
+#### Camera parameters of our unified format
 
 Each scene has its independent multi-view camera parameters, and each json file is dumped by `class FisheyeCameraParameter` in [XRPrimer](https://github.com/openxrlab/xrprimer/blob/main/docs/en/data_structure/camera.md#fisheye).
 
-##### Image list of our unified format
+#### Image list of our unified format
 
 In a scene whose frame length is `n_frame`, number of cameras is `n_view`, there are `n_view` image list files, and every file has `n_frame` lines inside, take the `frame_idx`-th line in file `image_list_view_{view_idx}.txt`, we get a path of image relative to dataset_root(Dataset_xxx).
 
-##### Keypoints3d groundtruth of our unified format
+#### Keypoints3d groundtruth of our unified format
 
 `keypoints3d_GT.npz` is a file dumped by `class Keypoints`, and it can be load by `keypoints3d = Keypoints.fromfile()`. In a scene whose frame length is `n_frame`, max number of objects is  `n_person`, number of single person's keypoints is `n_kps`, `keypoints3d.get_keypoints()` returns an ndarray in shape [n_frame, n_person, n_kps, 4], and `keypoints3d.get_mask()` is an ndarray in shape [n_frame, n_person, n_kps] which indicates which person and which keypoint is valid at a certain frame.
 
-##### Perception 2D of our unified format
+#### Perception 2D of our unified format
 
 `perception_2d.npz` is an compressed npz file of a python dict, whose structure lies below:
 

@@ -20,4 +20,4 @@ Please refer to [Shape-aware 3D Pose Optimization](../../configs/shape_aware_pos
 
 ### MvP
 
-Please refer to [MvP](../../configs/mvp/README.md) for details.
+Please refer to [MvP benchmarks](../../configs/mvp/README.md) for details.
