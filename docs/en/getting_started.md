@@ -86,11 +86,11 @@ python tools/process_smc.py \
 
 ### Multiple People
 
-A small test dataset for quick inference and demo can be downloaded from [here](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
+A small test dataset for quick demo can be downloaded [here](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
 
 #### Optimization-based methods
 
-For optimization-based approaches, it does not require any pretrained model. Taking [MVPose](https://zju3dv.github.io/mvpose/) as an example, it can be run as
+For optimization-based approaches, it does not require any pretrained model. Taking [MVPose](../../configs/mvpose/) as an example, it can be run on Shelf_50 as
 
 ```bash
 Coming soon!
@@ -102,18 +102,33 @@ Some useful configs are explained here:
 
 #### Learning-based methods
 
-For learning-based methods, we provide model checkpoints for MvP in [model_zoo](./benchmark.md). For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tools/train_model.md) and [evaluation tutorial](./tools/eval_model.md).
+For learning-based methods, it resorts to an end-to-end learning scheme so as to require training before inference.
+Taking [MvP](../../configs/mvp/) as an example, we can download [pretrained MvP model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth) and run it on Shelf_50 as:
 
-With the downloaded pretrained MvP models:
+1. Install `Deformable` package
 
-```shell
-sh ./scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
+Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) folder, rename and place the folder as `xrmocap/model/deformable`. Install `Deformable` by running:
+```
+cd xrmocap/model/deformable/
+sh make.sh
 ```
 
-Example:
-```shell
-sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+2. Download data and run demo
+
+```bash
+# download data
+mkdir -p xrmocap_data
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_dataa
+cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
+
+# download pretrained model
+mkdir -p weight/mvp
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth -P weight/mvp
+
+sh ./scripts/eval_mvp.sh 1 configs/mvp/shelf_config/mvp_shelf_50.py weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
 ```
+
+For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [training tutorial](./tools/train_model.md) and [evaluation tutorial](./tools/eval_model.md).
 
 
 ## Evaluation

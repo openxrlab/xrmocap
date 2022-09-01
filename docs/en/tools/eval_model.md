@@ -14,7 +14,8 @@ This tool takes a config file and MvP model checkpoints and performs evaluation 
 
 Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) folder, rename and place the folder as `ROOT/xrmocap/model/deformable`. Install `Deformable` by running:
 ```
-sh ROOT/xrmocap/model/deformable/make.sh
+cd ROOT/xrmocap/model/deformable/
+sh make.sh
 ```
 
 2. Prepare Datasets
