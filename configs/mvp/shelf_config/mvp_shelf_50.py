@@ -56,12 +56,12 @@ trainer_setup = dict(
         test_dataset_setup=dict(
             type='MVPDataset',
             test_mode=True,
-            meta_path='./xrmocap_data/meta/shelf/shelf_testset',
+            meta_path='./xrmocap_data/Shelf_50/xrmocap_meta_testset_small/',
         ),
         base_dataset_setup=dict(
             type='MVPDataset',
             dataset=__dataset__,
-            data_root='./xrmocap_data/Shelf',
+            data_root='./xrmocap_data/Shelf_50/Shelf/',
             img_pipeline=[
                 dict(type='LoadImageCV2'),
                 dict(type='BGR2RGB'),

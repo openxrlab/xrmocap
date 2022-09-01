@@ -42,21 +42,19 @@ RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
     pip install pre-commit interrogate coverage pytest && \
     pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.1/index.html && \
-    pip install xrprimer -i https://repo.sensetime.com/repository/pypi/simple && \
+    pip install xrprimer && \
     pip cache purge
 
 # Install build requirements
 RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
-    wget http://10.4.11.59:18080/resources/XRlab/requirements/xrmocap/build.txt && \
-    pip install -r build.txt && rm build.txt && \
+    pip install -r https://github.com/openxrlab/xrmocap/blob/main/requirements/build.txt && \
     pip cache purge
 
 # Install test requirements
 RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
-    wget http://10.4.11.59:18080/resources/XRlab/requirements/xrmocap/test.txt && \
-    pip install -r test.txt && rm test.txt && \
+    pip install -r https://github.com/openxrlab/xrmocap/blob/main/requirements/test.txt && \
     pip cache purge
 
 # Install mmhuman3d
@@ -72,4 +70,12 @@ RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
     pip uninstall opencv-python opencv-python-headless -y && \
     pip install opencv-python-headless && \
+    pip cache purge
+
+# Clone xrmocap and install
+RUN . /root/miniconda3/etc/profile.d/conda.sh && \
+    conda activate openxrlab && \
+    cd /workspace && \
+    git clone https://github.com/openxrlab/xrmocap.git && \
+    cd xrmocap && pip install -e . && \
     pip cache purge

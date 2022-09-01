@@ -1,6 +1,7 @@
 # yapf: disable
 import argparse
 import cv2
+import datetime
 import glob
 import mmcv
 import numpy as np
@@ -8,8 +9,10 @@ import os
 from mmhuman3d.core.visualization.visualize_smpl import (
     visualize_smpl_calibration,
 )
+from mmhuman3d.utils.demo_utils import get_different_colors
 from typing import List
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.utils.log_utils import setup_logger
 
 from xrmocap.core.estimation.builder import build_estimator
 from xrmocap.data_structure.keypoints import Keypoints
@@ -19,15 +22,30 @@ from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 
 
 def main(args):
+    os.makedirs('logs', exist_ok=True)
+    if args.enable_log_file:
+        time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        log_path = os.path.join('logs', f'estimation_log_{time_str}.txt')
+        logger = setup_logger(logger_name=__name__, logger_path=log_path)
+    else:
+        logger = setup_logger(logger_name=__name__)
     keypoints3d = Keypoints.fromfile(npz_path=args.keypoints3d_path)
-    fisheye_param_paths = sorted(
-        glob.glob(os.path.join(args.fisheye_param_dir, 'fisheye_param_*')))
+    image_dir = []
+    fisheye_param_paths = []
+    with open(args.image_and_camera_param, 'r') as f:
+        for i, line in enumerate(f.readlines()):
+            line = line.strip()
+            if i % 2 == 0:
+                image_dir.append(line)
+            else:
+                fisheye_param_paths.append(line)
     fisheye_params = load_camera_parameters(fisheye_param_paths)
     os.makedirs(args.output_dir, exist_ok=True)
     perception2d_dict = dict(
         np.load(args.perception2d_path, allow_pickle=True))
-    matched_list = np.load(args.matched_list_path, allow_pickle=True)
+    matched_list = np.load(args.matched_kps2d_idx, allow_pickle=True)
     estimator_config = dict(mmcv.Config.fromfile(args.estimator_config))
+    estimator_config['logger'] = logger
     smpl_estimator = build_estimator(estimator_config)
 
     keypoints2d_list = []
@@ -67,6 +85,10 @@ def main(args):
     if args.visualize:
         n_frame = args.end_frame - args.start_frame
         n_person = len(smpl_data_list)
+        colors = get_different_colors(n_person)
+        tmp = colors[:, 0].copy()
+        colors[:, 0] = colors[:, 2]
+        colors[:, 2] = tmp
         full_pose_list = []
         transl_list = []
         betas_list = []
@@ -87,20 +109,14 @@ def main(args):
             model_path='xrmocap_data/body_models',
             batch_size=1)
         # prepare camera
-        k_list = []
-        r_list = []
-        t_list = []
-        for fisheye_param in fisheye_params:
-            k_list.append(np.array(fisheye_param.get_intrinsic(3)))
-            r_list.append(np.array(fisheye_param.get_extrinsic_r()))
-            t_list.append(np.array(fisheye_param.get_extrinsic_t()))
-        k_np = np.stack(k_list)
-        r_np = np.stack(r_list)
-        t_np = np.stack(t_list)
-
-        for cam_name in sorted(os.listdir(args.image_dir)):
+        for idx, fisheye_param in enumerate(fisheye_params):
+            k_np = np.array(fisheye_param.get_intrinsic(3))
+            r_np = np.array(fisheye_param.get_extrinsic_r())
+            t_np = np.array(fisheye_param.get_extrinsic_t())
+            cam_name = fisheye_param.name
+            view_name = cam_name.replace('fisheye_param_', '')
             frame_list = sorted(
-                glob.glob(os.path.join(args.image_dir, cam_name, '*.png')))
+                glob.glob(os.path.join(image_dir[idx], '*.png')))
             frame_list_start = int(frame_list[0][-10:-4])
             frame_list = frame_list[args.start_frame -
                                     frame_list_start:args.end_frame -
@@ -114,12 +130,13 @@ def main(args):
                 poses=fullpose.reshape(n_frame, n_person, -1),
                 betas=betas,
                 transl=transl,
+                palette=colors,
                 output_path=os.path.join(args.output_dir,
-                                         f'{cam_name}_smpl.mp4'),
+                                         f'{view_name}_smpl.mp4'),
                 body_model_config=body_model_cfg,
-                K=k_np[int(cam_name[-1])],
-                R=r_np[int(cam_name[-1])],
-                T=t_np[int(cam_name[-1])],
+                K=k_np,
+                R=r_np,
+                T=t_np,
                 image_array=image_array,
                 resolution=(image_array.shape[1], image_array.shape[2]),
                 overwrite=True)
@@ -141,9 +158,11 @@ def setup_parser():
     parser = argparse.ArgumentParser(
         description='Estimate smpl from keypoints3d')
     parser.add_argument(
-        '--image_dir',
-        help='Path to the directory containing image',
-        default='./data/shelf/img')
+        '--estimator_config',
+        help='Config file for MultiViewMultiPersonSMPLEstimator',
+        type=str,
+        default='configs/modules/core/estimation/'
+        'mview_mperson_smpl_estimator.py')
     parser.add_argument('--start_frame', type=int, default=300)
     parser.add_argument('--end_frame', type=int, default=600)
     parser.add_argument('--bbox_thr', type=float, default=0.9)
@@ -151,36 +170,35 @@ def setup_parser():
         '--keypoints3d_path',
         type=str,
         help='Path to input keypoints3d file',
-        default='./output/shelf/init/scene0_pred_keypoints3d.npz')
+        default='./output/mvpose_tracking/shelf/scene0_pred_keypoints3d.npz')
     parser.add_argument(
-        '--fisheye_param_dir',
+        '--matched_kps2d_idx',
         type=str,
-        help='Path to camera parameter',
-        default='./xrmocap_data/Shelf/xrmocap_meta_testset/'
-        'scene_0/camera_parameters')
+        default='./output/mvpose_tracking/shelf/scene0_matched_kps2d_idx.npy')
+    parser.add_argument(
+        '--image_and_camera_param',
+        help='A text file contains the image path and the corresponding'
+        'camera parameters',
+        default='./xrmocap_data/Shelf/image_and_camera_param.txt')
     parser.add_argument(
         '--perception2d_path',
         type=str,
         default='./xrmocap_data/Shelf/xrmocap_meta_testset/'
         'scene_0/perception_2d.npz')
     parser.add_argument(
-        '--matched_list_path',
-        type=str,
-        default='./output/shelf/init/matched_kps2d_idx.npy')
-    parser.add_argument(
         '--output_dir',
         type=str,
         help='Path to the directory saving',
-        default='./output/shelf/smpl')
-    parser.add_argument(
-        '--estimator_config',
-        help='Config file for MultiViewMultiPersonSMPLEstimator',
-        type=str,
-        default='configs/modules/estimation/mview_mperson_smpl_estimator.py')
+        default='./output/mvpose_tracking/shelf/smpl')
     parser.add_argument(
         '--visualize',
         action='store_true',
         help='If checked, visualize result.',
+        default=False)
+    parser.add_argument(
+        '--enable_log_file',
+        action='store_true',
+        help='If checked, log will be written as file.',
         default=False)
     args = parser.parse_args()
     return args

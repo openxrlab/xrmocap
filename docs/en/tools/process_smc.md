@@ -1,6 +1,11 @@
 # Tool process_smc
 
-[TOC]
+- [Overview](#overview)
+- [Argument: estimator_config](#argument-estimator_config)
+- [Argument: output_dir](#argument-output_dir)
+- [Argument: disable_log_file](#argument-disable_log_file)
+- [Argument: visualize](#argument-visualize)
+- [Example](#example)
 
 ### Overview
 
@@ -29,8 +34,8 @@ By default, visualize is False. Add `--visualize` makes it True and the tool wil
 Run the tool with visualization.
 
 ```bash
-python tool/process_smc.py \
-	--estimator_config config/estimation/mview_sperson_smpl_estimator.py \
+python tools/process_smc.py \
+	--estimator_cofig configs/humman_mocap/mview_sperson_smpl_estimator.py \
 	--smc_path xrmocap_data/humman/raw_smc/p000105_a000195.smc \
 	--output_dir xrmocap_data/humman/p000105_a000195_output \
 	--visualize

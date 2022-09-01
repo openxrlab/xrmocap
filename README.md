@@ -1,5 +1,13 @@
 # XRMocap
 
+<div align="left">
+
+[![actions](https://github.com/openxrlab/xrmocap/workflows/build/badge.svg)](https://github.com/openxrlab/xrmocap/actions)
+[![codecov](https://codecov.io/gh/openxrlab/xrmocap/branch/main/graph/badge.svg)](https://codecov.io/gh/openxrlab/xrmocap)
+[![PyPI](https://img.shields.io/pypi/v/xrmocap)](https://pypi.org/project/xrmocap/)
+[![LICENSE](https://img.shields.io/github/license/openxrlab/xrmocap.svg)](https://github.com/openxrlab/xrmocap/blob/main/LICENSE)
+
+</div>
 
 ## Introduction
 
@@ -9,7 +17,7 @@ XRMoCap is an open-source PyTorch-based codebase for the use of multi-view motio
 
 If you are interested in single-view motion capture, please refer to [mmhuman3d](https://github.com/open-mmlab/mmhuman3d) for more details.
 
-**TODO:[Insert demo here]**
+https://user-images.githubusercontent.com/26729379/187710195-ba4660ce-c736-4820-8450-104f82e5cc99.mp4
 
 A detailed introduction can be found in [introduction.md](./docs/en/tutorials/introduction.md).
 
@@ -62,7 +70,7 @@ Supported datasets:
 
 ## Getting Started
 
-Please see [getting_started.md](docs/getting_started.md) for the basic usage of XRMoCap.
+Please see [getting_started.md](docs/en/getting_started.md) for the basic usage of XRMoCap.
 
 ## License
 

@@ -12,7 +12,7 @@ Please refer to [MVPose](../../configs/mvpose/README.md) for details.
 
 ### MVPose (Temporal tracking and filtering)
 
-Please refer to [MVPose with tracking)](../../configs/mvpose_tracking/README.md) for details.
+Please refer to [MVPose with tracking](../../configs/mvpose_tracking/README.md) for details.
 
 ### Shape-aware 3D Pose Optimization
 
@@ -20,4 +20,4 @@ TBA
 
 ### MvP
 
-Please refer to [MvP](../../configs/mvp/README.md) for details.
+Please refer to [MvP benchmarks](../../configs/mvp/README.md) for details.
