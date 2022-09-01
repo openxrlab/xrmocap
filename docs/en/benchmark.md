@@ -16,7 +16,7 @@ Please refer to [MVPose with tracking](../../configs/mvpose_tracking/README.md) 
 
 ### Shape-aware 3D Pose Optimization
 
-Please refer to [Shape-aware 3D Pose Optimization](../../configs/shape_aware_pose_optim/README.md) for details.
+Please refer to [Shape-aware 3D Pose Optimization](../../configs/shape_aware_3d_pose_optim/README.md) for details.
 
 ### MvP
 
