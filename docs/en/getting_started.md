@@ -50,7 +50,7 @@ xrmocap
 
 We provide a demo script to estimate SMPL parameters for single-person or multi-person from multi-view synchronized input images or videos. With this demo script, you only need to choose a method, we currently support two types of methods, namely, optimization-based approaches and end-to-end learning algorithms, specify a few arguments, and then you can get the estimated results.
 
-We assume that the cameras have been calibrated. If you want to know more about camera calibration, refer to [XRPrimer](https://github.com/openxrlab/xrprimer/blob/main/docs/en/tool/calibrate_pinhole_cameras.md) for more details.
+We assume that the cameras have been calibrated. If you want to know more about camera calibration, refer to [XRPrimer](https://github.com/openxrlab/xrprimer/blob/main/docs/en/tools/calibrate_multiple_cameras.md) for more details.
 
 
 ### Perception Model
@@ -66,7 +66,7 @@ You could find `resnet50_reid_camstyle.pth.tar` in `weight` file.
 
 Currently, we only provide optimization-based method for single person estimation.
 
-1. Download an SMC file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
+1. Download a `.smc` file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
 2. Extract the 7z file.
 
 ```bash
@@ -83,8 +83,6 @@ python tools/process_smc.py \
 	--output_dir xrmocap_data/humman/p000127_a000007_output \
 	--visualize
 ```
-
-The above code is supposed to run successfully upon you finish the installation.
 
 
 ### Multiple People
