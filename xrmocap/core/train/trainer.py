@@ -39,19 +39,19 @@ class MVPTrainer():
                  gpu_idx: int,
                  train_dataset: str,
                  test_dataset: str,
-                 lr: float,
-                 weight_decay: float,
-                 optimizer: str,
-                 end_epoch: int,
-                 pretrained_backbone: str,
-                 finetune_model: Union[None, str],
-                 resume: bool,
-                 final_output_dir: str,
-                 lr_decay_epoch: list,
-                 test_model_file: str,
                  cudnn_setup: dict,
                  dataset_setup: dict,
                  mvp_setup: dict,
+                 pretrained_backbone: Union[None, str] = None,
+                 finetune_model: Union[None, str] = None,
+                 resume: bool = False,
+                 final_output_dir: Union[None, str] = './output',
+                 lr_decay_epoch: list = [30],
+                 test_model_file: Union[None, str] = None,
+                 end_epoch: int = 30,
+                 optimizer: Union[None, str] = None,
+                 weight_decay: float = 0.0,
+                 lr: float = 0.2,
                  logger: Union[None, str, logging.Logger] = None,
                  device: str = 'cuda',
                  seed: int = 42,
@@ -76,27 +76,29 @@ class MVPTrainer():
                 Name of the train dataset.
             test_dataset (str):
                 Name of the test dataset.
-            lr (float):
-                Learning rate.
-            weight_decay (float):
-                Weight decay.
-            optimizer (str):
-                Type of optimizer.
-            end_epoch (int):
-                End epoch of trainig.
-            pretrained_backbone (str):
+            lr (float, optional):
+                Learning rate. Defaults to 0.2.
+            weight_decay (float, optional):
+                Weight decay. Defaults to 0.0.
+            optimizer (Union[None, str], optional):
+                Type of optimizer. Defaults to None.
+            end_epoch (int, optional):
+                End epoch of trainig. Defaults to 30.
+            pretrained_backbone (Union[None, str], optional):
                 Path to pretrained backbone weights
-                if using pretrained model.
-            finetune_model (Union[None, str]):
+                if using pretrained model. Defaults to None.
+            finetune_model (Union[None, str], optional):
                 Path to a pretrained model weights to be finetuned.
-            resume (bool):
+                Defaults to None.
+            resume (bool, optional):
                 If auto resume from checkpoints is used.
-            final_output_dir (str):
-                Path to output folder.
-            lr_decay_epoch (list):
-                Lr decay milestones.
-            test_model_file (str):
-                Path to test model weight.
+                Defaults to False.
+            final_output_dir (Union[None, str], optional):
+                Path to output folder. Defaults to './output'.
+            lr_decay_epoch (list, optional):
+                Lr decay milestones. Defaults to [30].
+            test_model_file (Union[None, str], optional):
+                Path to test model weight. Defaults to None.
             cudnn_setup (dict):
                 Dict of parameters to setup cudnn.
             dataset_setup (dict):
@@ -347,8 +349,7 @@ class MVPTrainer():
 
             lr_scheduler.step()
 
-            inference_conf_thr = self.inference_conf_thr
-            for thr in inference_conf_thr:
+            for thr in self.inference_conf_thr:
                 preds_single, _ = validate_3d(
                     model,
                     test_loader,
@@ -361,7 +362,6 @@ class MVPTrainer():
                 preds = collect_results(preds_single, len(test_dataset))
 
                 if is_main_process():
-
                     precision = None
 
                     if 'panoptic' in self.test_dataset:
@@ -392,7 +392,6 @@ class MVPTrainer():
                         evaluator = build_evaluation(eval_cfg)
                         actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
                             preds, recall_threshold=500, alpha=0.5)
-
                         tb = PrettyTable()
                         tb.field_names = [
                             'Metric', 'Actor 1', 'Actor 2', 'Actor 3',
