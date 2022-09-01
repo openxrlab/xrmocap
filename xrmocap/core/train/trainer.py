@@ -367,10 +367,15 @@ class MVPTrainer():
                     if 'panoptic' in self.test_dataset:
                         tb = PrettyTable()
                         mpjpe_threshold = np.arange(25, 155, 25)
+
+                        eval_cfg = dict(
+                            type='MVPEvaluation', dataset=test_loader.dataset)
+                        evaluator = build_evaluation(eval_cfg)
                         aps, recs, mpjpe, recall500 = \
-                            test_loader.dataset.evaluate(preds)
+                            evaluator.evaluate_map(preds)
+
                         tb.field_names = ['Threshold/mm'] + \
-                                         [f'{i}' for i in mpjpe_threshold]
+                            [f'{i}' for i in mpjpe_threshold]
                         tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
                         tb.add_row(['Recall'] +
                                    [f'{re * 100:.2f}' for re in recs])
@@ -382,8 +387,11 @@ class MVPTrainer():
 
                     elif 'campus' in self.test_dataset \
                             or 'shelf' in self.test_dataset:
-                        actor_pcp, avg_pcp, _, recall = \
-                            test_loader.dataset.evaluate(preds)
+                        eval_cfg = dict(
+                            type='MVPEvaluation', dataset=test_loader.dataset)
+                        evaluator = build_evaluation(eval_cfg)
+                        actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
+                            preds, recall_threshold=500, alpha=0.5)
 
                         tb = PrettyTable()
                         tb.field_names = [
@@ -396,7 +404,7 @@ class MVPTrainer():
                             f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
                         ])
                         self.logger.info('\n' + tb.get_string())
-                        self.logger.info(f'Recall@500mm: {recall:.4f}')
+                        self.logger.info(f'Recall@500mm: {recall500:.4f}')
 
                         precision = np.mean(avg_pcp)
 
