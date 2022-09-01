@@ -1,8 +1,8 @@
 # Installation
 
 - [Requirements](#requirements)
-- [Prepare environment](#prepare-environment)
 - [A from-scratch setup script](#a-from-scratch-setup-script)
+- [Prepare environment](#prepare-environment)
 - [Run with docker image](#run-with-docker-image)
 - [Test environment](#test-environment)
 - [Frequently Asked Questions](#frequently-asked-questions)
@@ -28,9 +28,45 @@ Optional:
 | [MMTracking](https://github.com/open-mmlab/mmtracking)   | Multiple object tracking. | Install `mmcv-full`, instead of `mmcv`.                      |
 | [Aniposelib](https://github.com/google/aistplusplus_api) | Triangulation.            | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
 
+## A from-scratch setup script
+
+```shell
+conda create -n xrmocap python=3.8
+source activate xrmocap
+
+# install ffmpeg for video and images
+conda install -y ffmpeg
+
+# install pytorch
+conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.1 -c pytorch
+
+# install pytorch3d
+conda install -y -c fvcore -c iopath -c conda-forge fvcore iopath
+conda install -y -c bottler nvidiacub
+conda install -y pytorch3d -c pytorch3d
+
+# install mmcv-full
+pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.8.1/index.html
+
+# install xrprimer
+pip install xrprimer
+
+# clone xrmocap
+git clone https://github.com/openxrlab/xrmocap.git
+cd xrmocap
+
+# install requirements for build
+pip install -r requirements/build.txt
+# install requirements for runtime
+pip install -r requirements/runtime.txt
+
+# install xrmocap
+rm -rf .eggs && pip install -e .
+```
+
 ## Prepare environment
 
-Here are advanced instructions for environment setup. If you are not so familiar with python environment stuff, please refer to [A from-scratch setup script](#a-from-scratch-setup-script).
+Here are advanced instructions for environment setup. If you have run [A from-scratch setup script](#a-from-scratch-setup-script) successfully, please skip this.
 
 #### a. Create a conda virtual environment and activate it.
 
@@ -85,42 +121,6 @@ pip install -e .
 #### e. Run unittests or demos
 
 If everything goes well, try to [run unittest](#test-environment) or go back to [run demos](./getting_started.md#inference)
-
-## A from-scratch setup script
-
-```shell
-conda create -n xrmocap python=3.8
-source activate xrmocap
-
-# install ffmpeg for video and images
-conda install -y ffmpeg
-
-# install pytorch
-conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.1 -c pytorch
-
-# install pytorch3d
-conda install -y -c fvcore -c iopath -c conda-forge fvcore iopath
-conda install -y -c bottler nvidiacub
-conda install -y pytorch3d -c pytorch3d
-
-# install mmcv-full
-pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.8.1/index.html
-
-# install xrprimer
-pip install xrprimer
-
-# clone xrmocap
-git clone https://github.com/openxrlab/xrmocap.git
-cd xrmocap
-
-# install requirements for build
-pip install -r requirements/build.txt
-# install requirements for runtime
-pip install -r requirements/runtime.txt
-
-# install xrmocap
-rm -rf .eggs && pip install -e .
-```
 
 ### Run with Docker Image
 
