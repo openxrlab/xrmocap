@@ -14,7 +14,7 @@ This tool takes calibrated camera parameters, RGB sequences, 2d perception data 
 By default, enable_log_file is False and the tool will only print log to console. Add `--enable_log_file` makes it True and a log file named `{smc_file_name}_{time_str}.txt` will be written.
 
 - **evaluation_config**:
-`evaluation_config` is the path to a `TopDownAssociationEvaluation` config file. For more details, see docs for `TopDownAssociationEvaluation` and the docstring in [code](../../../xrmocap/core/evaluation/top_down_association_evaluation.py).
+`evaluation_config` is the path to the `TopDownAssociationEvaluation` config file. For more details, see docs for `TopDownAssociationEvaluation` and the docstring in [code](../../../xrmocap/core/evaluation/top_down_association_evaluation.py).
 
 Also, you can find our prepared config files at `configs/mvpose/*/eval_keypoints3d.py` or `configs/mvpose_tracking/*/eval_keypoints3d.py`.
 
