@@ -159,10 +159,10 @@ def setup_parser():
         description='Estimate smpl from keypoints3d')
     parser.add_argument(
         '--estimator_config',
-        help='Config file for MultiViewMultiPersonSMPLEstimator',
+        help='Config file for MultiPersonSMPLEstimator',
         type=str,
         default='configs/modules/core/estimation/'
-        'mview_mperson_smpl_estimator.py')
+        'mperson_smpl_estimator.py')
     parser.add_argument('--start_frame', type=int, default=300)
     parser.add_argument('--end_frame', type=int, default=600)
     parser.add_argument('--bbox_thr', type=float, default=0.9)

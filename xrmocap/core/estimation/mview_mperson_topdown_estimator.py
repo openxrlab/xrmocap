@@ -23,12 +23,12 @@ from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
 )
 from xrmocap.transform.keypoints3d.optim.builder import BaseOptimizer
-from .mview_mperson_smpl_estimator import MultiViewMultiPersonSMPLEstimator
+from .mperson_smpl_estimator import MultiPersonSMPLEstimator
 
 # yapf: enable
 
 
-class MultiViewMultiPersonTopDownEstimator(MultiViewMultiPersonSMPLEstimator):
+class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
 
     def __init__(self,
                  work_dir: str,

@@ -15,12 +15,12 @@ from xrmocap.model.registrant.builder import SMPLify, build_registrant
 from xrmocap.transform.keypoints3d.optim.builder import (
     BaseOptimizer, build_keypoints3d_optimizer,
 )
-from .mview_mperson_smpl_estimator import MultiViewMultiPersonSMPLEstimator
+from .mperson_smpl_estimator import MultiPersonSMPLEstimator
 
 # yapf: enable
 
 
-class MultiViewMultiPersonEnd2EndEstimator(MultiViewMultiPersonSMPLEstimator):
+class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
 
     def __init__(self,
                  work_dir: str,
