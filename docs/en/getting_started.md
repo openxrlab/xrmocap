@@ -90,7 +90,7 @@ A small test dataset for quick demo can be downloaded [here](https://openxrlab-s
 
 #### Optimization-based methods
 
-For optimization-based approaches, it does not require any pretrained model. Taking [MVPose](../../configs/mvpose/) as an example, it can be run on Shelf_50 as
+For optimization-based approaches, it utilizes the association between 2D keypoints and generates 3D keypoints by triangulation or other methods. Taking [MVPose](../../configs/mvpose/) as an example, it can be run as
 
 ```bash
 Coming soon!
@@ -167,6 +167,7 @@ Example:
 ```shell
 sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
+
 
 
 ### Evaluate with slurm
