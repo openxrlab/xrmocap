@@ -16,7 +16,7 @@ from .base_estimator import BaseEstimator
 # yapf: enable
 
 
-class MultiViewMultiPersonSMPLEstimator(BaseEstimator):
+class MultiPersonSMPLEstimator(BaseEstimator):
 
     def __init__(self,
                  work_dir: str,

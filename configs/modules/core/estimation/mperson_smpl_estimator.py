@@ -1,4 +1,4 @@
-type = 'MultiViewMultiPersonSMPLEstimator'
+type = 'MultiPersonSMPLEstimator'
 work_dir = './temp'
 verbose = True
 logger = None
