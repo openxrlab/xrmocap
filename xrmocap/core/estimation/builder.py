@@ -2,6 +2,7 @@
 from mmcv.utils import Registry
 
 from .base_estimator import BaseEstimator
+from .mmse import MMSE
 from .mview_mperson_smpl_estimator import MultiViewMultiPersonSMPLEstimator
 from .mview_sperson_smpl_estimator import MultiViewSinglePersonSMPLEstimator
 
@@ -14,6 +15,7 @@ ESTIMATORS.register_module(
 ESTIMATORS.register_module(
     name='MultiViewMultiPersonSMPLEstimator',
     module=MultiViewMultiPersonSMPLEstimator)
+ESTIMATORS.register_module(name='MMSE', module=MMSE)
 
 
 def build_estimator(cfg) -> BaseEstimator:

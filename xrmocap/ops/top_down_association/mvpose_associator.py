@@ -126,7 +126,7 @@ class MvposeAssociator:
         Args:
             mview_img_arr (np.ndarray):
                 Multi-view image array, in shape
-                [n_frames, h, w, ch].
+                [n_frames, ch, h, w].
             mview_bbox2d (List[torch.Tensor]):
                 Multi-view bbox2d.
             mview_keypoints2d (List[Keypoints]):
