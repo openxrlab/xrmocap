@@ -93,12 +93,14 @@ A small test dataset for quick demo can be downloaded [here](https://openxrlab-s
 For optimization-based approaches, it utilizes the association between 2D keypoints and generates 3D keypoints by triangulation or other methods. Taking [MVPose](../../configs/mvpose/) as an example, it can be run as
 
 ```bash
-Coming soon!
+python tools/mview_mperson_topdown_estimator.py \
+      --image_and_camera_param 'data/image_and_camera_param.txt' \
+      --start_frame 0 \
+      --end_frame 10 \
+      --enable_log_file
 ```
 
-Some useful configs are explained here:
-
- - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` to True in config file.
+ - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` in `associator` config file. For more details, see [mview_mperson_topdown_smpl_estimator.md](../../docs/en/estimation/mview_mperson_topdown_smpl_estimator.md).
 
 #### Learning-based methods
 

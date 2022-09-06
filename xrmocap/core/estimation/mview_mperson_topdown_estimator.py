@@ -277,6 +277,7 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                         for selector in self.point_selectors:
                             tri_mask = selector.get_selection_mask(
                                 points=tri_kps2d, init_points_mask=tri_mask)
+                    # Triangulation
                     kps3d = self.triangulator.triangulate(tri_kps2d, tri_mask)
                     if identity > max_identity:
                         n_identity = identity - max_identity

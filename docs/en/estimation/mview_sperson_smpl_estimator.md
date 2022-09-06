@@ -1,4 +1,4 @@
-# Multi-view single-person SMPL Estimator
+# Multi-view Single-person SMPL Estimator
 
 - [Overview](#overview)
 - [Arguments](#arguments)
