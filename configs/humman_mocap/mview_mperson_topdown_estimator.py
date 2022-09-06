@@ -1,4 +1,4 @@
-type = 'MMSE'
+type = 'MultiViewMultiPersonTopDownEstimator'
 bbox_thr = 0.9
 work_dir = './temp'
 verbose = False
@@ -22,7 +22,7 @@ kps2d_estimator = dict(
         config='configs/modules/human_perception/mmpose_hrnet_w48_' +
         'coco_wholebody_384x288_dark_plus.py',
         device='cuda'),
-    bbox_thr=0.9)
+    bbox_thr=bbox_thr)
 
 associator = dict(
     type='MvposeAssociator',
@@ -66,7 +66,7 @@ associator = dict(
 
 smplify = dict(
     type='SMPLify',
-    verbose=verbose,
+    verbose=True,
     info_level='stage',
     n_epochs=1,
     use_one_betas_per_video=False,
@@ -191,22 +191,39 @@ smplify = dict(
     ],
 )
 
+triangulator = dict(
+    type='AniposelibTriangulator',
+    camera_parameters=[],
+    logger=logger,
+)
+point_selectors = [
+    dict(
+        type='HybridKps2dSelector',
+        triangulator=dict(
+            type='AniposelibTriangulator', camera_parameters=[],
+            logger=logger),
+        verbose=verbose,
+        ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
+        convention=pred_kps3d_convention,
+    )
+]
+
 kps3d_optimizers = [
     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
     dict(type='NanInterpolation', verbose=verbose, logger=logger),
-    # dict(
-    #     type='SMPLShapeAwareOptimizer',
-    #     smplify=smplify,
-    #     body_model=smplify['body_model'],
-    #     projector=dict(type='PytorchProjector', camera_parameters=[]),
-    #     iteration=1,
-    #     refine_threshold=1,
-    #     kps2d_conf_threshold=0.97,
-    #     use_percep2d_optimizer=False,
-    #     verbose=verbose,
-    #     logger=logger),
+    dict(
+        type='SMPLShapeAwareOptimizer',
+        smplify=smplify,
+        body_model=smplify['body_model'],
+        projector=dict(type='PytorchProjector', camera_parameters=[]),
+        iteration=1,
+        refine_threshold=1,
+        kps2d_conf_threshold=0.97,
+        use_percep2d_optimizer=False,
+        verbose=verbose,
+        logger=logger),
     # After SMPL shape-aware optimizer, the keypoints are not very stable,
     # so trajectory optimization is added.
-    # dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
-    # dict(type='NanInterpolation', verbose=verbose, logger=logger),
+    dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
+    dict(type='NanInterpolation', verbose=verbose, logger=logger),
 ]

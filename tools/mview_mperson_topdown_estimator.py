@@ -47,10 +47,12 @@ def main(args):
                                         img_list_start]
 
         mview_img_list.append(sview_img_list)
-    pred_keypoints3d = smpl_estimator.run(
+    pred_keypoints3d, smpl_data_list = smpl_estimator.run(
         cam_param=fisheye_params, img_paths=mview_img_list)
     npz_path = os.path.join(args.output_dir, 'pred_keypoints3d.npz')
     pred_keypoints3d.dump(npz_path)
+    for i, smpl_data in enumerate(smpl_data_list):
+        smpl_data.dump(os.path.join(args.output_dir, f'smpl_{i}.npz'))
 
 
 def load_camera_parameters(fisheye_param_paths: List[str]):
@@ -66,17 +68,19 @@ def load_camera_parameters(fisheye_param_paths: List[str]):
 
 
 def setup_parser():
-    parser = argparse.ArgumentParser(description='MMSE')
+    parser = argparse.ArgumentParser(
+        description='MultiViewMultiPersonTopDownEstimator')
     parser.add_argument(
         '--output_dir',
         type=str,
         help='Path to the directory saving all possible output files.',
-        default='./output/mmse')
+        default='./output/estimation')
     parser.add_argument(
         '--estimator_config',
-        help='Config file for MMSE.',
+        help='Config file for MultiViewMultiPersonTopDownEstimator.',
         type=str,
-        default='configs/humman_mocap/mmse.py')
+        default='configs/modules/core/estimation/'
+        'mview_mperson_topdown_estimator.py')
     parser.add_argument(
         '--image_and_camera_param',
         help='A text file contains the image path and the corresponding'

@@ -3,7 +3,6 @@ import os
 import os.path as osp
 import pytest
 import shutil
-import torch
 
 from xrmocap.core.evaluation.builder import build_evaluation
 from xrmocap.data_structure.keypoints import Keypoints
@@ -18,8 +17,6 @@ def fixture():
     os.makedirs(output_dir, exist_ok=False)
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_mvpose_evaluation():
     evaluation_config = dict(
         mmcv.Config.fromfile('configs/modules/core/evaluation/' +
