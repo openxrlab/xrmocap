@@ -30,9 +30,6 @@ jobs:
         shell: bash -l {0}
     container:
       image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
-      credentials:
-        username: ${{secrets.DOCKERHUB_USERNAME}}
-        password: ${{secrets.DOCKERHUB_PWD}}
     steps:
       - uses: actions/checkout@v2
       - name: Show conda env
