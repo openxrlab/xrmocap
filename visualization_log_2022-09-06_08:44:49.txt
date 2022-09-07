@@ -1,7 +1,0 @@
-2022-09-06 08:44:49,018 - __main__ - INFO - Not all paths are configured in sys.argv, use the paths in xrmocap_data/my_config/shelf_config/shelf_data_visualization_testset.py.
-2022-09-06 08:44:49,034 - __main__ - INFO - Visualizing predict3d data for scene 0 view 0
-2022-09-06 08:45:35,160 - __main__ - INFO - Visualizing predict3d data for scene 0 view 1
-2022-09-06 08:46:20,803 - __main__ - INFO - Visualizing predict3d data for scene 0 view 2
-2022-09-06 08:47:07,389 - __main__ - INFO - Visualizing predict3d data for scene 0 view 3
-2022-09-06 08:47:53,321 - __main__ - INFO - Visualizing predict3d data for scene 0 view 4
-2022-09-06 08:48:38,741 - __main__ - INFO - Running "ffmpeg -y -f rawvideo -pix_fmt bgr24 -s 3096x1552 -r 30.0 -loglevel error -threads 1 -i - -vcodec libx264 -r 30.0 -an output/video/scene_0/predict3d_project_AIO.mp4"

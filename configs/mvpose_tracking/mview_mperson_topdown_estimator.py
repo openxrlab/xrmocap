@@ -50,14 +50,14 @@ associator = dict(
     kalman_tracking=dict(type='KalmanTracking', n_cam_min=3, logger=logger),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',
-        tracking_distance=0.7,
+        tracking_distance=1,
         tracking_kps3d_convention=pred_kps3d_convention,
         tracking_kps3d_name=[
             'left_shoulder', 'right_shoulder', 'left_hip_extra',
             'right_hip_extra'
         ]),
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
-    best_distance=600,
+    best_distance=800,
     interval=5,
     bbox_thr=bbox_thr,
     device='cuda',
@@ -209,21 +209,6 @@ point_selectors = [
 ]
 
 kps3d_optimizers = [
-    dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
-    dict(type='NanInterpolation', verbose=verbose, logger=logger),
-    dict(
-        type='SMPLShapeAwareOptimizer',
-        smplify=smplify,
-        body_model=smplify['body_model'],
-        projector=dict(type='PytorchProjector', camera_parameters=[]),
-        iteration=1,
-        refine_threshold=1,
-        kps2d_conf_threshold=0.97,
-        use_percep2d_optimizer=False,
-        verbose=verbose,
-        logger=logger),
-    # After SMPL shape-aware optimizer, the keypoints are not very stable,
-    # so trajectory optimization is added.
     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
     dict(type='NanInterpolation', verbose=verbose, logger=logger),
 ]

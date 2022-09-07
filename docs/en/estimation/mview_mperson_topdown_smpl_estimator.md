@@ -3,7 +3,7 @@
 - [Overview](#overview)
 - [Arguments](#arguments)
 - [Run](#run)
-  - [Step0: estimate keypoints2d](#step0-estimate-keypoints2d)
+  - [Step0: estimate perception2d](#step0-estimate-keypoints2d)
   - [Step1: establish cross-frame and cross-person associations](#step1-establish-cross-frame-and-cross-person-associations)
   - [Step2: estimate keypoints3d](#step2-estimate-keypoints3d)
   - [Step3: estimate smpl](#step3-estimate-smpl)
@@ -40,7 +40,7 @@ By default, disable_visualization is False and the tool will visualize keypoints
 
 Inside `run()`, there are three major steps of estimation, and details of each step are shown in the diagram below.
 
-### Step0: estimate keypoints2d
+### Step0: estimate perception2d
 
 In this step, we perform a top-down keypoints2d estimation, detect bbox2d by `bbox_detector`, and detect keypoints2d in every bbox by `kps2d_estimator`. You can choose the model and weight you like by modifying the config file.
 

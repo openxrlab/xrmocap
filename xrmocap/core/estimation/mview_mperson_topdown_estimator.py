@@ -207,7 +207,9 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
         association_results = [[] for _ in range(n_frame)]
         selected_keypoints2d = []
         max_identity = 0
-        for start_idx in tqdm(range(0, n_frame, self.load_batch_size)):
+        for start_idx in tqdm(
+                range(0, n_frame, self.load_batch_size),
+                disable=not self.verbose):
             end_idx = min(n_frame, start_idx + self.load_batch_size)
             mview_batch_arr = load_clip_from_mview_src(
                 start_idx=start_idx,
@@ -255,6 +257,8 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                 # Establish cross-frame and cross-person associations
                 sframe_association_results, predict_keypoints3d, identities = \
                     self.associator.associate_frame(
+                        # Dimension definition varies between
+                        # cv2 images and tensor images.
                         mview_img_arr=mview_batch_arr[:, sub_fidx].transpose(
                             0, 3, 1, 2),
                         mview_bbox2d=sframe_bbox2d_list,
@@ -262,6 +266,7 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                         affinity_type='geometry_mean'
                     )
                 for p_idx in range(len(sframe_association_results)):
+                    # Triangulation, one associated person per time
                     identity = identities[p_idx]
                     associate_idxs = sframe_association_results[p_idx]
                     tri_kps2d = np.zeros((n_view, n_kps, 3))
@@ -277,7 +282,6 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                         for selector in self.point_selectors:
                             tri_mask = selector.get_selection_mask(
                                 points=tri_kps2d, init_points_mask=tri_mask)
-                    # Triangulation
                     kps3d = self.triangulator.triangulate(tri_kps2d, tri_mask)
                     if identity > max_identity:
                         n_identity = identity - max_identity
@@ -290,13 +294,12 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                                identity] = np.concatenate(
                                    (kps3d, np.ones_like(kps3d[:, 0:1])),
                                    axis=-1)
-                for i in range(max_identity + 1):
-                    if i in identities:
-                        index = identities.index(i)
-                        association_results[start_idx + sub_fidx].append(
-                            sframe_association_results[index])
+                for identity in sorted(identities):
+                    index = identities.index(identity)
+                    association_results[start_idx + sub_fidx].append(
+                        sframe_association_results[index])
                 selected_keypoints2d.append(sframe_keypoints2d_list)
-        # Save the predicted keypoints3d
+        # Convert array to keypoints instance
         pred_keypoints3d = Keypoints(
             dtype='numpy',
             kps=pred_kps3d,

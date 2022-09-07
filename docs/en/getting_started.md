@@ -92,15 +92,31 @@ A small test dataset for quick demo can be downloaded [here](https://openxrlab-s
 
 For optimization-based approaches, it utilizes the association between 2D keypoints and generates 3D keypoints by triangulation or other methods. Taking [MVPose](../../configs/mvpose/) as an example, it can be run as
 
+1. Download data and body model
+
+- download data
+
 ```bash
+mkdir xrmocap_data
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
+cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
+```
+- download body model
+
+Please refer to [Body Model Preparation](#body-model-preparation-optional)
+
+2. Run demo
+
+```python
 python tools/mview_mperson_topdown_estimator.py \
-      --image_and_camera_param 'data/image_and_camera_param.txt' \
-      --start_frame 0 \
-      --end_frame 10 \
+      --estimator_config 'configs/mvpose_tracking/mview_mperson_topdown_estimator.py' \
+      --image_and_camera_param 'xrmocap_data/Shelf_50/image_and_camera_param.txt' \
+      --start_frame 300 \
+      --end_frame 350 \
+      --output_dir 'output/estimation' \
       --enable_log_file
 ```
-
- - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` in `associator` config file. For more details, see [mview_mperson_topdown_smpl_estimator.md](../../docs/en/estimation/mview_mperson_topdown_smpl_estimator.md).
+If all the configuration is OK, you could see the results in `output_dir`.
 
 #### Learning-based methods
 
@@ -120,7 +136,7 @@ sh make.sh
 ```bash
 # download data
 mkdir -p xrmocap_data
-wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_dataa
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
 cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 
 # download pretrained model
