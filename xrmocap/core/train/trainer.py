@@ -62,7 +62,8 @@ class MVPTrainer():
                  model_root: str = './weight',
                  inference_conf_thr: list = [0.0],
                  print_freq: int = 100,
-                 clip_max_norm: float = 0.1) -> None:
+                 clip_max_norm: float = 0.1,
+                 optimize_backbone: bool = False) -> None:
         """Create a trainer for training the Multi-view Pose Transformer(MVP).
 
         Args:
@@ -131,7 +132,10 @@ class MVPTrainer():
             print_freq (int, optional):
                 Printing frequency during training. Defaults to 100.
             clip_max_norm (float, optional):
-                Gradient clipping.. Defaults to 0.1.
+                Gradient clipping. Defaults to 0.1.
+            optimize_backbone (bool, optional):
+                Set it to be True to train the whole model jointly.
+                Defaults to False.
         """
 
         self.logger = get_logger(logger)
@@ -161,6 +165,7 @@ class MVPTrainer():
         self.print_freq = print_freq
         self.workers = workers
         self.final_output_dir = final_output_dir
+        self.optimize_backbone = optimize_backbone
 
         self.cudnn_setup = cudnn_setup
         self.dataset_setup = dataset_setup
@@ -176,7 +181,8 @@ class MVPTrainer():
         if model_without_ddp.backbone is not None:
             for params in model_without_ddp.backbone.parameters():
                 # Set it to be True to train the whole model jointly
-                params.requires_grad = True  # dufault false
+                # Dufault to false to avoid OOM
+                params.requires_grad = self.optimize_backbone
 
         lr_linear_proj_mult = self.lr_linear_proj_mult
         lr_linear_proj_names = ['reference_points', 'sampling_offsets']
@@ -612,9 +618,7 @@ def train_3d(model,
         model.module.backbone.eval()
 
     end = time.time()
-    for i, (inputs, meta, skip) in enumerate(loader):
-        if skip[-1] == 1:
-            continue
+    for i, (inputs, meta) in enumerate(loader):
         assert len(inputs) == n_views
         inputs = [i.to(device) for i in inputs]
         meta = [{
@@ -733,8 +737,7 @@ def validate_3d(model,
         end = time.time()
         kps3d_pred = []
         n_max_person = 0
-        for i, (inputs, meta, skip) in enumerate(loader):
-
+        for i, (inputs, meta) in enumerate(loader):
             data_time.update(time.time() - end)
             assert len(inputs) == n_views
             output = model(views=inputs, meta=meta)
