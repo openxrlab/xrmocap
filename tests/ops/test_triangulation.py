@@ -121,3 +121,27 @@ def test_aniposelib_triangulator():
             filename=os.path.join(output_dir,
                                   f'projected_aniposelib_{cam_idx}.jpg'),
             img=canvas)
+
+
+def test_fourdag_triangulator():
+    n_view = 6
+    kps2d_list = []
+    mask_list = []
+    for view_idx in range(n_view):
+        npz_path = os.path.join(input_dir, f'keypoints_2d_{view_idx:02d}.npz')
+        npz_dict = dict(np.load(npz_path, allow_pickle=True))
+        kps2d_list.append(npz_dict['keypoints'][0, 0, :, :])
+        mask_list.append(npz_dict['mask'][0, 0, :])
+    kps2d = np.asarray(kps2d_list)
+    kps2d_mask = np.asarray(mask_list, dtype=kps2d.dtype)
+    cam_param_list = []
+    for view_idx in range(n_view):
+        cam_param_path = os.path.join(input_dir, f'cam_{view_idx:03d}.json')
+        cam_param = PinholeCameraParameter()
+        cam_param.load(cam_param_path)
+        cam_param_list.append(cam_param)
+    triangulator_config = dict(
+        mmcv.Config.fromfile(
+            'configs/modules/ops/triangulation/fourdag_triangulator.py'))
+    triangulator = build_triangulator(triangulator_config)
+    assert triangulator is not None

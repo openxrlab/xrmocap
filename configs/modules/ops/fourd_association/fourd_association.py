@@ -1,0 +1,35 @@
+type='FourdAssociator'
+m_minAsgnCnt=5
+m_filter = False
+triangulator=dict(
+    type='FourDAGTriangulator',
+    m_activeRate=0.1,
+    m_minTrackJCnt=5,
+    m_boneCapacity=100,
+    m_wBone3d=1.0,
+    m_wSquareShape=1e-2,
+    m_shapeMaxIter=5,
+    m_wJ3d=1.0,
+    m_wRegularPose=1e-3,
+    m_poseMaxIter=20,
+    m_wJ2d=1e-5,
+    m_wTemporalTrans=1e-1,
+    m_wTemporalPose=1e-2,
+    m_minTriangulateJCnt=15,
+    m_initActive=0.9,
+    m_triangulateThresh=0.05,
+)
+fourd_matching=dict(
+    type='FourdMatching',
+    m_maxEpiDist=0.15,
+    m_maxTempDist=0.2,
+    m_wEpi=2,
+    m_wTemp=2,
+    m_wView= 2,
+    m_wPaf= 1 ,
+    m_wHier= 0.5,
+    m_cViewCnt= 1.5,
+    m_minCheckCnt= 1,
+    m_minAsgnCnt= 5 ,
+    m_normalizeEdges = True,
+)
