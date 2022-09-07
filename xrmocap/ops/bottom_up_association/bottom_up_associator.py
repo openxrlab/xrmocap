@@ -1,7 +1,7 @@
 # yapf: disable
 import logging
 import numpy as np
-from typing import List, Tuple, Union
+from typing import List, Mapping, Tuple, Union
 import json
 import cv2
 from xrprimer.data_structure.camera import (
@@ -15,57 +15,38 @@ from xrmocap.ops.triangulation.builder import (
     BaseTriangulator, build_triangulator,
 )
 
-from xrmocap.ops.fourd_association.matching.builder import build_matching
+from xrmocap.ops.bottom_up_association.matching.builder import build_matching
 # yapf: enable
 
 
 class Camera():
     def __init__(self,cam_param) -> None:
         super().__init__()
-        self.originK = np.zeros((3,3), dtype=np.float)
-        self.cvR = np.zeros((3,3), dtype=np.float)
-        self.cvT = np.zeros(3, dtype=np.float)
-
-        self.originK = cam_param.intrinsic33()
-        self.cvT = np.array(cam_param.get_extrinsic_t())
-        self.cvR = np.array(cam_param.get_extrinsic_r())
-        self.imgSize = [cam_param.width, cam_param.height]
-        self.rectifyAlpha = 0
-        # self.cvK, _ = cv2.getOptimalNewCameraMatrix(self.originK,self.distCoeff, self.imgSize, self.rectifyAlpha)
-        self.cvK = self.originK
-
-        self.cvKi = np.linalg.inv(self.cvK)
-        self.cvRt = self.cvR.T
-        self.cvRtKi = np.matmul(self.cvRt, self.cvKi)
-        self.cvPos = -np.matmul(self.cvRt, self.cvT) 
+        self.K = cam_param.intrinsic33()
+        self.T = np.array(cam_param.get_extrinsic_t())
+        self.R = np.array(cam_param.get_extrinsic_r())
+        self.Ki = np.linalg.inv(self.K)
+        self.Rt = self.R.T
+        self.RtKi = np.matmul(self.Rt, self.Ki)
+        self.Pos = -np.matmul(self.Rt, self.T) 
         
-        self.cvProj = np.zeros((3,4), dtype=np.float)
+        self.Proj = np.zeros((3,4), dtype=np.float)
         for i in range(3):
             for j in range(4):
-                self.cvProj[i,j] = self.cvR[i,j] if j < 3 else self.cvT[i]
-        self.cvProj = np.matmul(self.cvK, self.cvProj)
+                self.Proj[i,j] = self.R[i,j] if j < 3 else self.T[i]
+        self.Proj = np.matmul(self.K, self.Proj)
 
     def calcRay(self, uv):
-        ver  = -self.cvRtKi.dot(np.append(uv, 1).T)
+        ver  = -self.RtKi.dot(np.append(uv, 1).T)
         return ver / np.linalg.norm(ver)
-        
-def convert_kps3d(multi_kps3d):
-    kps_arr = np.zeros((1,len(multi_kps3d),14,4))
-    for index, skel15 in enumerate(multi_kps3d):
-        kps_arr[0,index,...] = skel15.T
-    mask_arr = np.zeros((1,len(multi_kps3d),14))
-    for index, skel15 in enumerate(multi_kps3d):
-        mask_arr[0,index,:] = skel15[3,:]
-    keypoints = Keypoints(kps=kps_arr, mask=mask_arr, convention='campus')
-    return keypoints
 
-class FourdAssociator:
+class BottomUpAssociator:
 
     def __init__(self,
                  triangulator: Union[None, dict, BaseTriangulator],
                  m_filter: bool=False,
                  fourd_matching: Union[None, dict] = None,
-                 m_minAsgnCnt: int = 5 ,
+                 min_asgn_cnt: int = 5 ,
                  logger: Union[None, str, logging.Logger] = None) -> None:
 
         self.logger = get_logger(logger)
@@ -79,7 +60,7 @@ class FourdAssociator:
         self.n_views = -1
         self.last_multi_kps3d = dict()
         self.joint_size = 19
-        self.m_minAsgnCnt = m_minAsgnCnt
+        self.min_asgn_cnt = min_asgn_cnt
         self.m_filter = m_filter
         if isinstance(fourd_matching, dict):
             fourd_matching['logger'] = self.logger
@@ -91,7 +72,6 @@ class FourdAssociator:
         self, cameras: List[Union[FisheyeCameraParameter,
                                   PinholeCameraParameter]]
     ) -> None:
-        ###tricky
         mycameras = []
         for view in range(len(cameras)):
             mycameras.append(Camera(cameras[view]))
@@ -106,7 +86,7 @@ class FourdAssociator:
         for i, person_id in enumerate(m_personsMap.copy()):
             if i < len(self.last_multi_kps3d):
                 continue
-            if  sum(sum(m_personsMap[person_id] >= 0)) >= self.m_minAsgnCnt:
+            if  sum(sum(m_personsMap[person_id] >= 0)) >= self.min_asgn_cnt:
                 continue
             else:
                 m_personsMap.pop(person_id)
@@ -131,23 +111,31 @@ class FourdAssociator:
             m_skels2d[identity] = skel2d
         return m_skels2d
 
-    def MappingToCampus(self,skel19):
-        shelf15 = np.zeros((4,15), dtype=np.float)
-        mapping = [ 13, 7, 2, 3, 8, 14, 15, 11, 5, 6, 12, 16, 1, 4, 0 ]
-        for jIdx in range(len(mapping)):
-            shelf15[:,jIdx] = skel19[:,mapping[jIdx]]
+    def MappingToCampus(self,multi_kps3d):
+        kps_arr = np.zeros((1,len(multi_kps3d),14,4))
+        mask_arr = np.zeros((1,len(multi_kps3d),14))
+        for index, pid in enumerate(multi_kps3d):
+            fourd19 = multi_kps3d[pid]
+            fourd15 = np.zeros((4,15), dtype=np.float)
+            mapping = [ 13, 7, 2, 3, 8, 14, 15, 11, 5, 6, 12, 16, 1, 4, 0 ]
+            for jIdx in range(len(mapping)):
+                fourd15[:,jIdx] = fourd19[:,mapping[jIdx]]
 
-        faceDir = np.cross((shelf15[0:0+3,12:12+1] - shelf15[0:0+3,14:14+1]).reshape(-1),(shelf15[:3,8:9] - shelf15[:3,9:10]).reshape(-1))
-        faceDir = faceDir / np.linalg.norm(faceDir)
-        zDir = np.array([0., 0., 1.], dtype=np.float)
-        shoulderCenter = (skel19[:3,5:6] + skel19[:3,6:7]) / 2.
-        headCenter = (skel19[:3,9:10] + skel19[:3,10:11]) / 2.
-        
-        shelf15[:3,12:13] = shoulderCenter + (headCenter - shoulderCenter)*0.5
-        if shelf15[3,12] == 0 or  shelf15[3,14] == 0 or  shelf15[3,8] == 0 or  shelf15[3,9] == 0:
-            return shelf15[:,:14]
-        shelf15[:3,13:14] = shelf15[:3,12:13] + faceDir.reshape(-1,1) * 0.125 + zDir.reshape(-1,1) * 0.145
-        return shelf15[:,:14]
+            faceDir = np.cross((fourd15[0:0+3,12:12+1] - fourd15[0:0+3,14:14+1]).reshape(-1),(fourd15[:3,8:9] - fourd15[:3,9:10]).reshape(-1))
+            faceDir = faceDir / np.linalg.norm(faceDir)
+            zDir = np.array([0., 0., 1.], dtype=np.float)
+            shoulderCenter = (fourd19[:3,5:6] + fourd19[:3,6:7]) / 2.
+            headCenter = (fourd19[:3,9:10] + fourd19[:3,10:11]) / 2.
+            
+            fourd15[:3,12:13] = shoulderCenter + (headCenter - shoulderCenter)*0.5
+            if not (fourd15[3,12] == 0 or  fourd15[3,14] == 0 or  fourd15[3,8] == 0 or  fourd15[3,9] == 0):
+                fourd15[:3,13:14] = fourd15[:3,12:13] + faceDir.reshape(-1,1) * 0.125 + zDir.reshape(-1,1) * 0.145
+
+            kps_arr[0,index,...] = fourd15[:,:14].T
+            mask_arr[0,index,:] = fourd15[3,:14]
+
+        keypoints = Keypoints(kps=kps_arr, mask=mask_arr, convention='campus')
+        return keypoints
 
     def associate_frame(
             self, kps2d_paf:list
@@ -173,13 +161,9 @@ class FourdAssociator:
         else:
             multi_kps3d = self.triangulator.triangulate_wo_filter(m_skels2d)
         self.last_multi_kps3d = multi_kps3d
-
-        shelfSkels = []
-        for skel_id in multi_kps3d:
-            shelfSkels.append(self.MappingToCampus(multi_kps3d[skel_id]))
-            
-        keypoints3d = convert_kps3d(shelfSkels)
+        keypoints3d = self.MappingToCampus(multi_kps3d) 
         indentities = multi_kps3d.keys()
+
         return keypoints3d, indentities
 
     

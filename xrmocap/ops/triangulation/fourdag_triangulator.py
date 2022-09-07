@@ -8,7 +8,7 @@ from xrmocap.ops.triangulation import m_shape
 jointSize = 19
 shapeSize=10
 joint_parent = [-1, 0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 6, 7, 8, 11, 12, 14, 13]
-hierarchyMap = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
+hierarchy_map = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
 ###
 
 def Welsch(c, x):
@@ -30,7 +30,6 @@ def Rodrigues(vec):
     else:
         c = np.cos(theta)
         s = np.sin(theta)
-        itheta = 1 / theta
         r = vec / theta
         return c * I + np.matmul((1 - c) * r.reshape((-1,1)), r.reshape((1, -1))) + s * Skew(r)
     
@@ -191,9 +190,7 @@ class SkelSolver():
 
     def CalcJBlend(self, param):
         jOffset = np.matmul(self.m_jShapeBlend, param.GetShape())
-        # jBlend = self.m_joints + Eigen::Map<const Eigen::Matrix3Xf>(jOffset.data(), 3, self.m_joints.shape[1])
         jBlend = self.m_joints + jOffset.reshape((self.m_joints.shape[1],3)).T
-
         return jBlend
 
     def CalcNodeWarps(self, param, jBlend):
@@ -207,7 +204,6 @@ class SkelSolver():
 
             matrix[:3,:3] = Rodrigues(param.GetPose()[3*jIdx:3*jIdx+3])
             nodeWarps[:4,4 * jIdx:4 * jIdx+4] = matrix
-        # import pdb; pdb.set_trace()
         return nodeWarps
 
     def CalcChainWarps(self,nodeWarps):
@@ -229,10 +225,8 @@ class SkelSolver():
             axes[:,1] =  np.cross(axes[:,2],axes[:,0]) / np.linalg.norm(np.cross(axes[:,2],axes[:,0]))
             return axes
         
-        # import pdb; pdb.set_trace()
         mat =np.matmul(CalcAxes(term.j3dTarget[:,2][:3] - term.j3dTarget[:,1][:3],term.j3dTarget[:,3][:3] - term.j3dTarget[:,1][:3]), \
              (np.linalg.inv(CalcAxes(self.m_joints[:,2] - self.m_joints[:,1], self.m_joints[:,3] - self.m_joints[:,1]))))
-        # angleAxis(mat)
         angle = np.arccos(( mat[0,0] + mat[1,1] + mat[2,2] - 1)/2)
         x = (mat[2,1] - mat[1,2])/np.sqrt((mat[2,1] - mat[1,2])**2+(mat[0,2] - mat[2,0])**2+(mat[1,0] - mat[0,1])**2)
         y = (mat[0,2] - mat[2,0])/np.sqrt((mat[2,1] - mat[1,2])**2+(mat[0,2] - mat[2,0])**2+(mat[1,0] - mat[0,1])**2)
@@ -243,11 +237,11 @@ class SkelSolver():
         
         jBlend = self.CalcJBlend(param)
 
-        hierSize = max(hierarchyMap)
+        hierSize = max(hierarchy_map)
         hier = 0 if hierarchy else hierSize
         jCut = 0
         while hier <= hierSize:
-            while jCut < jointSize and hierarchyMap[jCut] <= hier:
+            while jCut < jointSize and hierarchy_map[jCut] <= hier:
                 jCut += 1
             for iterTime in range(maxIterTime):
                 nodeWarps = self.CalcNodeWarps(param, jBlend[:,:jCut])
@@ -399,38 +393,38 @@ class SkelSolver():
 
 class FourDAGTriangulator():
     def __init__(self,
-                 m_activeRate: float=0.1,
-                 m_minTrackJCnt: int=5,
-                 m_boneCapacity: int=100,
-                 m_wBone3d: float=1.0,
-                 m_wSquareShape: float=1e-2,
-                 m_shapeMaxIter: int=5,
-                 m_wJ3d: float=1.0,
-                 m_wRegularPose: float=1e-3,
-                 m_poseMaxIter: int=20,
-                 m_wJ2d: float=1e-5,
-                 m_wTemporalTrans: float=1e-1,
-                 m_wTemporalPose: float=1e-2,
-                 m_minTriangulateJCnt: int=15,
-                 m_initActive: float=0.9,
-                 m_triangulateThresh: float=0.05,
+                 active_rate: float=0.1,
+                 min_track_cnt: int=5,
+                 bone_capacity: int=100,
+                 w_bone3d: float=1.0,
+                 w_square_shape: float=1e-2,
+                 shape_max_iter: int=5,
+                 w_joint3d: float=1.0,
+                 w_regular_pose: float=1e-3,
+                 pose_max_iter: int=20,
+                 w_joint2d: float=1e-5,
+                 w_temporal_trans: float=1e-1,
+                 w_temporal_pose: float=1e-2,
+                 min_triangulate_cnt: int=15,
+                 init_active: float=0.9,
+                 triangulate_thresh: float=0.05,
                  logger=None):
         
-        self.m_activeRate = m_activeRate
-        self.m_minTrackJCnt = m_minTrackJCnt
-        self.m_boneCapacity = m_boneCapacity
-        self.m_wBone3d = m_wBone3d
-        self.m_wSquareShape = m_wSquareShape
-        self.m_shapeMaxIter = m_shapeMaxIter
-        self.m_wJ3d = m_wJ3d
-        self.m_wRegularPose = m_wRegularPose
-        self.m_poseMaxIter = m_poseMaxIter
-        self.m_wJ2d = m_wJ2d
-        self.m_wTemporalTrans = m_wTemporalTrans
-        self.m_wTemporalPose = m_wTemporalPose
-        self.m_minTriangulateJCnt = m_minTriangulateJCnt
-        self.m_initActive = m_initActive
-        self.m_triangulateThresh = m_triangulateThresh
+        self.active_rate = active_rate
+        self.min_track_cnt = min_track_cnt
+        self.bone_capacity = bone_capacity
+        self.w_bone3d = w_bone3d
+        self.w_square_shape = w_square_shape
+        self.shape_max_iter = shape_max_iter
+        self.w_joint3d = w_joint3d
+        self.w_regular_pose = w_regular_pose
+        self.pose_max_iter = pose_max_iter
+        self.w_joint2d = w_joint2d
+        self.w_temporal_trans = w_temporal_trans
+        self.w_temporal_pose = w_temporal_pose
+        self.min_triangulate_cnt = min_triangulate_cnt
+        self.init_active = init_active
+        self.triangulate_thresh = triangulate_thresh
 
         self.projs = None
         self.m_skels = dict()
@@ -447,7 +441,7 @@ class FourDAGTriangulator():
                 skel_tmp = skel2d[:,view*jointSize:view*jointSize+jointSize]
                 triangulator.points[:,view] = skel_tmp[:,jIdx]
             triangulator.Solve()
-            if triangulator.loss < self.m_triangulateThresh:
+            if triangulator.loss < self.triangulate_thresh:
                 skel[:,jIdx] = np.append(triangulator.pos, 1)
         
         return skel
@@ -456,41 +450,39 @@ class FourDAGTriangulator():
         prevCnt = len(self.m_skels)
         info_index = 0
         for pid, corr_id in enumerate(skels2d):
-            # skel2dCorr = skels2d[corr_id]
             if len(self.m_skels) != len(self.m_skelInfos):
                 import pdb; pdb.set_trace()
             if pid < prevCnt:
                 info = self.m_skelInfos[info_index][1]
                 info_id = self.m_skelInfos[info_index][0]
                 skel = self.m_skels[info_id]
-                active = min(info.active + self.m_activeRate * (2.0 * Welsch(self.m_minTrackJCnt, sum(skels2d[corr_id][2] > 0)) - 1.0 ), 1.0)
+                active = min(info.active + self.active_rate * (2.0 * Welsch(self.min_track_cnt, sum(skels2d[corr_id][2] > 0)) - 1.0 ), 1.0)
                 if info.active < 0:
                     self.m_skels.pop(info_id)
                     self.m_skelInfos.pop(info_index)
-                    # info_index += 1
                     continue
                 else:
                     info_index += 1
 
                 if not info.shapeFixed:
                     skel = self.TriangulatePerson(skels2d[corr_id])
-                    if sum(skel[3] > 0) >= self.m_minTriangulateJCnt:
+                    if sum(skel[3] > 0) >= self.min_triangulate_cnt:
                         info.PushPrevBones(skel)
-                        if min(info.boneCnt) >= self.m_boneCapacity:
+                        if min(info.boneCnt) >= self.bone_capacity:
                             info.PushPrevBones(skel)
                             shapeTerm = Term()
                             shapeTerm.bone3dTarget = np.row_stack((info.boneLen.T, np.ones(info.boneLen.shape[0],dtype=np.float32)))
-                            shapeTerm.wBone3d = self.m_wBone3d
-                            shapeTerm.wSquareShape = self.m_wSquareShape
-                            self.m_solver.SolveShape(shapeTerm, info, self.m_shapeMaxIter)
+                            shapeTerm.wBone3d = self.w_bone3d
+                            shapeTerm.wSquareShape = self.w_square_shape
+                            self.m_solver.SolveShape(shapeTerm, info, self.shape_max_iter)
 
                             # align pose
                             poseTerm = Term()
                             poseTerm.j3dTarget = skel
-                            poseTerm.wJ3d = self.m_wJ3d
-                            poseTerm.wRegularPose = self.m_wRegularPose
+                            poseTerm.wJ3d = self.w_joint3d
+                            poseTerm.wRegularPose = self.w_regular_pose
                             self.m_solver.AlignRT(poseTerm, info)
-                            self.m_solver.SolvePose(poseTerm, info, self.m_poseMaxIter)
+                            self.m_solver.SolvePose(poseTerm, info, self.pose_max_iter)
                             
                             skel[:3] = self.m_solver.CalcJFinal_2(info)
                             info.shapeFixed = True
@@ -499,7 +491,7 @@ class FourDAGTriangulator():
                 else:
                     # align pose
                     poseTerm = Term()
-                    poseTerm.wJ2d = self.m_wJ2d
+                    poseTerm.wJ2d = self.w_joint2d
                     poseTerm.projs = self.projs
                     poseTerm.j2dTarget = copy.deepcopy(skels2d[corr_id])
 
@@ -515,11 +507,11 @@ class FourDAGTriangulator():
                             for view in range(int(self.projs.shape[1] / 4)):
                                 poseTerm.j2dTarget[:,view * jointSize + jIdx] = 0
                     
-                    poseTerm.wRegularPose = self.m_wRegularPose
+                    poseTerm.wRegularPose = self.w_regular_pose
                     poseTerm.paramPrev = info
-                    poseTerm.wTemporalTrans = self.m_wTemporalTrans
-                    poseTerm.wTemporalPose = self.m_wTemporalPose
-                    self.m_solver.SolvePose(poseTerm, info, self.m_poseMaxIter)
+                    poseTerm.wTemporalTrans = self.w_temporal_trans
+                    poseTerm.wTemporalPose = self.w_temporal_pose
+                    self.m_solver.SolvePose(poseTerm, info, self.pose_max_iter)
                     skel[:3] = self.m_solver.CalcJFinal_2(info)
                     skel[3] = jConfidence.T
                     # update active
@@ -527,11 +519,11 @@ class FourDAGTriangulator():
             else:
                 skel = self.TriangulatePerson(skels2d[corr_id])
                 # alloc new person
-                if sum(skel[3]> 0) >= self.m_minTriangulateJCnt:
+                if sum(skel[3]> 0) >= self.min_triangulate_cnt:
                     self.m_skelInfos.append((corr_id, SkelInfo()))
                     info = self.m_skelInfos[-1][1]
                     info.PushPrevBones(skel)
-                    info.active = self.m_initActive
+                    info.active = self.init_active
                     self.m_skels[corr_id] = skel
         return self.m_skels
                 
@@ -540,18 +532,17 @@ class FourDAGTriangulator():
         self.cameras = cameras
         self.projs = np.zeros((3, len(self.cameras) * 4))
         for view in range(len(self.cameras)):
-            self.projs[:,4*view:4*view + 4] = self.cameras[view].cvProj
+            self.projs[:,4*view:4*view + 4] = self.cameras[view].Proj
 
     def triangulate_wo_filter(self, skels2d):
         skelIter = iter(self.m_skels.copy())
         prevCnt = len(self.m_skels)
         for pIdx, corr_id in enumerate(skels2d):
             skel = self.TriangulatePerson(skels2d[corr_id])
-            active = sum(skel[3]> 0) >= self.m_minTriangulateJCnt
+            active = sum(skel[3]> 0) >= self.min_triangulate_cnt
             if pIdx < prevCnt:
                 if active:
                     self.m_skels[next(skelIter)] = skel
-                    # index += 1
                 else:
                     self.m_skels.pop(next(skelIter))
             

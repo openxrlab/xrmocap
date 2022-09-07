@@ -1,9 +1,8 @@
 import logging
 import numpy as np
-from typing import List, Tuple, Union
+from typing import Union
 import heapq
 import copy
-from xrprimer.utils.log_utils import get_logger
 import math
 
 from .base_matching import BaseMatching
@@ -69,17 +68,17 @@ class FourdMatching(BaseMatching):
                  n_views=5,
                  n_joints=19,
                  n_pafs=18,
-                 m_maxEpiDist: float=0.15,
-                 m_maxTempDist: float=0.2,
-                 m_wEpi: float=2,
-                 m_wTemp: float=2,
-                 m_wView: float= 2,
-                 m_wPaf: float= 1 ,
-                 m_wHier: float= 0.5,
-                 m_cViewCnt: float= 1.5,
-                 m_minCheckCnt: int= 1,
-                 m_minAsgnCnt: int= 5 ,
-                 m_normalizeEdges: bool = True,
+                 max_epi_dist: float=0.15,
+                 max_temp_dist: float=0.2,
+                 w_epi: float=2,
+                 w_temp: float=2,
+                 w_view: float= 2,
+                 w_paf: float= 1 ,
+                 w_hier: float= 0.5,
+                 c_view_cnt: float= 1.5,
+                 min_check_cnt: int= 1,
+                 min_asgn_cnt: int= 5 ,
+                 normalize_edges: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """
 
@@ -94,27 +93,27 @@ class FourdMatching(BaseMatching):
         self.n_views = n_views
         self.n_joints = n_joints
         self.n_pafs = n_pafs
-        self.m_maxEpiDist =  m_maxEpiDist
-        self.m_maxTempDist = m_maxTempDist
-        self.m_wEpi = m_wEpi
-        self.m_wTemp = m_wTemp
-        self.m_wView = m_wView
-        self.m_wPaf = m_wPaf
-        self.m_wHier = m_wHier
-        self.m_cViewCnt = m_cViewCnt
-        self.m_minCheckCnt = m_minCheckCnt
-        self.m_minAsgnCnt = m_minAsgnCnt
-        self.m_normalizeEdges = m_normalizeEdges
+        self.max_epi_dist =  max_epi_dist
+        self.max_temp_dist = max_temp_dist
+        self.w_epi = w_epi
+        self.w_temp = w_temp
+        self.w_view = w_view
+        self.w_paf = w_paf
+        self.w_hier = w_hier
+        self.c_view_cnt = c_view_cnt
+        self.min_check_cnt = min_check_cnt
+        self.min_asgn_cnt = min_asgn_cnt
+        self.normalize_edges = normalize_edges
 
         ######
         self.paf_dict = [[1, 2, 7,  0, 0, 3, 8,  1, 5,  11, 5, 1, 6,  12, 6, 1,  14, 13],
 			        [0, 7, 13, 2, 3, 8, 14, 5, 11, 15, 9, 6, 12, 16, 10, 4, 17, 18]]
-        self.hierarchyMap = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
+        self.hierarchy_map = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
         #####
 
         self.m_pafHier = np.zeros(self.n_pafs)
         for paf_id in range(self.n_pafs):
-            self.m_pafHier[paf_id] = min(self.hierarchyMap[self.paf_dict[0][paf_id]], self.hierarchyMap[self.paf_dict[1][paf_id]])
+            self.m_pafHier[paf_id] = min(self.hierarchy_map[self.paf_dict[0][paf_id]], self.hierarchy_map[self.paf_dict[1][paf_id]])
         self.m_pafHierSize = self.m_pafHier.max()
 
         self.m_joint2paf = {i:[] for i in range(self.n_joints)}
@@ -180,9 +179,8 @@ class FourdMatching(BaseMatching):
                     self.m_jointRays[view][joint_id].append(cam.calcRay(joints[joint_candidate][:2]))
 
     def cal_paf_edges(self):
-        if self.m_normalizeEdges:
+        if self.normalize_edges:
             for paf_id in range(self.n_pafs):
-                # joint_pair = [paf_dict[paf_id], paf_dict[paf_id+18]]
                 for detection in self.kps2d_paf:
                     pafs = detection['pafs'][paf_id]
                     if np.sum(pafs) > 0: 
@@ -209,11 +207,11 @@ class FourdMatching(BaseMatching):
                         epi = np.full((len(joint1), len(joint2)), -1.0)
                         for joint1_candidate in range(len(joint1)):
                             for joint2_candidate in range(len(joint2)):
-                                dist = line2linedist(cam1.cvPos, ray1[joint1_candidate], cam2.cvPos, ray2[joint2_candidate])
-                                if dist < self.m_maxEpiDist:
-                                    epi[joint1_candidate, joint2_candidate] = 1 - dist / self.m_maxEpiDist
+                                dist = line2linedist(cam1.Pos, ray1[joint1_candidate], cam2.Pos, ray2[joint2_candidate])
+                                if dist < self.max_epi_dist:
+                                    epi[joint1_candidate, joint2_candidate] = 1 - dist / self.max_epi_dist
 
-                        if self.m_normalizeEdges:
+                        if self.normalize_edges:
                             row_factor = np.clip(epi.sum(1), 1.0, None)
                             col_factor = np.clip(epi.sum(0), 1.0, None)
                             for i in range(len(row_factor)):
@@ -233,11 +231,11 @@ class FourdMatching(BaseMatching):
                         skel = self.last_multi_kps3d[person_id]
                         if skel[3, joint_id] > 0:
                             for joint_candidate in range(len(rays)):
-                                dist = point2linedist(skel[:,joint_id][:3], self.cameras[view].cvPos, rays[joint_candidate])
-                                if dist < self.m_maxTempDist:
-                                    temp[pid, joint_candidate] = 1 - dist / self.m_maxTempDist
+                                dist = point2linedist(skel[:,joint_id][:3], self.cameras[view].Pos, rays[joint_candidate])
+                                if dist < self.max_temp_dist:
+                                    temp[pid, joint_candidate] = 1 - dist / self.max_temp_dist
 
-                    if self.m_normalizeEdges:
+                    if self.normalize_edges:
                         row_factor = np.clip(temp.sum(1), 1.0, None)
                         col_factor = np.clip(temp.sum(0), 1.0, None)
                         for i in range(len(row_factor)):
@@ -269,9 +267,7 @@ class FourdMatching(BaseMatching):
                             node1 = nodes1[bone1_id]
                             node2 = nodes2[bone2_id]
                             epidist = np.zeros(2)
-                            # normals = np.zeros((3,2))
                             for i in range(2):
-                                # normals[:,i] = np.cross(self.m_jointRays[view1][joint_pair[i]][:,node1[i]], self.m_jointRays[view2][joint_pair[i]][:,node1[i]])
                                 epidist[i] = self.m_epiEdges[joint_pair[i]][view1][view2][node1[i], node2[i]]
                             if epidist.min() < 0:
                                 continue
@@ -307,7 +303,6 @@ class FourdMatching(BaseMatching):
     def enum_cliques(self):
         tmpCliques = {i:[] for i in range(self.n_pafs)}
         for paf_id in range(self.n_pafs):
-            # joint_pair = [self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]]
             nodes = self.m_boneNodes[paf_id]
             pick = [-1]* (self.n_views+1)
             available_node = {i:{j:[] for j in range(self.n_views+1)} for i in range(self.n_views+1)}
@@ -336,7 +331,6 @@ class FourdMatching(BaseMatching):
                     index += 1
                     if index == 0:
                         for view in range(self.n_views):
-                            # assign_map = self.m_assign_map[view]
                             for bone in range(len(nodes[view])):
                                 available_node[0][view].append(bone)
                         for pid in range(len(self.last_multi_kps3d)):
@@ -348,7 +342,6 @@ class FourdMatching(BaseMatching):
                                 available_node[index][view] = []
                                 epiEdges = self.m_boneEpiEdges[paf_id][index-1][view]
                                 bone1_id = available_node[index - 1][index - 1][pick[index - 1]]
-                                # assign_map = self.assign_map[view]
                                 for bone2_id in available_node[index - 1][view]:
                                     if epiEdges[bone1_id,bone2_id] > 0:
                                         available_node[index][view].append(bone2_id)
@@ -377,7 +370,6 @@ class FourdMatching(BaseMatching):
         joint_pair = [self.paf_dict[0][clique.paf_id], self.paf_dict[1][clique.paf_id]]
 
         if clique.proposal[self.n_views] != -1:
-            # print('1####在前一帧有对应person id')
             person_id = clique.proposal[self.n_views]
 
             if self.checkCnt(clique, joint_pair, nodes, person_id) != -1:
@@ -390,7 +382,6 @@ class FourdMatching(BaseMatching):
                         assign = (self.m_assignMap[view][joint_pair[0]][node[0]], self.m_assignMap[view][joint_pair[1]][node[1]])
 
                         if (assign[0] == -1 or assign[0] == person_id) and (assign[1] == -1 or assign[1] == person_id):
-                            #没有分配 或者 分配了personid一样
                             for i in range(2):
                                 person[joint_pair[i], view] = node[i]
                                 self.m_assignMap[view][joint_pair[i]][node[i]] = person_id
@@ -405,10 +396,8 @@ class FourdMatching(BaseMatching):
                 _proposal = clique.proposal
                 _proposal[self.n_views] = -1
                 self.push_clique(clique.paf_id, _proposal[:])
-                # print("2#####存在冲突")
             
         else:
-            #没有对应前一帧
             voting = Voting()
             voting = self.clique2voting(clique,voting)
             voting.parse()            
@@ -431,7 +420,7 @@ class FourdMatching(BaseMatching):
                                 cnt += _cnt
                             return cnt
                         cntt = checkCnt()
-                        if cntt >= self.m_minCheckCnt:
+                        if cntt >= self.min_check_cnt:
                             person_candidate.append([cntt, person_id])
                     if len(person_candidate) == 0:
                         return True
@@ -474,7 +463,6 @@ class FourdMatching(BaseMatching):
                         node = nodes[view][clique.proposal[view]]
                         unassignj_candidata = node[1 - valid_id]
                         assigned = self.m_assignMap[view][joint_pair[valid_id]][node[valid_id]]
-                        # unassigned = self.m_assignMap[view][joint_pair[1-valid_id]][node[1-valid_id]]
                         if assigned == master_id:
                             if person[unassignj_id, view] == -1 and self.CheckJointCompatibility(view,unassignj_id, unassignj_candidata, master_id) >= 0:
                                 person[unassignj_id, view] = unassignj_candidata
@@ -516,7 +504,6 @@ class FourdMatching(BaseMatching):
                         
                         elif (assign_id[0] == master_id and assign_id[1] == -1 ) or (assign_id[0] == -1 and assign_id[1] == master_id ):
                             valid_id = 0 if assign_id[1] == -1 else 1
-                            # unassigned = self.m_assignMap[view][joint_pair[1-valid_id]][node[1-valid_id]]
                             unassignj_id = joint_pair[1-valid_id]
                             unassignj_candidata = node[1-valid_id]
                             if person[unassignj_id, view] == -1 or person[unassignj_id, view] == unassignj_candidata:
@@ -568,7 +555,7 @@ class FourdMatching(BaseMatching):
                             if clique.proposal[view] >= 0:
                                 if clique.proposal[view] >= len(nodes[view]):
                                     import pdb; pdb.set_trace()
-                                node = nodes[view][clique.proposal[view]] ###
+                                node = nodes[view][clique.proposal[view]]
                                 if master[joint_pair[0], view] != node[0] or master[joint_pair[1], view] != node[1]:
                                     _proposal[view] = clique.proposal[view]
                         self.push_clique(clique.paf_id, _proposal[:])
@@ -624,9 +611,9 @@ class FourdMatching(BaseMatching):
 
         pafScore = sum(scores) / len(scores)
         var  = sum(np.array(clique.proposal[:self.n_views]) >= 0)
-        viewScore = Welsch(self.m_cViewCnt, var)
+        viewScore = Welsch(self.c_view_cnt, var)
         hierScore = 1 - pow(self.m_pafHier[clique.paf_id] / self.m_pafHierSize, 4)
-        return (self.m_wEpi * epiScore + self.m_wTemp * tempScore + self.m_wPaf * pafScore + self.m_wView * viewScore+ self.m_wHier * hierScore) / (self.m_wEpi + self.m_wTemp + self.m_wPaf + self.m_wView + self.m_wHier)
+        return (self.w_epi * epiScore + self.w_temp * tempScore + self.w_paf * pafScore + self.w_view * viewScore+ self.w_hier * hierScore) / (self.w_epi + self.w_temp + self.w_paf + self.w_view + self.w_hier)
 
     def checkCnt(self, clique, joint_pair, nodes, person_id):
         cnt = 0
@@ -672,7 +659,7 @@ class FourdMatching(BaseMatching):
 
     def push_clique(self, paf_id, proposal):
         if max(proposal[:self.n_views]) == -1:
-            return #不需要拆
+            return 
         clique = Clique(paf_id, proposal)
         clique.score = self.cal_clique_score(clique)
         heapq.heappush(self.cliques, clique)
