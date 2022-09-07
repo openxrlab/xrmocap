@@ -11,4 +11,4 @@
 
 ## Multi-view multi-person SMPL Estimator
 
-`MultiViewMultiPersonSMPLEstimator` is an API class for multi-view multi-person scenario, taking multi-person keypoints3d and multi-view camera parameters as input, estimating SMPL parameters and some other important information. See the [estimator doc](./tools/mview_mperson_smplify3d.md) for details.
+`MultiPersonSMPLEstimator` is an API class for multi-view multi-person scenario, taking multi-person keypoints3d and multi-view camera parameters as input, estimating SMPL parameters and some other important information. See the [estimator doc](./tools/mview_mperson_smplify3d.md) for details.

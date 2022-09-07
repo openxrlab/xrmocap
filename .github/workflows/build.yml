@@ -6,7 +6,6 @@ name: build
 on:
   push:
     branches:
-     - alpha_test # remove it after public
      - main
     paths-ignore:
       - 'README.md'
@@ -31,9 +30,6 @@ jobs:
         shell: bash -l {0}
     container:
       image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
-      credentials:
-        username: ${{secrets.DOCKERHUB_USERNAME}}
-        password: ${{secrets.DOCKERHUB_PWD}}
     steps:
       - uses: actions/checkout@v2
       - name: Show conda env
@@ -71,7 +67,6 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # deprecated after public
           files: ./coverage.xml
           flags: unittests
           env_vars: OS,PYTHON
