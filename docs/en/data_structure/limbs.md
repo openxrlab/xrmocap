@@ -1,6 +1,8 @@
 # Limbs
 
-[TOC]
+- [Overview](#overview)
+- [Attribute definition](#attribute-definition)
+- [Create an instance](#create-an-instance)
 
 ### Overview
 

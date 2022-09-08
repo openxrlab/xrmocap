@@ -1,11 +1,11 @@
 type = 'TopDownAssociationEvaluation'
 
 __data_root__ = './xrmocap_data/CMU-panoptic'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
-__bbox_thr__ = 0.99
+__meta_path__ = __data_root__ + '/xrmocap_meta_band4'
+__bbox_thr__ = 0.85
 
 logger = None
-output_dir = './output/cmu-panoptic'
+output_dir = './output/mvpose_tracking/cmu-panoptic/band'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -35,9 +35,9 @@ associator = dict(
         use_dual_stochastic_SVT=True,
         lambda_SVT=50,
         alpha_SVT=0.5,
-        n_cam_min=3,
+        n_cam_min=2,
     ),
-    kalman_tracking=dict(type='KalmanTracking', n_cam_min=3, logger=logger),
+    kalman_tracking=dict(type='KalmanTracking', n_cam_min=2, logger=logger),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',
         tracking_distance=1.5,
@@ -48,7 +48,7 @@ associator = dict(
         ]),
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
     best_distance=1800,
-    interval=5,
+    interval=10,
     bbox_thr=__bbox_thr__,
     device='cuda',
     logger=logger,

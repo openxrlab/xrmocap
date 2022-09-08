@@ -1,11 +1,11 @@
 type = 'TopDownAssociationEvaluation'
 
 __data_root__ = './xrmocap_data/CMU-panoptic'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
-__bbox_thr__ = 0.99
+__meta_path__ = __data_root__ + '/xrmocap_meta_band4'
+__bbox_thr__ = 0.85
 
 logger = None
-output_dir = './output/cmu-panoptic'
+output_dir = './output/mvpose/cmu-panoptic/band'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -35,7 +35,7 @@ associator = dict(
         use_dual_stochastic_SVT=True,
         lambda_SVT=50,
         alpha_SVT=0.5,
-        n_cam_min=3,
+        n_cam_min=2,
     ),
     kalman_tracking=None,
     identity_tracking=dict(

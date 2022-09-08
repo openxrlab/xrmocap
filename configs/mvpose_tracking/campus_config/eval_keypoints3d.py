@@ -1,11 +1,11 @@
 type = 'TopDownAssociationEvaluation'
 
 __data_root__ = './xrmocap_data/CampusSeq1'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
+__meta_path__ = __data_root__ + '/xrmocap_meta_testset_fasterrcnn'
 __bbox_thr__ = 0.9
 
 logger = None
-output_dir = './output/campus'
+output_dir = './output/mvpose_tracking/campus/fasterrcnn'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -47,8 +47,8 @@ associator = dict(
             'right_hip_extra'
         ]),
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
-    best_distance=100,
-    interval=5,
+    best_distance=90,
+    interval=10,
     bbox_thr=__bbox_thr__,
     device='cuda',
     logger=logger,

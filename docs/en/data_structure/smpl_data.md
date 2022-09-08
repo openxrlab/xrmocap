@@ -1,8 +1,11 @@
 # SMPLData
 
-[TOC]
-
-
+- [Overview](#overview)
+- [Key/Value definition](#keyvalue-definition)
+- [Attribute definition](#attribute-definition)
+- [Create an instance](#create-an-instance)
+- [Convert into body_model input](#convert-into-body_model-input)
+- [File IO](#file-io)
 
 ### Overview
 
