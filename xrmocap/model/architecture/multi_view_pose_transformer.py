@@ -52,12 +52,12 @@ class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
                  use_feat_level: list, n_cameras: int, query_embed_type: str,
                  with_pose_refine: bool, loss_weight_loss_ce: float,
                  loss_per_kp: float, aux_loss: bool, pred_conf_threshold: list,
-                 pred_class_fuse: str, projattn_pose_embed_mode: str,
+                 pred_class_fuse: str, projattn_pos_embed_mode: str,
                  query_adaptation: bool, convert_kp_format_indexes: list,
-                 backbone_setup: dict, decoder_layer_setup: dict,
-                 decoder_setup: dict, pos_encoding_setup: dict,
-                 pose_embed_setup: dict, matcher_setup: dict,
-                 criterion_setup: dict, space_size: list,
+                 backbone_setup: dict, proj_attn_setup: dict,
+                 decoder_layer_setup: dict, decoder_setup: dict,
+                 pos_encoding_setup: dict, pose_embed_setup: dict,
+                 matcher_setup: dict, criterion_setup: dict, space_size: list,
                  space_center: list) -> None:
         """
         Args:
@@ -93,7 +93,7 @@ class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
             pred_class_fuse (str):
                 Type of fusing predictions.
                 ['mean', 'feat_mean_pool', 'feat_max_pool']
-            projattn_pose_embed_mode (str):
+            projattn_pos_embed_mode (str):
                 The positional embedding mode of projective
                 attention. ['use_rayconv','use_2d_coordconv']
                 query_adaptation (bool): Whether to use query adaptation.
@@ -150,7 +150,12 @@ class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
         if is_train:
             self.backbone.init_weights()
 
-        decoder_layer_cfg = dict(type='MvPDecoderLayer')
+        # projective attention
+        proj_attn_cfg = dict(type='ProjAttn')
+        proj_attn_cfg.update(proj_attn_setup)
+        proj_attn = build_model(proj_attn_cfg)
+
+        decoder_layer_cfg = dict(type='MvPDecoderLayer', proj_attn=proj_attn)
         decoder_layer_cfg.update(decoder_layer_setup)
         decoder_layer = build_model(decoder_layer_cfg)
 
@@ -251,7 +256,7 @@ class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
         self.pred_class_fuse = pred_class_fuse
 
         self.level_embed = nn.Parameter(torch.Tensor(3, d_model))
-        self.projattn_pose_embed_mode = projattn_pose_embed_mode
+        self.projattn_pos_embed_mode = projattn_pos_embed_mode
         self.query_adaptation = query_adaptation
         self.convert_kp_format_indexes = convert_kp_format_indexes
 
@@ -308,12 +313,12 @@ class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
         # get pos embed, camera ray or 2d coords
         for lvl in range(n_feat_level):
             # this can be compute only once, without iterating over views
-            if self.projattn_pose_embed_mode == 'use_rayconv':
+            if self.projattn_pos_embed_mode == 'use_rayconv':
                 camera_rays.append(
                     get_rays(self.image_size, all_feats[lvl].shape[2],
                              all_feats[lvl].shape[3], cam_K_crop, cam_R,
                              cam_T).flatten(0, 1))
-            elif self.projattn_pose_embed_mode == 'use_2d_coordconv':
+            elif self.projattn_pos_embed_mode == 'use_2d_coordconv':
                 camera_rays.append(
                     get_2d_coords(self.image_size, all_feats[lvl].shape[2],
                                   all_feats[lvl].shape[3], cam_K_crop, cam_R,

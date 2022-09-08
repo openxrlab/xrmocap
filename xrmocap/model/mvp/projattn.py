@@ -20,20 +20,25 @@ class ProjAttn(nn.Module):
                  n_levels=4,
                  n_heads=8,
                  n_points=4,
-                 projattn_posembed_mode='use_rayconv'):
+                 projattn_pos_embed_mode='use_rayconv'):
         """Projective Attention Module Modified from DeformableConvV2 and
         Deformable DETR https://github.com/chengdazhi/Deformable-
         Convolution-V2-PyTorch/tree/pytorch_1.0.0
         https://github.com/fundamentalvision/Deformable-DETR.
 
-        :param d_model      hidden dimension
-        :param n_levels     number of feature levels
-        :param n_heads      number of attention heads
-        :param n_points     number of sampling
-        points per attention head per feature level
-
-        :param projattn_posembed_mode      the
-        positional embedding mode of projective attention
+        Args:
+            d_model (int, optional):
+                hidden dimension. Defaults to 256.
+            n_levels (int, optional):
+                number of feature levels. Defaults to 4.
+            n_heads (int, optional):
+                number of attention heads. Defaults to 8.
+            n_points (int, optional):
+                number of sampling points per attention head
+                per feature level. Defaults to 4.
+            projattn_pos_embed_mode (str, optional):
+                the positional embedding mode of projective
+                attention. Defaults to 'use_rayconv'.
         """
         super().__init__()
         if d_model % n_heads != 0:
@@ -59,11 +64,11 @@ class ProjAttn(nn.Module):
                                           n_heads * n_levels * n_points * 2)
         self.attention_weights = nn.Linear(d_model,
                                            n_heads * n_levels * n_points)
-        if projattn_posembed_mode == 'use_rayconv':
+        if projattn_pos_embed_mode == 'use_rayconv':
             self.rayconv = nn.Linear(d_model + 3, d_model)
-        elif projattn_posembed_mode == 'use_2d_coordconv':
+        elif projattn_pos_embed_mode == 'use_2d_coordconv':
             self.rayconv = nn.Linear(d_model + 2, d_model)
-        elif projattn_posembed_mode == 'ablation_not_use_rayconv':
+        elif projattn_pos_embed_mode == 'ablation_not_use_rayconv':
             self.rayconv = nn.Linear(d_model, d_model)
         else:
             raise ValueError('invalid projective attention posembed mode')
@@ -71,7 +76,7 @@ class ProjAttn(nn.Module):
 
         self._reset_parameters()
 
-        self.projattn_posembed_mode = projattn_posembed_mode
+        self.projattn_pos_embed_mode = projattn_pos_embed_mode
 
     def _reset_parameters(self):
         constant_(self.sampling_offsets.weight.data, 0.)
@@ -100,7 +105,7 @@ class ProjAttn(nn.Module):
                 input_spatial_shapes,
                 input_level_start_index,
                 input_padding_mask=None):
-        """
+        """Forward function for Projective Attention.
 
         Args:
             query :
@@ -137,8 +142,8 @@ class ProjAttn(nn.Module):
         sample_grid = torch.clamp(reference_points * 2.0 - 1.0, -1.1, 1.1)
         ref_point_feat_views_alllvs = []
 
-        if 'use_rayconv' in self.projattn_posembed_mode or \
-                'use_2d_coordconv' in self.projattn_posembed_mode:
+        if 'use_rayconv' in self.projattn_pos_embed_mode or \
+                'use_2d_coordconv' in self.projattn_pos_embed_mode:
             for lvl in range(feat_lvls):
                 ref_point_feat_views_alllvs.append(
                     F.grid_sample(src_views[lvl],
@@ -153,7 +158,7 @@ class ProjAttn(nn.Module):
             ],
                                       dim=-1)
 
-        elif self.projattn_posembed_mode == 'ablation_not_use_rayconv':
+        elif self.projattn_pos_embed_mode == 'ablation_not_use_rayconv':
             for lvl in range(feat_lvls):
                 ref_point_feat_views_alllvs.append(
                     F.grid_sample(src_views[lvl],
@@ -240,41 +245,6 @@ class DeformFunction(Function):
             None, None, \
             grad_sampling_loc, \
             grad_attn_weight, None
-
-
-def deform_core_pytorch(value, value_spatial_shapes, sampling_locations,
-                        attention_weights):
-    # for debug and test only,
-    # need to use cuda version instead
-    N_, S_, M_, D_ = value.shape
-    _, Lq_, M_, L_, P_, _ = sampling_locations.shape
-    value_list = value.split([H_ * W_ for H_, W_ in value_spatial_shapes],
-                             dim=1)
-    sampling_grids = 2 * sampling_locations - 1
-    sampling_value_list = []
-    for lid_, (H_, W_) in enumerate(value_spatial_shapes):
-        # N_, H_*W_, M_, D_ -> N_, H_*W_,
-        # M_*D_ -> N_, M_*D_, H_*W_ -> N_*M_, D_, H_, W_
-        value_l_ = value_list[lid_].flatten(2).\
-            transpose(1, 2).reshape(N_*M_, D_, H_, W_)
-        # N_, Lq_, M_, P_, 2 -> N_, M_, Lq_, P_, 2 -> N_*M_, Lq_, P_, 2
-        sampling_grid_l_ = sampling_grids[:, :, :, lid_]\
-            .transpose(1, 2).flatten(0, 1)
-        # N_*M_, D_, Lq_, P_
-        sampling_value_l_ = F.grid_sample(
-            value_l_,
-            sampling_grid_l_,
-            mode='bilinear',
-            padding_mode='zeros',
-            align_corners=False)
-        sampling_value_list.append(sampling_value_l_)
-    # (N_, Lq_, M_, L_, P_) ->
-    # (N_, M_, Lq_, L_, P_) -> (N_, M_, 1, Lq_, L_*P_)
-    attention_weights = attention_weights.\
-        transpose(1, 2).reshape(N_*M_, 1, Lq_, L_*P_)
-    output = (torch.stack(sampling_value_list, dim=-2).flatten(-2) *
-              attention_weights).sum(-1).view(N_, M_ * D_, Lq_)
-    return output.transpose(1, 2).contiguous()
 
 
 def _is_power_of_2(n):
