@@ -181,7 +181,7 @@ class MVPTrainer():
         if model_without_ddp.backbone is not None:
             for params in model_without_ddp.backbone.parameters():
                 # Set it to be True to train the whole model jointly
-                # Dufault to false to avoid OOM
+                # Default to false to avoid OOM
                 params.requires_grad = self.optimize_backbone
 
         lr_linear_proj_mult = self.lr_linear_proj_mult
