@@ -201,7 +201,7 @@ class HybridKps2dSelector(BaseSelector):
         # get the unary of 3D candidates
         n_kps2d = len(candidates)
         n_point = len(candidates[0])
-        n_cameras = mview_kps2d.shape[0]
+        n_cameras = len(self.triangulator.camera_parameters)
         unary = np.ones((n_kps2d, n_point))
         camera_parameter = {
             'P': np.zeros((n_cameras, 3, 4)),

@@ -49,7 +49,7 @@ By default, enable_log_file is False and the tool will only print log to console
 
 Run the tool with visualization.
 
-```bash
+```python
 python tools/mview_mperson_smplify3d.py \
       --estimator_config 'configs/modules/core/estimation/mperson_smpl_estimator.py' \
       --start_frame 300 \
