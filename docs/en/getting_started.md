@@ -14,18 +14,19 @@ Please refer to [installation.md](./installation.md) for installation.
 
 ## Data Preparation
 
-Please refer to [data_preparation.md](./dataset_preparation.md) for data preparation.
+Please refer to [data\_preparation.md](./dataset_preparation.md) for data preparation.
 
 ## Body Model Preparation (Optional)
 
 If you want to obtain keypoints3d, the body model is not necessary.
-If you want to infer SMPL as well, you can prepare the body_model as follows.
+If you want to infer SMPL as well, you can prepare the body\_model as follows.
 
 - [SMPL](https://smpl.is.tue.mpg.de/) v1.0 is used in our experiments.
   - Neutral model can be downloaded from [SMPLify](https://smplify.is.tue.mpg.de/).
   - All body models have to be renamed in `SMPL_{GENDER}.pkl` format. <br/>
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
-- [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
+- [smpl\_mean\_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
+- [gmm\_08.pkl]()
 
 Download the above resources and arrange them in the following file structure:
 
@@ -36,9 +37,10 @@ xrmocap
 ├── tests
 ├── tools
 ├── configs
-└── data
+└── xrmocap_data
     └── body_models
         ├── smpl_mean_params.npz
+        ├── gmm_08.pkl (optional)
         └── smpl
             ├── SMPL_FEMALE.pkl
             ├── SMPL_MALE.pkl
@@ -118,7 +120,7 @@ sh make.sh
 ```bash
 # download data
 mkdir -p xrmocap_data
-wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_dataa
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
 cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 
 # download pretrained model
