@@ -142,7 +142,6 @@ class Triangulator():
             ATA = regularTerm * np.identity(3,dtype=np.float32)
             ATb = np.zeros(3,dtype=np.float32)
             for view in range(self.points.shape[1]):
-
                 if self.points[2, view] > 0: 
                     proj = self.projs[:,4 * view: 4 * view+ 4]
                     xyz = np.matmul(proj, np.append(self.pos, 1))
@@ -393,6 +392,7 @@ class SkelSolver():
 
 class FourDAGTriangulator():
     def __init__(self,
+                 m_filter: bool=False,
                  active_rate: float=0.1,
                  min_track_cnt: int=5,
                  bone_capacity: int=100,
@@ -410,6 +410,7 @@ class FourDAGTriangulator():
                  triangulate_thresh: float=0.05,
                  logger=None):
         
+        self.m_filter = m_filter
         self.active_rate = active_rate
         self.min_track_cnt = min_track_cnt
         self.bone_capacity = bone_capacity
@@ -431,6 +432,12 @@ class FourDAGTriangulator():
         self.m_skelInfos = []
         self.m_solver = SkelSolver()
 
+    def triangulate(self, skels2d):
+        if self.m_filter:
+            return self.triangulate_w_filter(skels2d)
+        else:
+            return self.triangulate_wo_filter(skels2d)
+
     def TriangulatePerson(self, skel2d):
         skel = np.zeros((4, n_kps),dtype=np.float32)
         triangulator = Triangulator()
@@ -443,7 +450,6 @@ class FourDAGTriangulator():
             triangulator.Solve()
             if triangulator.loss < self.triangulate_thresh:
                 skel[:,jIdx] = np.append(triangulator.pos, 1)
-        
         return skel
 
     def triangulate_w_filter(self, skels2d):

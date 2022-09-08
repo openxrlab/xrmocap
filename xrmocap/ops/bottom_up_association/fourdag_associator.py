@@ -17,7 +17,6 @@ class FourDAGAssociator:
 
     def __init__(self,
                  triangulator: Union[None, dict, BaseTriangulator],
-                 m_filter: bool=False,
                  fourd_matching: Union[None, dict] = None,
                  min_asgn_cnt: int = 5 ,
                  logger: Union[None, str, logging.Logger] = None) -> None:
@@ -34,7 +33,6 @@ class FourDAGAssociator:
         self.last_multi_kps3d = dict()
         self.n_kps = 19
         self.min_asgn_cnt = min_asgn_cnt
-        self.m_filter = m_filter
         if isinstance(fourd_matching, dict):
             fourd_matching['logger'] = self.logger
             self.fourd_matching = build_matching(fourd_matching)
@@ -126,10 +124,7 @@ class FourDAGAssociator:
            
         m_personsMap = self.fourd_matching(kps2d_paf, self.last_multi_kps3d)
         m_skels2d = self.cal_keypoints2d(m_personsMap, kps2d_paf)
-        if self.m_filter:
-            multi_kps3d = self.triangulator.triangulate_w_filter(m_skels2d)
-        else:
-            multi_kps3d = self.triangulator.triangulate_wo_filter(m_skels2d)
+        multi_kps3d = self.triangulator.triangulate(m_skels2d)
         self.last_multi_kps3d = multi_kps3d
         keypoints3d = self.MappingToCampus(multi_kps3d) 
         indentities = multi_kps3d.keys()
