@@ -107,7 +107,7 @@ def main(args):
                 cam_param=fisheye_param,
                 output_path=os.path.join(args.output_dir, 'kps3d',
                                          f'project_view_{view_name}.mp4'),
-                img_arr=image_array,
+                img_arr=image_array.copy(),
                 overwrite=True)
 
             visualize_smpl_calibration(

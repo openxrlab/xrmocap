@@ -253,7 +253,10 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                     else:
                         sframe_bbox2d_list.append(torch.tensor([]))
                         sframe_keypoints2d_list.append(
-                            Keypoints(convention=self.pred_kps3d_convention))
+                            Keypoints(
+                                kps=np.zeros((1, 1, n_kps, 3)),
+                                mask=np.zeros((1, 1, n_kps)),
+                                convention=self.pred_kps3d_convention))
                 # Establish cross-frame and cross-person associations
                 sframe_association_results, predict_keypoints3d, identities = \
                     self.associator.associate_frame(

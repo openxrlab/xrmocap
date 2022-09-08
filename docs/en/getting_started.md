@@ -54,12 +54,12 @@ We assume that the cameras have been calibrated. If you want to know more about 
 
 ### Perception Model
 
-Prepare perceptions models, including detection, 2d pose estimation, tracking and CamStyle models.
+Prepare perception models, including detection, 2d pose estimation, tracking and CamStyle models.
 
 ```
 sh scripts/download_weight.sh
 ```
-You could find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You could find perception models in `weight` file.
 
 ### Single Person
 
