@@ -14,7 +14,7 @@ from xrmocap.data.dataset.builder import MviewMpersonDataset, build_dataset
 from xrmocap.data_structure.keypoints import Keypoints
 
 from xrmocap.ops.bottom_up_association.builder import (
-    BottomUpAssociator, build_bottom_up_associator
+    FourDAGAssociator, build_bottom_up_associator
 )
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from xrmocap.core.metric.metrics import (
@@ -30,7 +30,7 @@ class BottomUpAssociationEvaluation:
                  selected_limbs_name: List[List[str]],
                  additional_limbs_names: List[List[str]],
                  dataset: Union[dict, MviewMpersonDataset],
-                 associator: Union[dict, BottomUpAssociator],
+                 associator: Union[dict, FourDAGAssociator],
                  dataset_visualization: Union[None, dict,
                                               BaseDataVisualization] = None,
                  pred_kps3d_convention: str = 'coco',
@@ -158,7 +158,7 @@ class BottomUpAssociationEvaluation:
             scene_start_idx = scene_end_idx + 1
 
         pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
-            pred_keypoints3d, gt_keypoints3d,self.selected_limbs_name,self.additional_limbs_names)
+            pred_keypoints3d, gt_keypoints3d,self.eval_kps3d_convention,self.selected_limbs_name,self.additional_limbs_names)
         calc_limbs_accuracy(pred_keypoints3d_, gt_keypoints3d_, limbs,logger=self.logger)
         pck_50, pck_100, mpjpe, pa_mpjpe = evaluate(
             pred_keypoints3d_, gt_keypoints3d_,logger=self.logger)
