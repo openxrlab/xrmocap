@@ -110,8 +110,8 @@ class MVPDataset(MviewMpersonDataset):
 
         while True:
             mview_img_tensor, k_tensor, r_tensor, t_tensor, kps3d, \
-                kw_data, n_person, skip = self.get_one_frame(index)
-            if not self.test_mode and skip is True:
+                kw_data, n_person, skip_no_person = self.get_one_frame(index)
+            if not self.test_mode and skip_no_person is True:
                 # reload the previous valid frame
                 # if no person in gt for train set
                 index -= 1
@@ -224,7 +224,7 @@ class MVPDataset(MviewMpersonDataset):
         return super().__len__()
 
     def get_one_frame(self, index):
-        skip = False
+        skip_no_person = False
         mview_img_tensor, k_tensor, r_tensor, t_tensor, kps3d, \
             _, kw_data = super().__getitem__(index)
 
@@ -233,9 +233,9 @@ class MVPDataset(MviewMpersonDataset):
 
         n_person = kps3d.shape[0]
         if n_person == 0:  # skip the frame if no person
-            skip = True
+            skip_no_person = True
         return mview_img_tensor, k_tensor, r_tensor, t_tensor, \
-            kps3d, kw_data, n_person, skip
+            kps3d, kw_data, n_person, skip_no_person
 
     def get_affine_transforms(self,
                               c: np.ndarray,
