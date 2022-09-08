@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import os
 import torch
-import pickle
+import json
 from typing import Tuple, Union
 from .mview_mperson_dataset import MviewMpersonDataset
 
@@ -151,22 +151,25 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
     def load_perception_2d(self):
         """Load multi-scene keypoints2d and paf."""
         mscene_keypoints_list = []
+        #convert keypoint type body25-skel19
+        convert_n_kps = 18
+        convert_n_pafs = 19
+        joint_mapping = [4, 1, 5, 11, 15, 6, 12, 16, 0, 2, 7, 13, 3, 8, 14, -1, -1, 9, 10, 17, -1, -1, 18, -1, -1]
+        pafs_mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, 16, -1, -1, 17, -1, -1]
         for scene_idx in range(self.n_scene):
-
-            pkl_names = glob.glob(
-                os.path.join(self.meta_path, f'scene_{scene_idx}', "kps2d_paf", '*pkl'))
-            n_view = len(pkl_names)
+            file_name = os.path.join(self.meta_path, f'scene_{scene_idx}', "kps2d_paf.json")
+            f = open(file_name,'r')
+            json_data = json.load(f)
+            multi_detections = json_data['data']
+            n_kps = json_data['n_kps']
+            n_pafs = json_data['n_pafs']
+            n_view = len(multi_detections)
+            # import pdb; pdb.set_trace()
             mview_kps2d = []
             for view_idx in range(n_view):
                 img_size = (self.fisheye_params[scene_idx][view_idx].width, self.fisheye_params[scene_idx][view_idx].height)
-                file_name = os.path.join(self.meta_path, f'scene_{scene_idx}', "kps2d_paf", str(view_idx)+'.pkl')
-                f = open(file_name,'rb')
-                detections = pickle.load(f)
+                detections = multi_detections[view_idx]
                 frame_size = len(detections)
-                n_kps = 25
-                n_pafs =26
-                convert_n_kps = 18
-                convert_n_pafs = 19
                 convert_detections = []
                 for i in range(frame_size):
                     var = {'joints':{j:[] for j in range(convert_n_kps)}, 'pafs':{k:[] for k in range(convert_n_pafs)}}
@@ -174,24 +177,21 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
 
                 for frame_id in range(frame_size):
                     for joint_id in range(n_kps):
-                        #resize
-                        detections[frame_id]['joints'][joint_id][:,0] = detections[frame_id]['joints'][joint_id][:,0]*(img_size[0] - 1)
-                        detections[frame_id]['joints'][joint_id][:,1] = detections[frame_id]['joints'][joint_id][:,1] * (img_size[1] - 1)
-
-                    #convert keypoint type body25-skel19
-                    joint_mapping = [4, 1, 5, 11, 15, 6, 12, 16, 0, 2, 7, 13, 3, 8, 14, -1, -1, 9, 10, 17, -1, -1, 18, -1, -1]
-                    pafs_mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, 16, -1, -1, 17, -1, -1]
-
-                    for joint_id in range(n_kps):
                         tmp_joint_id = joint_mapping[joint_id]
                         if tmp_joint_id != -1:
-                            convert_detections[frame_id]['joints'][tmp_joint_id] = detections[frame_id]['joints'][joint_id]
-                    
+                            convert_detections[frame_id]['joints'][tmp_joint_id] = np.array(detections[frame_id]['joints'][joint_id], dtype=np.float32)
                     for paf_id in range(n_pafs):
                         tmp_paf_id = pafs_mapping[paf_id]
                         if tmp_paf_id != -1: 
-                            convert_detections[frame_id]['pafs'][tmp_paf_id]= detections[frame_id]['pafs'][paf_id]
-                f.close()
+                            convert_detections[frame_id]['pafs'][tmp_paf_id]= np.array(detections[frame_id]['pafs'][paf_id], dtype=np.float32)
+                    #resize
+                    for joint_id in range(convert_n_kps):
+                        if len(convert_detections[frame_id]['joints'][joint_id]) > 0:
+                            convert_detections[frame_id]['joints'][joint_id][:,0] = convert_detections[frame_id]['joints'][joint_id][:,0]*(img_size[0] - 1)
+                            convert_detections[frame_id]['joints'][joint_id][:,1] = convert_detections[frame_id]['joints'][joint_id][:,1] * (img_size[1] - 1)
+                    
+        
                 mview_kps2d.append(convert_detections)
+            f.close()
             mscene_keypoints_list.append(mview_kps2d)
         self.percep_keypoints2d = mscene_keypoints_list 
