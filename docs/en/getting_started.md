@@ -56,12 +56,12 @@ We assume that the cameras have been calibrated. If you want to know more about 
 
 ### Perception Model
 
-Prepare perceptions models, including detection, 2d pose estimation, tracking and CamStyle models.
+Prepare perception models, including detection, 2d pose estimation, tracking and CamStyle models.
 
 ```
 sh scripts/download_weight.sh
 ```
-You could find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You could find perception models in `weight` file.
 
 ### Single Person
 
@@ -92,15 +92,33 @@ A small test dataset for quick demo can be downloaded [here](https://openxrlab-s
 
 #### Optimization-based methods
 
-For optimization-based approaches, it does not require any pretrained model. Taking [MVPose](../../configs/mvpose/) as an example, it can be run on Shelf_50 as
+For optimization-based approaches, it utilizes the association between 2D keypoints and generates 3D keypoints by triangulation or other methods. Taking [MVPose](../../configs/mvpose/) as an example, it can be run as
+
+1. Download data and body model
+
+- download data
 
 ```bash
-Coming soon!
+mkdir xrmocap_data
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
+cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 ```
+- download body model
 
-Some useful configs are explained here:
+Please refer to [Body Model Preparation](#body-model-preparation-optional)
 
- - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` to True in config file.
+2. Run demo
+
+```python
+python tools/mview_mperson_topdown_estimator.py \
+      --estimator_config 'configs/mvpose_tracking/mview_mperson_topdown_estimator.py' \
+      --image_and_camera_param 'xrmocap_data/Shelf_50/image_and_camera_param.txt' \
+      --start_frame 300 \
+      --end_frame 350 \
+      --output_dir 'output/estimation' \
+      --enable_log_file
+```
+If all the configuration is OK, you could see the results in `output_dir`.
 
 #### Learning-based methods
 
@@ -169,6 +187,7 @@ Example:
 ```shell
 sh ./scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
+
 
 
 ### Evaluate with slurm

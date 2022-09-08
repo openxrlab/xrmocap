@@ -43,7 +43,8 @@ def main(args):
     if not args.disable_log_file:
         shutil.move(
             log_path,
-            dst=os.path.join(args.meta_path, f'converter_log_{time_str}.txt'))
+            dst=os.path.join(converter_config['meta_path'],
+                             f'converter_log_{time_str}.txt'))
 
 
 def setup_parser():

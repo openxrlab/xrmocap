@@ -1,8 +1,9 @@
 # Multi-view Multi-person SMPLify3D
 
-- [Overview](#overview)
-- [Argument](#argument)
-- [Example](#example)
+- [Multi-view Multi-person SMPLify3D](#multi-view-multi-person-smplify3d)
+  - [Overview](#overview)
+  - [Argument](#argument)
+  - [Example](#example)
 
 ## Overview
 
@@ -11,7 +12,7 @@ This tool could generate multi-view multi-person SMPLData from keypoints3d.
 ## Argument
 
 - **estimator_config**:
-`estimator_config` is the path to a `MultiViewMultiPersonSMPLEstimator` config file. For more details, see docs for `MultiViewMultiPersonSMPLEstimator` and the docstring in [code](../../../xrmocap/core/estimation/mview_mperson_smpl_estimator.py).
+`estimator_config` is the path to a `MultiPersonSMPLEstimator` config file. For more details, see docs for `MultiPersonSMPLEstimator` and the docstring in [code](../../../xrmocap/core/estimation/mperson_smpl_estimator.py).
 
 - **start_frame**:
 `start_frame` is the index of the start frame.
@@ -48,9 +49,9 @@ By default, enable_log_file is False and the tool will only print log to console
 
 Run the tool with visualization.
 
-```bash
+```python
 python tools/mview_mperson_smplify3d.py \
-      --estimator_config 'configs/modules/core/estimation/mview_mperson_smpl_estimator.py' \
+      --estimator_config 'configs/modules/core/estimation/mperson_smpl_estimator.py' \
       --start_frame 300 \
       --end_frame 600 \
       --keypoints3d_path 'output/mvpose_tracking/shelf/scene0_pred_keypoints3d.npz' \

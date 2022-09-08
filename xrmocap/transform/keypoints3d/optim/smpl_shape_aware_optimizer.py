@@ -133,7 +133,7 @@ class SMPLShapeAwareOptimizer(BaseOptimizer):
         kp3d_tensor = torch.tensor(skps3d[kp3d_idx], dtype=torch.float32)
         return kp3d_tensor, kps2d_tensor, selected_view, mkps2d_conf_list
 
-    def step(self, keypoints3d: Keypoints, keypoints2d: Keypoints,
+    def step(self, keypoints3d: Keypoints, keypoints2d: List[Keypoints],
              matched_list, keypoints_from_smpl: Keypoints) -> Keypoints:
 
         kps3d = keypoints3d.get_keypoints()[..., :3]
@@ -186,15 +186,15 @@ class SMPLShapeAwareOptimizer(BaseOptimizer):
         return ret_keypoints
 
     def optimize_keypoints3d(self, keypoints3d: Keypoints,
-                             keypoints2d: Keypoints, mview_person_id: list,
-                             matched_list: list,
+                             keypoints2d: List[Keypoints],
+                             mview_person_id: list, matched_list: list,
                              cam_params: List[FisheyeCameraParameter],
                              **kwargs: dict) -> Keypoints:
         """Forward function of keypoints3d optimizer.
 
         Args:
             keypoints3d (Keypoints): A keypoints3d Keypoints instance.
-            keypoints2d (Keypoints): A keypoints2d Keypoints instance.
+            keypoints2d (Keypoints): A list of keypoints2d Keypoints instance.
             mview_person_id (list):
                 The kps2d index in the bbox2d threshold of different frames
                 from different views.
