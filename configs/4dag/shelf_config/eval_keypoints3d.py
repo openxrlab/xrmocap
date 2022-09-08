@@ -14,7 +14,7 @@ selected_limbs_name = [
 additional_limbs_names = [['jaw', 'headtop']]
 
 associator = dict(
-    type='BottomUpAssociator',
+    type='FourDAGAssociator',
     min_asgn_cnt=5,
     m_filter = False,
     triangulator=dict(
@@ -37,7 +37,7 @@ associator = dict(
         logger=logger,
     ),
     fourd_matching=dict(
-        type='FourdMatching',
+        type='FourDAGMatching',
         max_epi_dist=0.15,
         max_temp_dist=0.2,
         w_epi=2,
