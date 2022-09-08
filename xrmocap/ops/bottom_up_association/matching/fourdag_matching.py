@@ -63,7 +63,21 @@ class Voting():
                     self.secCnt[index] = _vote[person_id][index]
                 _vote[person_id][index] = 0
 
-class FourdMatching(BaseMatching):
+class Camera():
+    def __init__(self,cam_param) -> None:
+        super().__init__()
+        c_K = cam_param.intrinsic33()
+        c_T = np.array(cam_param.get_extrinsic_t())
+        c_R = np.array(cam_param.get_extrinsic_r())
+        C_Ki = np.linalg.inv(c_K)
+        self.RtKi = np.matmul(c_R.T, C_Ki)
+        self.Pos = -np.matmul(c_R.T, c_T) 
+        
+    def calcRay(self, uv):
+        var  = -self.RtKi.dot(np.append(uv, 1).T)
+        return var / np.linalg.norm(var)
+
+class FourDAGMatching(BaseMatching):
     def __init__(self,
                  n_views=5,
                  n_joints=19,
@@ -136,8 +150,9 @@ class FourdMatching(BaseMatching):
         self.last_multi_kps3d = dict()
         self.cliques = []
 
-    def set_cameras(self, cameras):
-        self.cameras = cameras
+    def set_cameras(self, cameras_param):
+        for view in range(len(cameras_param)):
+            self.cameras.append(Camera(cameras_param[view]))
 
     def __call__(self,
                  kps2d_paf,

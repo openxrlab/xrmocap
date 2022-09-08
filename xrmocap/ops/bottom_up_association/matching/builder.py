@@ -1,11 +1,11 @@
 from mmcv.utils import Registry
 
 from .base_matching import BaseMatching
-from .fourd_matching import FourdMatching
+from .fourdag_matching import FourDAGMatching
 
 MATCHING = Registry('matching')
 
-MATCHING.register_module(name='FourdMatching', module=FourdMatching)
+MATCHING.register_module(name='FourDAGMatching', module=FourDAGMatching)
 
 
 def build_matching(cfg) -> BaseMatching:

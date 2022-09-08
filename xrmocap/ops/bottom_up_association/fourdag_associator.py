@@ -1,46 +1,19 @@
 # yapf: disable
 import logging
 import numpy as np
-from typing import List, Mapping, Tuple, Union
-import json
-import cv2
+from typing import List, Tuple, Union
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
 from xrprimer.utils.log_utils import get_logger
-
 from xrmocap.data_structure.keypoints import Keypoints
-
 from xrmocap.ops.triangulation.builder import (
     BaseTriangulator, build_triangulator,
 )
-
 from xrmocap.ops.bottom_up_association.matching.builder import build_matching
 # yapf: enable
 
-
-class Camera():
-    def __init__(self,cam_param) -> None:
-        super().__init__()
-        self.K = cam_param.intrinsic33()
-        self.T = np.array(cam_param.get_extrinsic_t())
-        self.R = np.array(cam_param.get_extrinsic_r())
-        self.Ki = np.linalg.inv(self.K)
-        self.Rt = self.R.T
-        self.RtKi = np.matmul(self.Rt, self.Ki)
-        self.Pos = -np.matmul(self.Rt, self.T) 
-        
-        self.Proj = np.zeros((3,4), dtype=np.float)
-        for i in range(3):
-            for j in range(4):
-                self.Proj[i,j] = self.R[i,j] if j < 3 else self.T[i]
-        self.Proj = np.matmul(self.K, self.Proj)
-
-    def calcRay(self, uv):
-        ver  = -self.RtKi.dot(np.append(uv, 1).T)
-        return ver / np.linalg.norm(ver)
-
-class BottomUpAssociator:
+class FourDAGAssociator:
 
     def __init__(self,
                  triangulator: Union[None, dict, BaseTriangulator],
@@ -59,7 +32,7 @@ class BottomUpAssociator:
         
         self.n_views = -1
         self.last_multi_kps3d = dict()
-        self.joint_size = 19
+        self.n_kps = 19
         self.min_asgn_cnt = min_asgn_cnt
         self.m_filter = m_filter
         if isinstance(fourd_matching, dict):
@@ -72,12 +45,9 @@ class BottomUpAssociator:
         self, cameras: List[Union[FisheyeCameraParameter,
                                   PinholeCameraParameter]]
     ) -> None:
-        mycameras = []
-        for view in range(len(cameras)):
-            mycameras.append(Camera(cameras[view]))
         
-        self.triangulator.set_cameras(mycameras)
-        self.fourd_matching.set_cameras(mycameras)
+        self.triangulator.set_cameras(cameras)
+        self.fourd_matching.set_cameras(cameras)
         self.n_views = len(cameras)
 
 
@@ -99,12 +69,12 @@ class BottomUpAssociator:
                 identity = 0
             else:
                 identity = max(m_skels2d) + 1
-            skel2d = np.zeros((3,self.n_views *self.joint_size))
+            skel2d = np.zeros((3,self.n_views *self.n_kps))
             for view in range(self.n_views):
-                for joint_id in range(self.joint_size):
+                for joint_id in range(self.n_kps):
                     index = m_personsMap[person_id][joint_id, view]
                     if index != -1:
-                        skel2d[:,view*self.joint_size+joint_id] = kps2d_paf[view]['joints'][joint_id][index]
+                        skel2d[:,view*self.n_kps+joint_id] = kps2d_paf[view]['joints'][joint_id][index]
                     else:
                         continue
 

@@ -1,14 +1,14 @@
 # yapf: disable
 from mmcv.utils import Registry
 
-from .bottom_up_associator import BottomUpAssociator
+from .fourdag_associator import FourDAGAssociator
 # yapf: enable
 
-BOTTOM_UP_ASSOCIATORS = Registry('fourd_associator')
+BOTTOM_UP_ASSOCIATORS = Registry('bottom_up_associator')
 
 BOTTOM_UP_ASSOCIATORS.register_module(
-    name='BottomUpAssociator', module=BottomUpAssociator)
+    name='FourDAGAssociator', module=FourDAGAssociator)
 
-def build_bottom_up_associator(cfg) -> BottomUpAssociator:
+def build_bottom_up_associator(cfg) -> FourDAGAssociator:
     """Build top_down_associator."""
     return BOTTOM_UP_ASSOCIATORS.build(cfg)
