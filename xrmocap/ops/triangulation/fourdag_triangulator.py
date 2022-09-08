@@ -5,7 +5,7 @@ import os
 from xrmocap.ops.triangulation import m_shape
 
 ###
-jointSize = 19
+n_kps = 19
 shapeSize=10
 joint_parent = [-1, 0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 6, 7, 8, 11, 12, 14, 13]
 hierarchy_map = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
@@ -66,14 +66,14 @@ def RodriguesJacobi(vec):
 
 class SkelInfo():
     def __init__(self) -> None:
-        self.boneLen = np.zeros(jointSize - 1,dtype=np.float32)
-        self.boneCnt = np.zeros(jointSize - 1,dtype=np.float32)
+        self.boneLen = np.zeros(n_kps - 1,dtype=np.float32)
+        self.boneCnt = np.zeros(n_kps - 1,dtype=np.float32)
         self.active = 0.0
         self.shapeFixed = False
-        self.data = np.zeros(3+jointSize*3+shapeSize,dtype=np.float32)
+        self.data = np.zeros(3+n_kps*3+shapeSize,dtype=np.float32)
 
     def PushPrevBones(self, skel):
-        for joint_id in range(1,jointSize):
+        for joint_id in range(1,n_kps):
             prtIdx = joint_parent[joint_id]
             if skel[3, joint_id] > 0 and skel[3, prtIdx] > 0:
                 len = np.linalg.norm(skel[:,joint_id][:3] - skel[:,prtIdx][:3])
@@ -84,10 +84,10 @@ class SkelInfo():
         return self.data[0:0+3]
 
     def GetPose(self):
-        return self.data[3:3+jointSize * 3]
+        return self.data[3:3+n_kps * 3]
 
     def GetTransPose(self):
-        return self.data[:3+jointSize * 3]
+        return self.data[:3+n_kps * 3]
 
     def GetShape(self):
         return self.data[-shapeSize:]
@@ -164,11 +164,11 @@ class Triangulator():
 
 class SkelSolver():
     def __init__(self) -> None:
-        self.m_joints = np.array(m_shape.m_joints).reshape(3,jointSize)
-        self.m_jShapeBlend = np.array(m_shape.m_jShapeBlend).reshape(jointSize*3, shapeSize)
-        assert self.m_joints.shape[1] == jointSize and self.m_jShapeBlend.shape[0] == 3 * jointSize and self.m_jShapeBlend.shape[1] ==  shapeSize 
-        self.m_boneShapeBlend= np.zeros((3 * (jointSize - 1), shapeSize), dtype=np.float32)
-        for jIdx in range(1,jointSize):
+        self.m_joints = np.array(m_shape.m_joints).reshape(3,n_kps)
+        self.m_jShapeBlend = np.array(m_shape.m_jShapeBlend).reshape(n_kps*3, shapeSize)
+        assert self.m_joints.shape[1] == n_kps and self.m_jShapeBlend.shape[0] == 3 * n_kps and self.m_jShapeBlend.shape[1] ==  shapeSize 
+        self.m_boneShapeBlend= np.zeros((3 * (n_kps - 1), shapeSize), dtype=np.float32)
+        for jIdx in range(1,n_kps):
         
             self.m_boneShapeBlend[3 * (jIdx - 1):3 * (jIdx - 1)+3] = self.m_jShapeBlend[3 * jIdx:3 * jIdx+3] \
             - self.m_jShapeBlend[3 * joint_parent[jIdx]:3 * joint_parent[jIdx]+3]
@@ -231,7 +231,7 @@ class SkelSolver():
         x = (mat[2,1] - mat[1,2])/np.sqrt((mat[2,1] - mat[1,2])**2+(mat[0,2] - mat[2,0])**2+(mat[1,0] - mat[0,1])**2)
         y = (mat[0,2] - mat[2,0])/np.sqrt((mat[2,1] - mat[1,2])**2+(mat[0,2] - mat[2,0])**2+(mat[1,0] - mat[0,1])**2)
         z = (mat[1,0] - mat[0,1])/np.sqrt((mat[2,1] - mat[1,2])**2+(mat[0,2] - mat[2,0])**2+(mat[1,0] - mat[0,1])**2)
-        param.data[3:3+jointSize * 3][:3] = angle * np.array([x,y,z], dtype=np.float32)
+        param.data[3:3+n_kps * 3][:3] = angle * np.array([x,y,z], dtype=np.float32)
 
     def SolvePose(self, term, param, maxIterTime,hierarchy = False, updateThresh = 1e-4):
         
@@ -241,7 +241,7 @@ class SkelSolver():
         hier = 0 if hierarchy else hierSize
         jCut = 0
         while hier <= hierSize:
-            while jCut < jointSize and hierarchy_map[jCut] <= hier:
+            while jCut < n_kps and hierarchy_map[jCut] <= hier:
                 jCut += 1
             for iterTime in range(maxIterTime):
                 nodeWarps = self.CalcNodeWarps(param, jBlend[:,:jCut])
@@ -282,7 +282,7 @@ class SkelSolver():
 
                 if term.wJ2d > 0: #1e-5
                     for view in range(int(term.projs.shape[1]/4)):
-                        j2dTarget = term.j2dTarget[:,view*jointSize:view*jointSize+jointSize]
+                        j2dTarget = term.j2dTarget[:,view*n_kps:view*n_kps+n_kps]
                         if sum(j2dTarget[2] > 0) > 0 :
                             proj = term.projs[:,view * 4:view * 4+4]
                             for jIdx in range(jCut):
@@ -311,7 +311,7 @@ class SkelSolver():
                     ATA += term.wRegularPose * np.identity(3 + 3 * jCut,dtype=np.float32)
                 
                 delta = np.linalg.solve(ATA, ATb)
-                param.data[:3+jointSize * 3][:3 + 3 * jCut] += delta
+                param.data[:3+n_kps * 3][:3 + 3 * jCut] += delta
             
                 if np.linalg.norm(delta) < updateThresh:
                     break
@@ -325,7 +325,7 @@ class SkelSolver():
             ATb = np.zeros(shapeSize,dtype=np.float32)
             
             if term.wBone3d > 0:
-                for jIdx in range(1, jointSize):
+                for jIdx in range(1, n_kps):
                     if term.bone3dTarget[1, jIdx - 1] > 0 :
                         w = term.wBone3d * term.bone3dTarget[1, jIdx - 1]
                         prtIdx = joint_parent[jIdx]
@@ -337,8 +337,8 @@ class SkelSolver():
             if term.wJ3d > 0 or term.wJ2d > 0:
                 chainWarps = self.CalcChainWarps(self.CalcNodeWarps(param, jBlend))
                 jFinal = self.CalcJFinal_1(chainWarps)
-                jointJacobi = np.zeros((3 * jointSize, shapeSize),dtype=np.float32)
-                for jIdx in range(jointSize):
+                jointJacobi = np.zeros((3 * n_kps, shapeSize),dtype=np.float32)
+                for jIdx in range(n_kps):
                     if jIdx == 0:
                         jointJacobi[3 * jIdx:3 * jIdx+3] = self.m_jShapeBlend[3 * jIdx:3 * jIdx+3]
                     else:
@@ -347,7 +347,7 @@ class SkelSolver():
                             + chainWarps[0:3,4*prtIdx+3] * (self.m_jShapeBlend[3 * jIdx:3 * jIdx+3] - self.m_jShapeBlend[3 * prtIdx:3 * prtIdx+3])
                     
                 if term.wJ3d > 0:
-                    for jIdx in range(jointSize):
+                    for jIdx in range(n_kps):
                         if term.j3dTarget[3, jIdx] > 0:
                             w = term.wJ3d * term.j3dTarget[3, jIdx]
                             jacobi = jointJacobi[3 * jIdx:3 * jIdx+3]
@@ -356,11 +356,11 @@ class SkelSolver():
                 
                 if term.wJ2d > 0:
                     for view in range(int(len(term.projs[0])/4)):
-                        j2dTarget = term.j2dTarget[view*jointSize:view*jointSize+jointSize]
+                        j2dTarget = term.j2dTarget[view*n_kps:view*n_kps+n_kps]
                         
                         if sum(j2dTarget[2] > 0) > 0:
                             proj = term.projs[view * 4: view * 4+4]
-                            for jIdx in range(jointSize):
+                            for jIdx in range(n_kps):
                                 if j2dTarget[2, jIdx] > 0:
                                     abc = proj * np.append(jFinal[:,jIdx], 1) 
                                     projJacobi = np.zeros((2,3), dtype=np.float32)
@@ -432,13 +432,13 @@ class FourDAGTriangulator():
         self.m_solver = SkelSolver()
 
     def TriangulatePerson(self, skel2d):
-        skel = np.zeros((4, jointSize),dtype=np.float32)
+        skel = np.zeros((4, n_kps),dtype=np.float32)
         triangulator = Triangulator()
         triangulator.projs = self.projs
         triangulator.points = np.zeros((3,int(self.projs.shape[1]/4)),dtype=np.float32)
-        for jIdx in range(jointSize):
+        for jIdx in range(n_kps):
             for view in range(int(self.projs.shape[1] / 4)):
-                skel_tmp = skel2d[:,view*jointSize:view*jointSize+jointSize]
+                skel_tmp = skel2d[:,view*n_kps:view*n_kps+n_kps]
                 triangulator.points[:,view] = skel_tmp[:,jIdx]
             triangulator.Solve()
             if triangulator.loss < self.triangulate_thresh:
@@ -496,16 +496,16 @@ class FourDAGTriangulator():
                     poseTerm.j2dTarget = copy.deepcopy(skels2d[corr_id])
 
                     # filter single view correspondence
-                    corrCnt = np.zeros(jointSize,dtype=np.float32)
-                    jConfidence = np.ones(jointSize,dtype=np.float32)
+                    corrCnt = np.zeros(n_kps,dtype=np.float32)
+                    jConfidence = np.ones(n_kps,dtype=np.float32)
                     for view in range(int(self.projs.shape[1] / 4)):
-                        corrCnt += ((poseTerm.j2dTarget[:,view * jointSize:view * jointSize+jointSize][2].T > 0).astype(np.int))
+                        corrCnt += ((poseTerm.j2dTarget[:,view * n_kps:view * n_kps+n_kps][2].T > 0).astype(np.int))
 
-                    for jIdx in range(jointSize):
+                    for jIdx in range(n_kps):
                         if corrCnt[jIdx] <= 1:
                             jConfidence[jIdx] = 0
                             for view in range(int(self.projs.shape[1] / 4)):
-                                poseTerm.j2dTarget[:,view * jointSize + jIdx] = 0
+                                poseTerm.j2dTarget[:,view * n_kps + jIdx] = 0
                     
                     poseTerm.wRegularPose = self.w_regular_pose
                     poseTerm.paramPrev = info
@@ -529,10 +529,16 @@ class FourDAGTriangulator():
                 
 
     def set_cameras(self, cameras):
-        self.cameras = cameras
-        self.projs = np.zeros((3, len(self.cameras) * 4))
-        for view in range(len(self.cameras)):
-            self.projs[:,4*view:4*view + 4] = self.cameras[view].Proj
+        self.projs = np.zeros((3, len(cameras) * 4))
+        for view in range(len(cameras)):
+            K = cameras[view].intrinsic33()
+            T = np.array(cameras[view].get_extrinsic_t())
+            R = np.array(cameras[view].get_extrinsic_r())        
+            Proj = np.zeros((3,4), dtype=np.float)
+            for i in range(3):
+                for j in range(4):
+                    Proj[i,j] = R[i,j] if j < 3 else T[i]
+            self.projs[:,4*view:4*view + 4] = np.matmul(K, Proj)
 
     def triangulate_wo_filter(self, skels2d):
         skelIter = iter(self.m_skels.copy())

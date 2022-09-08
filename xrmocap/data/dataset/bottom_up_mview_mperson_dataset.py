@@ -163,17 +163,17 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                 f = open(file_name,'rb')
                 detections = pickle.load(f)
                 frame_size = len(detections)
-                joint_size = 25
-                paf_size =26
-                convert_joint_size = 18
-                convert_paf_size = 19
+                n_kps = 25
+                n_pafs =26
+                convert_n_kps = 18
+                convert_n_pafs = 19
                 convert_detections = []
                 for i in range(frame_size):
-                    var = {'joints':{j:[] for j in range(convert_joint_size)}, 'pafs':{k:[] for k in range(convert_paf_size)}}
+                    var = {'joints':{j:[] for j in range(convert_n_kps)}, 'pafs':{k:[] for k in range(convert_n_pafs)}}
                     convert_detections.append(var)
 
                 for frame_id in range(frame_size):
-                    for joint_id in range(joint_size):
+                    for joint_id in range(n_kps):
                         #resize
                         detections[frame_id]['joints'][joint_id][:,0] = detections[frame_id]['joints'][joint_id][:,0]*(img_size[0] - 1)
                         detections[frame_id]['joints'][joint_id][:,1] = detections[frame_id]['joints'][joint_id][:,1] * (img_size[1] - 1)
@@ -182,12 +182,12 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                     joint_mapping = [4, 1, 5, 11, 15, 6, 12, 16, 0, 2, 7, 13, 3, 8, 14, -1, -1, 9, 10, 17, -1, -1, 18, -1, -1]
                     pafs_mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, 16, -1, -1, 17, -1, -1]
 
-                    for joint_id in range(joint_size):
+                    for joint_id in range(n_kps):
                         tmp_joint_id = joint_mapping[joint_id]
                         if tmp_joint_id != -1:
                             convert_detections[frame_id]['joints'][tmp_joint_id] = detections[frame_id]['joints'][joint_id]
                     
-                    for paf_id in range(paf_size):
+                    for paf_id in range(n_pafs):
                         tmp_paf_id = pafs_mapping[paf_id]
                         if tmp_paf_id != -1: 
                             convert_detections[frame_id]['pafs'][tmp_paf_id]= detections[frame_id]['pafs'][paf_id]
