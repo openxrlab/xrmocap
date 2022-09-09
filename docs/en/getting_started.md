@@ -27,6 +27,8 @@ If you want to infer SMPL as well, you can prepare the body_model as follows.
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
 
+- [gmm_08.pkl](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl?versionId=CAEQQRiBgMCH6YWAmRgiIDE4NTI0MDQ5NDBjYjQzY2U4NDM5MzQxMWZjNjY5NzRj)
+
 Download the above resources and arrange them in the following file structure:
 
 ```text
@@ -36,8 +38,9 @@ xrmocap
 ├── tests
 ├── tools
 ├── configs
-└── data
+└── xrmocap_data
     └── body_models
+        ├── gmm_08.pkl
         ├── smpl_mean_params.npz
         └── smpl
             ├── SMPL_FEMALE.pkl
