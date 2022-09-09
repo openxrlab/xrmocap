@@ -26,7 +26,7 @@ If you want to infer SMPL as well, you can prepare the body\_model as follows.
   - All body models have to be renamed in `SMPL_{GENDER}.pkl` format. <br/>
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
 - [smpl\_mean\_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
-- [gmm\_08.pkl]()
+- [gmm\_08.pkl](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip)
 
 Download the above resources and arrange them in the following file structure:
 
