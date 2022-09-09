@@ -25,12 +25,7 @@ try:
 except (ImportError, ModuleNotFoundError):
     has_deformable = False
     import traceback
-    stack_str = ''
-    for line in traceback.format_stack():
-        if 'frozen' not in line:
-            stack_str += line + '\n'
-    import_exception = traceback.format_exc() + '\n'
-    import_exception = stack_str + import_exception
+    import_exception = traceback.format_exc()
 
 # yapf: enable
 

@@ -1,6 +1,5 @@
 # yapf: disable
 
-import Deformable as DF
 import math
 import torch
 import torch.nn.functional as F
@@ -9,6 +8,15 @@ from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.init import constant_, xavier_uniform_
+
+try:
+    import Deformable as DF  # noqa F401
+    has_deformable = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_deformable = False
+    import traceback
+    import_exception = traceback.format_exc()
 
 # yapf: enable
 
@@ -41,6 +49,9 @@ class ProjAttn(nn.Module):
                 attention. Defaults to 'use_rayconv'.
         """
         super().__init__()
+        if not has_deformable:
+            raise ModuleNotFoundError('Please install deformable.')
+
         if d_model % n_heads != 0:
             raise ValueError('d_model must be divisible by n_heads, '
                              'but got {} and {}'.format(d_model, n_heads))
