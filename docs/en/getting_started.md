@@ -68,20 +68,21 @@ You could find perception models in `weight` file.
 
 Currently, we only provide optimization-based method for single person estimation.
 
-1. Download a `.smc` file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
-2. Extract the 7z file.
+1. Download body model. Please refer to [Body Model Preparation](#body-model-preparation-optional)
+2. Download a 7z file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
+3. Extract the 7z file.
 
 ```bash
+cd xrmocap_data/humman
 7z x p000127_a000007.7z
 ```
 
 3. Run [process_smc](./tools/process_smc.md) tool.
 
 ```bash
-mkdir xrmocap_data/humman
 python tools/process_smc.py \
-	--estimator_cofig configs/humman_mocap/mview_sperson_smpl_estimator.py \
-	--smc_path p000127_a000007.smc \
+	--estimator_config configs/humman_mocap/mview_sperson_smpl_estimator.py \
+	--smc_path xrmocap_data/humman/p000127_a000007.smc \
 	--output_dir xrmocap_data/humman/p000127_a000007_output \
 	--visualize
 ```
