@@ -35,12 +35,12 @@ data_converter
     :members:
 
 dataloader
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
 .. automodule:: xrmocap.data.dataloader
     :members:
 
 dataset
-^^^^^^^^^^^^^^^^^^
+^^^^^^^
 .. automodule:: xrmocap.data.dataset
     :members:
 
@@ -52,6 +52,9 @@ data_visualization
 
 xrmocap.data_structure
 ----------------------
+
+.. automodule:: xrmocap.data_structure
+    :members:
 
 
 xrmocap.human_perception
