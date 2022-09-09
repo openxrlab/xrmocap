@@ -32,9 +32,10 @@ def main(args):
     elif exist_result == Existence.DirectoryNotExist:
         os.mkdir(args.output_dir)
     file_name = args.smc_path.rsplit('/', 1)[-1]
+    smc_name = file_name.rsplit('.', 1)[0]
     if not args.disable_log_file:
         time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-        log_path = os.path.join(args.output_dir, f'{file_name}_{time_str}.txt')
+        log_path = os.path.join(args.output_dir, f'{smc_name}_{time_str}.txt')
         logger = setup_logger(logger_name=__name__, logger_path=log_path)
     else:
         logger = setup_logger(logger_name=__name__)
@@ -52,7 +53,7 @@ def main(args):
     cam_param_list = get_all_color_kinect_parameter_from_smc(
         smc_reader=smc_reader, align_floor=True, logger=logger)
     mview_img_list = []
-    frame_temp_dir = os.path.join(args.output_dir, f'{file_name}_temp_frames')
+    frame_temp_dir = os.path.join(args.output_dir, f'{smc_name}_temp_frames')
     prepare_output_path(
         output_path=frame_temp_dir,
         tag='Temp dir for smc frames',
@@ -73,12 +74,12 @@ def main(args):
     for index, keypoints2d in enumerate(keypoints2d_list):
         keypoints2d_path = os.path.join(
             args.output_dir,
-            f'{file_name}_keypoints2d_' + f'view{index:02d}.npz')
+            f'{smc_name}_keypoints2d_' + f'view{index:02d}.npz')
         keypoints2d.dump(keypoints2d_path)
     keypoints3d_path = os.path.join(args.output_dir,
-                                    f'{file_name}_keypoints3d.npz')
+                                    f'{smc_name}_keypoints3d.npz')
     keypoints3d.dump(keypoints3d_path)
-    smpl_path = os.path.join(args.output_dir, f'{file_name}_smpl_data.npz')
+    smpl_path = os.path.join(args.output_dir, f'{smc_name}_smpl_data.npz')
     smpl_data.dump(smpl_path)
     shutil.rmtree(frame_temp_dir)
     # write results to the output smc
@@ -89,7 +90,7 @@ def main(args):
             visualize_kp3d(
                 kp3d=keypoints3d.get_keypoints()[:, 0, ...],
                 output_path=os.path.join(args.output_dir,
-                                         f'{file_name}_keypoints3d.mp4'),
+                                         f'{smc_name}_keypoints3d.mp4'),
                 data_source=keypoints3d.get_convention(),
                 mask=keypoints3d.get_mask()[0, 0, ...])
             projector = mview_sp_smpl_estimator.triangulator.get_projector()
@@ -110,7 +111,7 @@ def main(args):
                     image_array=image_array,
                     output_path=os.path.join(
                         args.output_dir,
-                        f'{file_name}_projected' + f'_{view_idx:02d}.mp4'),
+                        f'{smc_name}_projected' + f'_{view_idx:02d}.mp4'),
                     data_source=keypoints3d.get_convention(),
                     mask=keypoints3d.get_mask()[0, 0, ...],
                     overwrite=True)
@@ -136,7 +137,7 @@ def main(args):
                 betas=smpl_data['betas'],
                 transl=smpl_data['transl'],
                 output_path=os.path.join(args.output_dir,
-                                         f'{file_name}_smpl_overlay.mp4'),
+                                         f'{smc_name}_smpl_overlay.mp4'),
                 body_model_config=body_model_cfg,
                 K=np.array(cam_param.get_intrinsic()),
                 R=np.array(cam_param.extrinsic_r),
