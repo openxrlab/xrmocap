@@ -1,5 +1,6 @@
 # yapf: disable
 
+import logging
 import math
 import torch
 import torch.nn.functional as F
@@ -8,6 +9,8 @@ from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.init import constant_, xavier_uniform_
+from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 try:
     import Deformable as DF  # noqa F401
@@ -24,6 +27,7 @@ except (ImportError, ModuleNotFoundError):
 class ProjAttn(nn.Module):
 
     def __init__(self,
+                 logger: Union[None, str, logging.Logger],
                  d_model=256,
                  n_levels=4,
                  n_heads=8,
@@ -36,29 +40,36 @@ class ProjAttn(nn.Module):
 
         Args:
             d_model (int, optional):
-                hidden dimension. Defaults to 256.
+                Hidden dimension. Defaults to 256.
             n_levels (int, optional):
-                number of feature levels. Defaults to 4.
+                Number of feature levels. Defaults to 4.
             n_heads (int, optional):
-                number of attention heads. Defaults to 8.
+                Number of attention heads. Defaults to 8.
             n_points (int, optional):
-                number of sampling points per attention head
+                Number of sampling points per attention head
                 per feature level. Defaults to 4.
             projattn_pos_embed_mode (str, optional):
-                the positional embedding mode of projective
+                The positional embedding mode of projective
                 attention. Defaults to 'use_rayconv'.
         """
         super().__init__()
+        self.logger = get_logger(logger)
         if not has_deformable:
+            self.logger.error(import_exception)
             raise ModuleNotFoundError('Please install deformable.')
 
         if d_model % n_heads != 0:
-            raise ValueError('d_model must be divisible by n_heads, '
-                             'but got {} and {}'.format(d_model, n_heads))
+            self.logger.error(f'd_model must be divisible by n_heads, '
+                              f'but got {d_model} and {n_heads}')
+            raise ValueError
         _d_per_head = d_model // n_heads
         # you'd better set _d_per_head to a power of
         # 2 which is more efficient in our CUDA implementation
         if not _is_power_of_2(_d_per_head):
+            self.logger.warning("You'd better set d_model in Deform to "
+                                'make the dimension of each attention '
+                                'head a power of 2 which is more efficient '
+                                'in our CUDA implementation.')
             warnings.warn("You'd better set d_model in Deform to "
                           'make the dimension of each attention '
                           'head a power of 2 which is more efficient '
@@ -127,7 +138,7 @@ class ProjAttn(nn.Module):
                 including padding area or (n_views, Length_{query}, n_levels,
                 4), add additional (w, h) to form reference boxes
             src_views :
-                list of (n_views, C, H, W), size n_levels,
+                List of (n_views, C, H, W), size n_levels,
                 [(n_views, C, H_0, W_0), (n_views, C, H_0, W_0), ...,
                 (n_views, C, H_{L-1}, W_{L-1})]
             camera_ray_embeds :
@@ -178,6 +189,10 @@ class ProjAttn(nn.Module):
                                                   0, 2, 1))
             input_flatten = torch.cat([src.flatten(2) for src in src_views],
                                       dim=-1).permute(0, 2, 1)
+        else:
+            self.logger.error('Unrecognized positional embedding '
+                              'mode is given.')
+            raise NotImplementedError
 
         n_views, Len_in, _ = input_flatten.shape
         assert (input_spatial_shapes[:, 0] *
