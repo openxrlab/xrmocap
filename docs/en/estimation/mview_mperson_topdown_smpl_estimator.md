@@ -23,6 +23,12 @@ This tool takes multi-view RGB sequences and multi-view calibrated camera parame
 
 - **image_and_camera_param**:
 `image_and_camera_param` is a text file contains the image path and the corresponding camera parameters. Line 0 is the image path of the first view, and line 1 is the corresponding camera parameter path. Line 2 is the image path of the second view, and line 3 is the corresponding camera parameter path, and so on.
+```text
+xrmocap_data/Shelf_50/Shelf/Camera0/
+xrmocap_data/Shelf_50/xrmocap_meta_testset_small/scene_0/camera_parameters/fisheye_param_00.json
+xrmocap_data/Shelf_50/Shelf/Camera1/
+xrmocap_data/Shelf_50/xrmocap_meta_testset_small/scene_0/camera_parameters/fisheye_param_01.json
+```
 
 - **start_frame**:
 `start_frame` is the index of the start frame.
