@@ -146,7 +146,7 @@ class MviewPoseTransformer(BaseArchitecture, metaclass=ABCMeta):
             self.backbone.init_weights()
 
         # projective attention
-        proj_attn_cfg = dict(type='ProjAttn')
+        proj_attn_cfg = dict(type='ProjAttn', logger=self.logger)
         proj_attn_cfg.update(proj_attn_setup)
         proj_attn = build_model(proj_attn_cfg)
 
