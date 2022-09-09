@@ -10,12 +10,11 @@ This tool takes a config file and MvP model checkpoints and performs evaluation 
 
 ## Preparation
 
-1. Install `Deformable` package (Skip if you have done this step during model training)
+1. Download and install the `Deformable` package (Skip if you have done this step during model training)
 
-Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) folder, rename and place the folder as `ROOT/xrmocap/model/deformable`. Install `Deformable` by running:
+Run the script:
 ```
-cd ROOT/xrmocap/model/deformable/
-sh make.sh
+sh scripts/download_install_deformable.sh
 ```
 
 2. Prepare Datasets
