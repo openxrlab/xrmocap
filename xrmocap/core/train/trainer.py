@@ -39,19 +39,19 @@ class MVPTrainer():
                  gpu_idx: int,
                  train_dataset: str,
                  test_dataset: str,
-                 lr: float,
-                 weight_decay: float,
-                 optimizer: str,
-                 end_epoch: int,
-                 pretrained_backbone: str,
-                 finetune_model: Union[None, str],
-                 resume: bool,
-                 final_output_dir: str,
-                 lr_decay_epoch: list,
-                 test_model_file: str,
                  cudnn_setup: dict,
                  dataset_setup: dict,
                  mvp_setup: dict,
+                 pretrained_backbone: Union[None, str] = None,
+                 finetune_model: Union[None, str] = None,
+                 resume: bool = False,
+                 final_output_dir: Union[None, str] = './output',
+                 lr_decay_epoch: list = [30],
+                 test_model_file: Union[None, str] = None,
+                 end_epoch: int = 30,
+                 optimizer: Union[None, str] = None,
+                 weight_decay: float = 0.0,
+                 lr: float = 0.2,
                  logger: Union[None, str, logging.Logger] = None,
                  device: str = 'cuda',
                  seed: int = 42,
@@ -62,7 +62,8 @@ class MVPTrainer():
                  model_root: str = './weight',
                  inference_conf_thr: list = [0.0],
                  print_freq: int = 100,
-                 clip_max_norm: float = 0.1) -> None:
+                 clip_max_norm: float = 0.1,
+                 optimize_backbone: bool = False) -> None:
         """Create a trainer for training the Multi-view Pose Transformer(MVP).
 
         Args:
@@ -76,27 +77,29 @@ class MVPTrainer():
                 Name of the train dataset.
             test_dataset (str):
                 Name of the test dataset.
-            lr (float):
-                Learning rate.
-            weight_decay (float):
-                Weight decay.
-            optimizer (str):
-                Type of optimizer.
-            end_epoch (int):
-                End epoch of trainig.
-            pretrained_backbone (str):
+            lr (float, optional):
+                Learning rate. Defaults to 0.2.
+            weight_decay (float, optional):
+                Weight decay. Defaults to 0.0.
+            optimizer (Union[None, str], optional):
+                Type of optimizer. Defaults to None.
+            end_epoch (int, optional):
+                End epoch of trainig. Defaults to 30.
+            pretrained_backbone (Union[None, str], optional):
                 Path to pretrained backbone weights
-                if using pretrained model.
-            finetune_model (Union[None, str]):
+                if using pretrained model. Defaults to None.
+            finetune_model (Union[None, str], optional):
                 Path to a pretrained model weights to be finetuned.
-            resume (bool):
+                Defaults to None.
+            resume (bool, optional):
                 If auto resume from checkpoints is used.
-            final_output_dir (str):
-                Path to output folder.
-            lr_decay_epoch (list):
-                Lr decay milestones.
-            test_model_file (str):
-                Path to test model weight.
+                Defaults to False.
+            final_output_dir (Union[None, str], optional):
+                Path to output folder. Defaults to './output'.
+            lr_decay_epoch (list, optional):
+                Lr decay milestones. Defaults to [30].
+            test_model_file (Union[None, str], optional):
+                Path to test model weight. Defaults to None.
             cudnn_setup (dict):
                 Dict of parameters to setup cudnn.
             dataset_setup (dict):
@@ -129,7 +132,10 @@ class MVPTrainer():
             print_freq (int, optional):
                 Printing frequency during training. Defaults to 100.
             clip_max_norm (float, optional):
-                Gradient clipping.. Defaults to 0.1.
+                Gradient clipping. Defaults to 0.1.
+            optimize_backbone (bool, optional):
+                Set it to be True to train the whole model jointly.
+                Defaults to False.
         """
 
         self.logger = get_logger(logger)
@@ -159,6 +165,7 @@ class MVPTrainer():
         self.print_freq = print_freq
         self.workers = workers
         self.final_output_dir = final_output_dir
+        self.optimize_backbone = optimize_backbone
 
         self.cudnn_setup = cudnn_setup
         self.dataset_setup = dataset_setup
@@ -174,7 +181,8 @@ class MVPTrainer():
         if model_without_ddp.backbone is not None:
             for params in model_without_ddp.backbone.parameters():
                 # Set it to be True to train the whole model jointly
-                params.requires_grad = True  # dufault false
+                # Default to false to avoid OOM
+                params.requires_grad = self.optimize_backbone
 
         lr_linear_proj_mult = self.lr_linear_proj_mult
         lr_linear_proj_names = ['reference_points', 'sampling_offsets']
@@ -347,8 +355,7 @@ class MVPTrainer():
 
             lr_scheduler.step()
 
-            inference_conf_thr = self.inference_conf_thr
-            for thr in inference_conf_thr:
+            for thr in self.inference_conf_thr:
                 preds_single, _ = validate_3d(
                     model,
                     test_loader,
@@ -361,16 +368,20 @@ class MVPTrainer():
                 preds = collect_results(preds_single, len(test_dataset))
 
                 if is_main_process():
-
                     precision = None
 
                     if 'panoptic' in self.test_dataset:
                         tb = PrettyTable()
                         mpjpe_threshold = np.arange(25, 155, 25)
+
+                        eval_cfg = dict(
+                            type='MVPEvaluation', dataset=test_loader.dataset)
+                        evaluator = build_evaluation(eval_cfg)
                         aps, recs, mpjpe, recall500 = \
-                            test_loader.dataset.evaluate(preds)
+                            evaluator.evaluate_map(preds)
+
                         tb.field_names = ['Threshold/mm'] + \
-                                         [f'{i}' for i in mpjpe_threshold]
+                            [f'{i}' for i in mpjpe_threshold]
                         tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
                         tb.add_row(['Recall'] +
                                    [f'{re * 100:.2f}' for re in recs])
@@ -382,9 +393,11 @@ class MVPTrainer():
 
                     elif 'campus' in self.test_dataset \
                             or 'shelf' in self.test_dataset:
-                        actor_pcp, avg_pcp, _, recall = \
-                            test_loader.dataset.evaluate(preds)
-
+                        eval_cfg = dict(
+                            type='MVPEvaluation', dataset=test_loader.dataset)
+                        evaluator = build_evaluation(eval_cfg)
+                        actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
+                            preds, recall_threshold=500, alpha=0.5)
                         tb = PrettyTable()
                         tb.field_names = [
                             'Metric', 'Actor 1', 'Actor 2', 'Actor 3',
@@ -396,7 +409,7 @@ class MVPTrainer():
                             f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
                         ])
                         self.logger.info('\n' + tb.get_string())
-                        self.logger.info(f'Recall@500mm: {recall:.4f}')
+                        self.logger.info(f'Recall@500mm: {recall500:.4f}')
 
                         precision = np.mean(avg_pcp)
 
@@ -605,9 +618,7 @@ def train_3d(model,
         model.module.backbone.eval()
 
     end = time.time()
-    for i, (inputs, meta, skip) in enumerate(loader):
-        if skip[-1] == 1:
-            continue
+    for i, (inputs, meta) in enumerate(loader):
         assert len(inputs) == n_views
         inputs = [i.to(device) for i in inputs]
         meta = [{
@@ -719,8 +730,7 @@ def validate_3d(model,
         end = time.time()
         kps3d_pred = []
         n_max_person = 0
-        for i, (inputs, meta, skip) in enumerate(loader):
-
+        for i, (inputs, meta) in enumerate(loader):
             data_time.update(time.time() - end)
             assert len(inputs) == n_views
             output = model(views=inputs, meta=meta)

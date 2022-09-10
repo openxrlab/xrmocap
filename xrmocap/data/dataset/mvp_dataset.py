@@ -91,6 +91,7 @@ class MVPDataset(MviewMpersonDataset):
             cam_world2cam=cam_world2cam,
             logger=logger)
 
+        self.test_mode = test_mode
         self.dataset = dataset
         self.image_size = np.array(image_size)
         self.heatmap_size = np.array(heatmap_size)
@@ -106,10 +107,16 @@ class MVPDataset(MviewMpersonDataset):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
                torch.Tensor, bool, dict]:
         meta = []
-        skip = 0
 
-        mview_img_tensor, k_tensor, r_tensor, t_tensor, kps3d, \
-            _, kw_data = super().__getitem__(index)
+        while True:
+            mview_img_tensor, k_tensor, r_tensor, t_tensor, kps3d, \
+                kw_data, n_person, skip_no_person = self.get_one_frame(index)
+            if not self.test_mode and skip_no_person is True:
+                # reload the previous valid frame
+                # if no person in gt for train set
+                index -= 1
+            else:
+                break
 
         k_tensor = k_tensor.double()
         r_tensor = r_tensor.double()
@@ -131,14 +138,6 @@ class MVPDataset(MviewMpersonDataset):
         kw_data['aug_trans'] = aug_trans
         kw_data['center'] = c
         kw_data['scale'] = s
-
-        # Other information
-        check_valid = torch.sum(kps3d, axis=1)  # [n_person, 4]
-        kps3d = kps3d[check_valid[:, -1] > 0]
-
-        n_person = kps3d.shape[0]
-        if n_person == 0:  # skip the frame if no person
-            skip = 1
 
         kw_data['n_person'] = n_person
 
@@ -219,10 +218,24 @@ class MVPDataset(MviewMpersonDataset):
 
         image = [img for img in mview_img_tensor]
 
-        return image, meta, skip
+        return image, meta
 
     def __len__(self):
         return super().__len__()
+
+    def get_one_frame(self, index):
+        skip_no_person = False
+        mview_img_tensor, k_tensor, r_tensor, t_tensor, kps3d, \
+            _, kw_data = super().__getitem__(index)
+
+        check_valid = torch.sum(kps3d, axis=1)  # [n_person, 4]
+        kps3d = kps3d[check_valid[:, -1] > 0]
+
+        n_person = kps3d.shape[0]
+        if n_person == 0:  # skip the frame if no person
+            skip_no_person = True
+        return mview_img_tensor, k_tensor, r_tensor, t_tensor, \
+            kps3d, kw_data, n_person, skip_no_person
 
     def get_affine_transforms(self,
                               c: np.ndarray,
