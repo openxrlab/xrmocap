@@ -1,1 +1,4 @@
 mmcv
+torch
+torchvision
+xrprimer
