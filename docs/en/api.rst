@@ -60,15 +60,31 @@ xrmocap.data_structure
 xrmocap.human_perception
 ------------------------
 
+bbox_detection
+^^^^^^^^^^^^^^
+.. automodule:: xrmocap.human_perception.bbox_detection
+    :members:
+
+keypoints_estimation
+^^^^^^^^^^^^^^^^^^^^
+.. automodule:: xrmocap.human_perception.keypoints_estimation
+    :members:
+
 
 xrmocap.io
 ----------
+
 .. automodule:: xrmocap.io
     :members:
 
 
 xrmocap.model
 -------------
+
+architecture
+^^^^^^^^^^^^
+.. automodule:: xrmocap.model.architecture
+    :members:
 
 
 xrmocap.ops

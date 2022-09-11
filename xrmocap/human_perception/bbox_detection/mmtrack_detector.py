@@ -179,12 +179,9 @@ def process_mmtrack_results(mframe_mmtrack_results: list,
     each tracked human.
 
     Args:
-        mframe_mmtrack_results (list):
-            A list of mmtrack inference output.
-            multi_person (bool, optional):
-                Whether to allow multi-person detection, which is
-                slower than single-person.
-                Defaults to False.
+        mframe_mmtrack_results (list): A list of mmtrack inference output.
+        multi_person (bool, optional): Whether to allow multi-person detection,
+            which is slower than single-person. Defaults to False.
 
     Returns:
         list:
