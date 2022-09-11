@@ -7,21 +7,20 @@ def unfold_camera_param(camera: dict):
     parameters from dictionary.
 
     Args:
-        camera (dict):
-            Dictionary to store the camera parameters.
+        camera (dict): Dictionary to store the camera parameters.
 
     Returns:
-        R(Union[np.ndarray, torch.Tensor]):
+        R (Union[np.ndarray, torch.Tensor]):
             Extrinsic parameters, rotation matrix.
-        T(Union[np.ndarray, torch.Tensor]):
+        T (Union[np.ndarray, torch.Tensor]):
             Extrinsic parameters, translation matrix.
-        f(Union[np.ndarray, torch.Tensor]):
+        f (Union[np.ndarray, torch.Tensor]):
             Focal length in x, y direction.
-        c(Union[np.ndarray, torch.Tensor]):
+        c (Union[np.ndarray, torch.Tensor]):
             Camera center.
-        k(Union[list, torch.Tensor]):
+        k (Union[list, torch.Tensor]):
             Radial distortion coefficients.
-        p(Union[list, torch.Tensor]):
+        p (Union[list, torch.Tensor]):
             Tangential distortion coefficients.
     """
 
@@ -87,7 +86,7 @@ def project_point_radial(x, R, T, f, c, k, p):
     """This function is to project a point in 3D space to 2D pixel space with
     given camera parameters.
 
-    Args
+    Args:
         x: Nx3 points in world coordinates
         R: 3x3 Camera rotation matrix
         T: 3x1 Camera translation parameters
@@ -96,7 +95,7 @@ def project_point_radial(x, R, T, f, c, k, p):
         k: 3x1 Camera radial distortion coefficients
         p: 2x1 Camera tangential distortion coefficients
 
-    Returns
+    Returns:
         ypixel.T: Nx2 points in pixel space
     """
     if not hasattr(x, 'device'):

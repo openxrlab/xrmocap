@@ -107,3 +107,6 @@ keypoints3d.optim
 
 xrmocap.utils
 -------------
+
+.. automodule:: xrmocap.utils
+    :members:
