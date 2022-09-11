@@ -25,7 +25,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
     def __init__(self,
                  work_dir: str,
                  smplify: Union[dict, SMPLify],
-                 kps3d_model: Union[dict, torch.nn.module],
+                 kps3d_model: Union[dict, torch.nn.Module],
                  load_batch_size: int = 500,
                  kps3d_optimizers: Union[List[Union[BaseOptimizer, dict]],
                                          None] = None,
@@ -41,7 +41,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                 or added by MultiViewSinglePersonSMPLEstimator.
             smplify (Union[dict, SMPLify]):
                 A SMPLify instance or its config.
-            kps3d_model (Union[dict, torch.nn.module]):
+            kps3d_model (Union[dict, torch.nn.Module]):
                 An end-to-end mview mperson keypoints3d predicting model.
             kps3d_optimizers (Union[
                     List[Union[BaseOptimizer, dict]], None], optional):
