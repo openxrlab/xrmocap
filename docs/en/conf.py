@@ -48,6 +48,8 @@ autodoc_mock_imports = [
     'filterpy'
 ]
 
+napoleon_custom_sections = [('Returns', 'params_style')]
+
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
 copybutton_prompt_is_regexp = True

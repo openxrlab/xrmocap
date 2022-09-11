@@ -4,7 +4,7 @@ from mmcv.runner import BaseModule
 
 
 class BaseArchitecture(BaseModule, metaclass=ABCMeta):
-    """Base class for mmhuman3d architecture."""
+    """Base class for xrmocap architecture."""
 
     def __init__(self, init_cfg=None):
         super(BaseArchitecture, self).__init__(init_cfg)
@@ -46,8 +46,9 @@ class BaseArchitecture(BaseModule, metaclass=ABCMeta):
                 and reserved.
 
         Returns:
-            dict: It should contain at least 3 keys: ``loss``, ``log_vars``, \
+            dict: It should contain at least 3 keys: ``loss``, ``log_vars``,
                 ``num_samples``.
+
                 - ``loss`` is a tensor for back propagation, which can be a
                   weighted sum of multiple losses.
                 - ``log_vars`` contains all the variables to be sent to the

@@ -21,6 +21,8 @@ from .mperson_smpl_estimator import MultiPersonSMPLEstimator
 
 
 class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
+    """Api for estimating keypoints3d and smpl in a multi-view multi-person
+    scene, using end2end learning-based method."""
 
     def __init__(self,
                  work_dir: str,
@@ -31,8 +33,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                                          None] = None,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Api for estimating smpl parameters in a multi-view, single-person
-        scene.
+        """Initialization of the class.
 
         Args:
             work_dir (str):

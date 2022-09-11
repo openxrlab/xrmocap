@@ -23,30 +23,51 @@ Welcome to XRMoCap's documentation!
 
 .. toctree::
    :maxdepth: 2
+   :caption: Data structures
+
+   data_structure/keypoints.md
+   data_structure/limbs.md
+   data_structure/smpl_data.md
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Operations
+
+   ops/triangulation.md
+
+.. toctree::
+   :maxdepth: 2
    :caption: Model
 
-   smplify.md
+   model/smplify.md
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Estimation
+
+   estimation/mview_sperson_smpl_estimator.md
+   estimation/mview_mperson_topdown_smpl_estimator.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Tools
 
-   eval_model.md
-   mview_mperson_evaluation.md
-   mview_mperson_smplify3d.md
-   prepare_dataset.md
-   process_smc.md
-   train_model.md
-   visualize_dataset.md
+   tools/eval_model.md
+   tools/mview_mperson_evaluation.md
+   tools/mview_mperson_smplify3d.md
+   tools/prepare_dataset.md
+   tools/process_smc.md
+   tools/train_model.md
+   tools/visualize_dataset.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Tutorials
 
-   introduction.md
-   config.md
-   new_dataset.md
-   new_module.md
+   tutorials/introduction.md
+   tutorials/config.md
+   tutorials/new_dataset.md
+   tutorials/new_module.md
 
 .. toctree::
    :maxdepth: 2
@@ -59,7 +80,13 @@ Welcome to XRMoCap's documentation!
    :maxdepth: 2
    :caption: License
 
-   additional_licenses.md
+   license.rst
+
+.. toctree::
+   :maxdepth: 1
+   :caption: APIs
+
+   apis.md
 
 .. toctree::
    :maxdepth: 1

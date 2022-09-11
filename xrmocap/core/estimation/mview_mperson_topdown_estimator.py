@@ -34,6 +34,8 @@ from .mperson_smpl_estimator import MultiPersonSMPLEstimator
 
 
 class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
+    """Api for estimating keypoints3d and smpl in a multi-view multi-person
+    scene, using optimization-based top-down method."""
 
     def __init__(self,
                  bbox_thr: float,
@@ -50,8 +52,7 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
                  load_batch_size: int = 10,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Api for estimating keypoints3d and smpl parameters in a multi-view,
-        multi-person scene.
+        """Initialization of the class.
 
         Args:
             bbox_thr (float):

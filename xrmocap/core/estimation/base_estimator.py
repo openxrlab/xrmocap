@@ -4,6 +4,7 @@ from xrprimer.utils.log_utils import get_logger
 
 
 class BaseEstimator:
+    """Base Estimator."""
 
     def __init__(self,
                  work_dir: str,
