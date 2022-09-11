@@ -99,6 +99,11 @@ projection
 xrmocap.transform
 -----------------
 
+keypoints3d.optim
+^^^^^^^^^^^^^^^^^
+.. automodule:: xrmocap.transform.keypoints3d.optim
+    :members:
+
 
 xrmocap.utils
 -------------
