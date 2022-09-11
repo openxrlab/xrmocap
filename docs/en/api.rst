@@ -90,6 +90,11 @@ architecture
 xrmocap.ops
 -----------
 
+projection
+^^^^^^^^^^
+.. automodule:: xrmocap.ops.projection
+    :members:
+
 
 xrmocap.transform
 -----------------
