@@ -4,7 +4,6 @@ import logging
 import math
 import torch
 import torch.nn.functional as F
-import warnings
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
@@ -50,7 +49,14 @@ class ProjAttn(nn.Module):
                 per feature level. Defaults to 4.
             projattn_pos_embed_mode (str, optional):
                 The positional embedding mode of projective
-                attention. Defaults to 'use_rayconv'.
+                attention. The mode includes 'use_rayconv',
+                'use_2d_coordconv' and 'ablation_not_use_rayconv'.
+                'use_raycon' uses camera ray dirction asd the positional
+                information to embed, while 'use_2d_coordconv' uses
+                2D coordinates as the positional information to embed/
+                'ablation_not_use_rayconv' does the positional embedding
+                without camera ray direction or pixel coordinates information.
+                Defaults to 'use_rayconv'.
         """
         super().__init__()
         self.logger = get_logger(logger)
@@ -70,10 +76,6 @@ class ProjAttn(nn.Module):
                                 'make the dimension of each attention '
                                 'head a power of 2 which is more efficient '
                                 'in our CUDA implementation.')
-            warnings.warn("You'd better set d_model in Deform to "
-                          'make the dimension of each attention '
-                          'head a power of 2 which is more efficient '
-                          'in our CUDA implementation.')
 
         self.im2col_step = 64
 
@@ -93,7 +95,9 @@ class ProjAttn(nn.Module):
         elif projattn_pos_embed_mode == 'ablation_not_use_rayconv':
             self.rayconv = nn.Linear(d_model, d_model)
         else:
-            raise ValueError('invalid projective attention posembed mode')
+            self.logger.error('Unrecognized positional embedding '
+                              'mode is given.')
+            raise NotImplementedError
         self.output_proj = nn.Linear(d_model, d_model)
 
         self._reset_parameters()
@@ -131,8 +135,10 @@ class ProjAttn(nn.Module):
 
         Args:
             query :
-                (n_views, Length_{query}, C)
+                Keypoints query feature of size (n_views, Length_{query}, C)
             reference_points :
+                2D projection of current predicted 3D keypoints
+                used as anchor points in projective attention.
                 (n_views, Length_{query}, n_levels, 2),
                 range in [0, 1], top-left (0,0), bottom-right (1, 1),
                 including padding area or (n_views, Length_{query}, n_levels,
@@ -142,7 +148,7 @@ class ProjAttn(nn.Module):
                 [(n_views, C, H_0, W_0), (n_views, C, H_0, W_0), ...,
                 (n_views, C, H_{L-1}, W_{L-1})]
             camera_ray_embeds :
-                Embedded camera rayts.
+                Embedded camera rays.
             input_spatial_shapes :
                 (n_levels, 2), [(H_0, W_0), (H_1, W_1), ...,
                 (H_{L-1}, W_{L-1})]
@@ -159,7 +165,7 @@ class ProjAttn(nn.Module):
             output : (n_views, Length_{query}, C)
         """
 
-        n_views, Len_q, c = query.shape
+        n_views, len_q, c = query.shape
         feat_lvls = len(src_views)
         sample_grid = torch.clamp(reference_points * 2.0 - 1.0, -1.1, 1.1)
         ref_point_feat_views_alllvs = []
@@ -194,28 +200,28 @@ class ProjAttn(nn.Module):
                               'mode is given.')
             raise NotImplementedError
 
-        n_views, Len_in, _ = input_flatten.shape
+        n_views, len_in, _ = input_flatten.shape
         assert (input_spatial_shapes[:, 0] *
-                input_spatial_shapes[:, 1]).sum() == Len_in
+                input_spatial_shapes[:, 1]).sum() == len_in
         value = self.rayconv(input_flatten)
 
         if input_padding_mask is not None:
             value = value.masked_fill(input_padding_mask[..., None], float(0))
-        value = value.view(n_views, Len_in, self.n_heads,
+        value = value.view(n_views, len_in, self.n_heads,
                            self.d_model // self.n_heads)
 
         # combine the view-specific ref point feature and the joint-specific
         # query feature
         sampling_offsets = self.sampling_offsets(
             torch.stack(ref_point_feat_views_alllvs, dim=2) +
-            query.unsqueeze(2)).view(n_views, Len_q, self.n_heads, feat_lvls,
+            query.unsqueeze(2)).view(n_views, len_q, self.n_heads, feat_lvls,
                                      self.n_points, 2)
         attention_weights = self.attention_weights(
             torch.stack(ref_point_feat_views_alllvs, dim=2) +
-            query.unsqueeze(2)).view(n_views, Len_q, self.n_heads,
+            query.unsqueeze(2)).view(n_views, len_q, self.n_heads,
                                      feat_lvls * self.n_points)
         attention_weights = F.softmax(attention_weights,
-                                      -1).view(n_views, Len_q, self.n_heads,
+                                      -1).view(n_views, len_q, self.n_heads,
                                                feat_lvls, self.n_points)
 
         if reference_points.shape[-1] == 2:
@@ -230,8 +236,8 @@ class ProjAttn(nn.Module):
                 + sampling_offsets / self.n_points \
                 * reference_points[:, :, None, :, None, 2:] * 0.5
         else:
-            raise ValueError('Last dim of reference_points must be 2 or 4, \
-                but get {} instead.'.format(reference_points.shape[-1]))
+            raise ValueError(f'Last dim of reference_points must be 2 or 4, \
+                but get {reference_points.shape[-1]} instead.')
         output = DeformFunction.apply(value, input_spatial_shapes,
                                       input_level_start_index,
                                       sampling_locations, attention_weights,
@@ -275,7 +281,6 @@ class DeformFunction(Function):
 
 def _is_power_of_2(n):
     if (not isinstance(n, int)) or (n < 0):
-        raise ValueError('invalid input '
-                         'for _is_power_of_2: '
-                         '{} (type: {})'.format(n, type(n)))
+        raise ValueError(f'invalid input for _is_power_of_2: '
+                         f'{n} (type: {type(n)})')
     return (n & (n - 1) == 0) and n != 0
