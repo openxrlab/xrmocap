@@ -3,26 +3,9 @@ import numpy as np
 from typing import Union
 import heapq
 import copy
-import math
-
+from xrmocap.ops.triangulation.SKEL19 import paf_dict, hierarchy_map
 from .base_matching import BaseMatching
-
-def Welsch(c, x):
-    x = x / c
-    return 1 - math.exp(- x * x /2)
-
-def line2linedist(pa, raya, pb, rayb):
-    if abs(np.vdot(raya, rayb)) < 1e-5:
-        return point2linedist(pa, pb, raya)
-    else:
-        ve = np.cross(raya, rayb)
-        ve  = ve/np.linalg.norm(ve)
-        ve =  abs(np.vdot((pa-pb), ve))
-        return ve
-
-def point2linedist(pa, pb, ray):
-    ve = np.cross(pa-pb, ray)
-    return np.linalg.norm(ve)
+from xrmocap.utils.fourdag_utils import *
 
 class Clique():
     def __init__(self, paf_id, proposal, score = -1) -> None:
@@ -120,9 +103,8 @@ class FourDAGMatching(BaseMatching):
         self.normalize_edges = normalize_edges
 
         ######
-        self.paf_dict = [[1, 2, 7,  0, 0, 3, 8,  1, 5,  11, 5, 1, 6,  12, 6, 1,  14, 13],
-			        [0, 7, 13, 2, 3, 8, 14, 5, 11, 15, 9, 6, 12, 16, 10, 4, 17, 18]]
-        self.hierarchy_map = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
+        self.paf_dict = paf_dict
+        self.hierarchy_map = hierarchy_map
         #####
 
         self.m_pafHier = np.zeros(self.n_pafs)
@@ -168,23 +150,23 @@ class FourDAGMatching(BaseMatching):
         """
         self.kps2d_paf = kps2d_paf
         self.last_multi_kps3d = last_multi_kps3d
-        self.cal_joint_rays()
-        self.cal_paf_edges() 
-        self.cal_epi_edges() 
-        self.cal_temp_edges() 
+        self.calculate_joint_rays()
+        self.calculate_paf_edges() 
+        self.calculate_epi_edges() 
+        self.calculate_temp_edges() 
 
-        self.cal_bone_nodes() 
-        self.cal_bone_epi_edges() 
-        self.cal_bone_temp_edges() 
+        self.calculate_bone_nodes() 
+        self.calculate_bone_epi_edges() 
+        self.calculate_bone_temp_edges() 
 
         self.initialize()
-        self.enum_cliques()
+        self.enumerate_clques()
         while len(self.cliques) > 0:
             self.assign_top_clique()
           
         return self.m_personsMap
     
-    def cal_joint_rays(self):
+    def calculate_joint_rays(self):
         for view in range(self.n_views):
             cam = self.cameras[view]
             for joint_id in range(self.n_joints):
@@ -193,7 +175,7 @@ class FourDAGMatching(BaseMatching):
                 for joint_candidate in range(len(joints)):
                     self.m_jointRays[view][joint_id].append(cam.calcRay(joints[joint_candidate][:2]))
 
-    def cal_paf_edges(self):
+    def calculate_paf_edges(self):
         if self.normalize_edges:
             for paf_id in range(self.n_pafs):
                 for detection in self.kps2d_paf:
@@ -207,7 +189,7 @@ class FourDAGMatching(BaseMatching):
                             pafs[:,j] /= col_factor[j]
                     detection['pafs'][paf_id] = pafs 
 
-    def cal_epi_edges(self):
+    def calculate_epi_edges(self):
         for joint_id in range(self.n_joints):
             for view1 in range(self.n_views-1):
                 cam1 = self.cameras[view1]
@@ -236,7 +218,7 @@ class FourDAGMatching(BaseMatching):
                         self.m_epiEdges[joint_id][view1][view2] = epi
                         self.m_epiEdges[joint_id][view2][view1] = epi.T
     
-    def cal_temp_edges(self):
+    def calculate_temp_edges(self):
         for joint_id in range(self.n_joints):
             for view in range(self.n_views):
                 rays = self.m_jointRays[view][joint_id]
@@ -259,7 +241,7 @@ class FourDAGMatching(BaseMatching):
                             temp[:,j] /= col_factor[j]
                     self.m_tempEdges[joint_id][view] = temp                    
 
-    def cal_bone_nodes(self):
+    def calculate_bone_nodes(self):
         for paf_id in range(self.n_pafs):
             joint1, joint2 = self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]
             for view in range(self.n_views):
@@ -269,11 +251,11 @@ class FourDAGMatching(BaseMatching):
                         if self.kps2d_paf[view]['pafs'][paf_id][joint1_candidate, joint2_candidate] > 0:
                             self.m_boneNodes[paf_id][view].append((joint1_candidate, joint2_candidate)) 
 
-    def cal_bone_epi_edges(self):
+    def calculate_bone_epi_edges(self):
         for paf_id in range(self.n_pafs):
             joint_pair = [self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]]
-            for view1 in range(5-1):
-                for view2 in range(view1+1, 5):
+            for view1 in range(self.n_views-1):
+                for view2 in range(view1+1, self.n_views):
                     nodes1 = self.m_boneNodes[paf_id][view1]
                     nodes2 = self.m_boneNodes[paf_id][view2]
                     epi = np.full((len(nodes1), len(nodes2)), -1.0)
@@ -290,7 +272,7 @@ class FourDAGMatching(BaseMatching):
                     self.m_boneEpiEdges[paf_id][view1][view2] = epi
                     self.m_boneEpiEdges[paf_id][view2][view1] = epi.T
 
-    def cal_bone_temp_edges(self):
+    def calculate_bone_temp_edges(self):
         for paf_id in range(self.n_pafs):
             joint_pair = [self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]]
             for view in range(self.n_views):
@@ -315,7 +297,7 @@ class FourDAGMatching(BaseMatching):
         for pid in range(len(self.last_multi_kps3d)):
             self.m_personsMap[pid] = np.full((self.n_joints, self.n_views), -1)
 
-    def enum_cliques(self):
+    def enumerate_clques(self):
         tmpCliques = {i:[] for i in range(self.n_pafs)}
         for paf_id in range(self.n_pafs):
             nodes = self.m_boneNodes[paf_id]
@@ -338,7 +320,7 @@ class FourDAGMatching(BaseMatching):
                         for i in range(len(pick)):
                             if pick[i] != -1:
                                 clique.proposal[i] = available_node[i][i][pick[i]]
-                        clique.score = self.cal_clique_score(clique)
+                        clique.score = self.calculate_clique_score(clique)
                         tmpCliques[paf_id].append(clique)
                     pick[index] += 1
                 
@@ -383,19 +365,15 @@ class FourDAGMatching(BaseMatching):
         clique = heapq.heappop(self.cliques)
         nodes = self.m_boneNodes[clique.paf_id]
         joint_pair = [self.paf_dict[0][clique.paf_id], self.paf_dict[1][clique.paf_id]]
-
         if clique.proposal[self.n_views] != -1:
             person_id = clique.proposal[self.n_views]
-
             if self.checkCnt(clique, joint_pair, nodes, person_id) != -1:
-
                 person = self.m_personsMap[person_id]
                 _proposal = [-1]*(self.n_views + 1)
                 for view in range(self.n_views):
                     if clique.proposal[view] != -1:
                         node = nodes[view][clique.proposal[view]]
                         assign = (self.m_assignMap[view][joint_pair[0]][node[0]], self.m_assignMap[view][joint_pair[1]][node[1]])
-
                         if (assign[0] == -1 or assign[0] == person_id) and (assign[1] == -1 or assign[1] == person_id):
                             for i in range(2):
                                 person[joint_pair[i], view] = node[i]
@@ -405,8 +383,6 @@ class FourDAGMatching(BaseMatching):
                 self.m_personsMap[person_id] = person
                 self.push_clique(clique.paf_id, _proposal[:])
                 
-            
-
             else:
                 _proposal = clique.proposal
                 _proposal[self.n_views] = -1
@@ -429,7 +405,7 @@ class FourDAGMatching(BaseMatching):
                         def checkCnt():
                             cnt = 0
                             for i in range(2):
-                                _cnt = self.CheckJointCompatibility(view, joint_pair[i], node[i], person_id)
+                                _cnt = self.check_joint_compatibility(view, joint_pair[i], node[i], person_id)
                                 if _cnt == -1:
                                     return -1
                                 cnt += _cnt
@@ -446,7 +422,6 @@ class FourDAGMatching(BaseMatching):
                         self.m_assignMap[view][joint_pair[i]][node[i]] = person_id
 
                     self.m_personsMap[person_id] = person
-
                     return False
                 # print('1. A & B not assigned yet')
                 if allocFlag():
@@ -479,7 +454,7 @@ class FourDAGMatching(BaseMatching):
                         unassignj_candidata = node[1 - valid_id]
                         assigned = self.m_assignMap[view][joint_pair[valid_id]][node[valid_id]]
                         if assigned == master_id:
-                            if person[unassignj_id, view] == -1 and self.CheckJointCompatibility(view,unassignj_id, unassignj_candidata, master_id) >= 0:
+                            if person[unassignj_id, view] == -1 and self.check_joint_compatibility(view,unassignj_id, unassignj_candidata, master_id) >= 0:
                                 person[unassignj_id, view] = unassignj_candidata
                                 self.m_assignMap[view][unassignj_id][unassignj_candidata] = master_id
                             else:
@@ -488,8 +463,8 @@ class FourDAGMatching(BaseMatching):
                         elif assigned == -1 and voting.fstCnt[valid_id] >= 2 and voting.secCnt[valid_id] == 0  \
                                 and (person[joint_pair[0], view] == -1 or person[joint_pair[0],view]==node[0]) \
                                 and (person[joint_pair[1], view] == -1 or person[joint_pair[1],view]==node[1]):
-                            if self.CheckJointCompatibility(view, joint_pair[0], node[0],master_id) >= 0 \
-                                and self.CheckJointCompatibility(view, joint_pair[1], node[1],master_id) >= 0 :
+                            if self.check_joint_compatibility(view, joint_pair[0], node[0],master_id) >= 0 \
+                                and self.check_joint_compatibility(view, joint_pair[1], node[1],master_id) >= 0 :
                                 for i in range(2):
                                     person[joint_pair[i], view] = node[i]
                                     self.m_assignMap[view][joint_pair[i]][node[i]] = master_id
@@ -499,7 +474,6 @@ class FourDAGMatching(BaseMatching):
                             _proposal[view] = clique.proposal[view]
 
                 self.m_personsMap[master_id] = person
-
                 if _proposal != clique.proposal:
                     self.push_clique(clique.paf_id, _proposal[:])
 
@@ -514,7 +488,7 @@ class FourDAGMatching(BaseMatching):
                         assign_id = [self.m_assignMap[view][joint_pair[0]][node[0]], self.m_assignMap[view][joint_pair[1]][node[1]]]
                         if assign_id[0] == master_id and assign_id[1] == master_id:
                             continue
-                        elif self.CheckJointCompatibility(view, joint_pair[0], node[0], master_id) == -1 or self.CheckJointCompatibility(view, joint_pair[1], node[1], master_id) == -1 :
+                        elif self.check_joint_compatibility(view, joint_pair[0], node[0], master_id) == -1 or self.check_joint_compatibility(view, joint_pair[1], node[1], master_id) == -1 :
                             _proposal[view] = clique.proposal[view]
                         
                         elif (assign_id[0] == master_id and assign_id[1] == -1 ) or (assign_id[0] == -1 and assign_id[1] == master_id ):
@@ -545,7 +519,7 @@ class FourDAGMatching(BaseMatching):
                         slave_id = max(voting.fst[index], voting.sec[index])
                         if slave_id  > max(self.m_personsMap):
                             import pdb; pdb.set_trace()
-                        if self.CheckPersonCompatibility(master_id, slave_id) >= 0:
+                        if self.check_person_compatibility(master_id, slave_id) >= 0:
                             self.merge_person(master_id, slave_id)
                             voting = self.clique2voting(clique, voting)
                             voting.parse()
@@ -560,7 +534,7 @@ class FourDAGMatching(BaseMatching):
                     master_id = min(voting.fst)
                     slave_id = max(voting.fst)
                     for view in range(self.n_views):
-                        conflict[view] = 1 if self.CheckPersonCompatibility_sview(master_id, slave_id, view)==-1 else 0
+                        conflict[view] = 1 if self.check_person_compatibility_sview(master_id, slave_id, view)==-1 else 0
                     
                     if sum(conflict) == 0:
                         self.merge_person(master_id, slave_id)
@@ -589,7 +563,7 @@ class FourDAGMatching(BaseMatching):
                                 _proposal[i] = clique.proposal[i]
                                 self.push_clique(clique.paf_id, _proposal[:])
     
-    def cal_clique_score(self, clique):
+    def calculate_clique_score(self, clique):
         scores = []
         for view1 in range(self.n_views-1):
             if clique.proposal[view1] == -1:
@@ -636,14 +610,14 @@ class FourDAGMatching(BaseMatching):
             index = clique.proposal[view]
             if index != -1:
                 for i in range(2):
-                    _cnt = self.CheckJointCompatibility(view, joint_pair[i], nodes[view][index][i], person_id)
+                    _cnt = self.check_joint_compatibility(view, joint_pair[i], nodes[view][index][i], person_id)
                     if _cnt == -1:
                         return -1
                     else:
                         cnt += _cnt
         return cnt
 
-    def CheckJointCompatibility(self, view, joint_id, candidate, pid):
+    def check_joint_compatibility(self, view, joint_id, candidate, pid):
         person = self.m_personsMap[pid]
         checkCnt = 0
         if person[joint_id][view] != -1 and person[joint_id][view] != candidate:
@@ -676,10 +650,10 @@ class FourDAGMatching(BaseMatching):
         if max(proposal[:self.n_views]) == -1:
             return 
         clique = Clique(paf_id, proposal)
-        clique.score = self.cal_clique_score(clique)
+        clique.score = self.calculate_clique_score(clique)
         heapq.heappush(self.cliques, clique)
 
-    def CheckPersonCompatibility_sview(self, master_id, slave_id, view):
+    def check_person_compatibility_sview(self, master_id, slave_id, view):
         assert master_id < slave_id
         if slave_id < len(self.last_multi_kps3d):
             return -1
@@ -709,7 +683,7 @@ class FourDAGMatching(BaseMatching):
                         return -1
         return checkCnt
 
-    def CheckPersonCompatibility(self, master_id, slave_id):
+    def check_person_compatibility(self, master_id, slave_id):
         assert master_id < slave_id
         if slave_id < len(self.last_multi_kps3d):
             return -1
@@ -719,7 +693,7 @@ class FourDAGMatching(BaseMatching):
         slave = self.m_personsMap[slave_id]
 
         for view in range(self.n_views):
-            _checkCnt = self.CheckPersonCompatibility_sview(master_id, slave_id, view)
+            _checkCnt = self.check_person_compatibility_sview(master_id, slave_id, view)
             if _checkCnt == -1:
                 return -1
             else:

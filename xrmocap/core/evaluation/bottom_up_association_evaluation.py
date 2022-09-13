@@ -140,7 +140,6 @@ class BottomUpAssociationEvaluation:
             mask=gt_kps3d[..., -1] > 0,
             convention=self.dataset.gt_kps3d_convention,
             logger=self.logger)
-
         mscene_keypoints_paths = []
         scene_start_idx = 0
         for scene_idx, scene_end_idx in enumerate(end_of_clip_idxs):

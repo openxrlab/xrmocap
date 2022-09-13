@@ -1,68 +1,8 @@
-import math
 import numpy as np
 import copy
-import os
-from xrmocap.ops.triangulation import m_shape
+from xrmocap.ops.triangulation.SKEL19 import *
+from xrmocap.utils.fourdag_utils import *
 
-###
-n_kps = 19
-shapeSize=10
-joint_parent = [-1, 0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 6, 7, 8, 11, 12, 14, 13]
-hierarchy_map = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]
-###
-
-def Welsch(c, x):
-    x = x / c
-    return 1 - math.exp(- x * x /2)
-
-def Skew(vec):
-    skew = np.zeros((3,3),dtype=np.float32)
-    skew = np.array( [0, -vec[2], vec[1], \
-        vec[2], 0, -vec[0], \
-        -vec[1], vec[0], 0],dtype=np.float32).reshape((3, 3))
-    return skew
-
-def Rodrigues(vec):
-    theta = np.linalg.norm(vec)
-    I = np.identity(3,dtype=np.float32)
-    if abs(theta) < 1e-5:
-        return I
-    else:
-        c = np.cos(theta)
-        s = np.sin(theta)
-        r = vec / theta
-        return c * I + np.matmul((1 - c) * r.reshape((-1,1)), r.reshape((1, -1))) + s * Skew(r)
-    
-def RodriguesJacobi(vec):
-    theta = np.linalg.norm(vec)
-    dSkew = np.zeros((3,9),dtype=np.float32)
-    dSkew[0, 5] = dSkew[1, 6] = dSkew[2, 1] = -1
-    dSkew[0, 7] = dSkew[1, 2] = dSkew[2, 3] = 1
-    if abs(theta) < 1e-5:
-        return -dSkew
-    else:
-        c = np.cos(theta)
-        s = np.sin(theta)
-        c1 = 1 - c
-        itheta = 1 / theta
-        r = vec / theta
-        rrt = np.matmul(r.reshape((-1,1)), r.reshape((1,-1)))
-        skew = Skew(r)
-        I = np.identity(3,dtype=np.float32)
-        drrt = np.array([r[0] + r[0], r[1], r[2], r[1], 0, 0, r[2], 0, 0,\
-            0, r[0], 0, r[0], r[1] + r[1], r[2], 0, r[2], 0,\
-            0, 0, r[0], 0, 0, r[1], r[0], r[1], r[2] + r[2]], dtype=np.float32).reshape((3,9))
-        jaocbi = np.zeros((3,9),dtype=np.float32)
-        a = np.zeros((5,1),dtype=np.float32)
-        for i in range(3):
-            a = np.array([ -s * r[i], (s - 2 * c1*itheta)*r[i], c1 * itheta, (c - s * itheta)*r[i], s * itheta], dtype=np.float32).reshape((5,1))
-            for j in range(3):
-                for k in range(3):
-                    
-                    jaocbi[i, k + k + k + j] = (a[0] * I[j, k] + a[1] * rrt[j, k] +\
-                        a[2] * drrt[i, j + j + j + k] + a[3] * skew[j, k] +\
-                        a[4] * dSkew[i, j + j + j + k])
-        return jaocbi
 
 class SkelInfo():
     def __init__(self) -> None:
@@ -72,7 +12,7 @@ class SkelInfo():
         self.shapeFixed = False
         self.data = np.zeros(3+n_kps*3+shapeSize,dtype=np.float32)
 
-    def PushPrevBones(self, skel):
+    def push_previous_bones(self, skel):
         for joint_id in range(1,n_kps):
             prtIdx = joint_parent[joint_id]
             if skel[3, joint_id] > 0 and skel[3, prtIdx] > 0:
@@ -80,16 +20,16 @@ class SkelInfo():
                 self.boneLen[joint_id - 1] = (self.boneCnt[joint_id - 1] *  self.boneLen[joint_id - 1] + len) / (self.boneCnt[joint_id - 1] + 1)
                 self.boneCnt[joint_id - 1] += 1
         
-    def GetTrans(self):
+    def get_trans(self):
         return self.data[0:0+3]
 
-    def GetPose(self):
+    def get_pose(self):
         return self.data[3:3+n_kps * 3]
 
-    def GetTransPose(self):
+    def get_trans_pose(self):
         return self.data[:3+n_kps * 3]
 
-    def GetShape(self):
+    def get_shape(self):
         return self.data[-shapeSize:]
 
 class Term():
@@ -128,7 +68,7 @@ class Triangulator():
         self.loss = 0
         self.pos = np.zeros(3, dtype=np.float32)
 
-    def Solve(self,maxIterTime = 20, updateTolerance = 1e-4, regularTerm = 1e-4):
+    def solve(self,maxIterTime = 20, updateTolerance = 1e-4, regularTerm = 1e-4):
         self.convergent = False
         self.loss = 10e9
         self.pos = np.zeros(3, dtype=np.float32)
@@ -163,9 +103,8 @@ class Triangulator():
 
 class SkelSolver():
     def __init__(self) -> None:
-        self.m_joints = np.array(m_shape.m_joints).reshape(3,n_kps)
-        self.m_jShapeBlend = np.array(m_shape.m_jShapeBlend).reshape(n_kps*3, shapeSize)
-        assert self.m_joints.shape[1] == n_kps and self.m_jShapeBlend.shape[0] == 3 * n_kps and self.m_jShapeBlend.shape[1] ==  shapeSize 
+        self.m_joints = np.array(m_joints).reshape(3,n_kps)
+        self.m_jShapeBlend = np.array(m_jShapeBlend).reshape(n_kps*3, shapeSize)
         self.m_boneShapeBlend= np.zeros((3 * (n_kps - 1), shapeSize), dtype=np.float32)
         for jIdx in range(1,n_kps):
         
@@ -188,7 +127,7 @@ class SkelSolver():
 
 
     def CalcJBlend(self, param):
-        jOffset = np.matmul(self.m_jShapeBlend, param.GetShape())
+        jOffset = np.matmul(self.m_jShapeBlend, param.get_shape())
         jBlend = self.m_joints + jOffset.reshape((self.m_joints.shape[1],3)).T
         return jBlend
 
@@ -197,11 +136,11 @@ class SkelSolver():
         for jIdx in range(jBlend.shape[1]):
             matrix = np.identity(4,dtype=np.float32)
             if jIdx == 0:
-                matrix[:3,-1:] = (jBlend[:,jIdx] + param.GetTrans()).reshape((-1,1))
+                matrix[:3,-1:] = (jBlend[:,jIdx] + param.get_trans()).reshape((-1,1))
             else:
                 matrix[:3,-1:] = (jBlend[:,jIdx] - jBlend[:,joint_parent[jIdx]]).reshape((-1,1)) 
 
-            matrix[:3,:3] = Rodrigues(param.GetPose()[3*jIdx:3*jIdx+3])
+            matrix[:3,:3] = Rodrigues(param.get_pose()[3*jIdx:3*jIdx+3])
             nodeWarps[:4,4 * jIdx:4 * jIdx+4] = matrix
         return nodeWarps
 
@@ -233,9 +172,7 @@ class SkelSolver():
         param.data[3:3+n_kps * 3][:3] = angle * np.array([x,y,z], dtype=np.float32)
 
     def SolvePose(self, term, param, maxIterTime,hierarchy = False, updateThresh = 1e-4):
-        
         jBlend = self.CalcJBlend(param)
-
         hierSize = max(hierarchy_map)
         hier = 0 if hierarchy else hierSize
         jCut = 0
@@ -251,7 +188,7 @@ class SkelSolver():
                 ATb = np.zeros((3 + 3 * jCut),dtype=np.float32)
                 nodeWarpsJacobi = np.zeros((9, 3 * jCut),dtype=np.float32)
                 for jIdx in range(jCut):
-                    nodeWarpsJacobi[:,3 * jIdx:3 * jIdx+3] = RodriguesJacobi(param.GetPose()[3*jIdx:3*jIdx+3]).T
+                    nodeWarpsJacobi[:,3 * jIdx:3 * jIdx+3] = RodriguesJacobi(param.get_pose()[3*jIdx:3*jIdx+3]).T
 
                 for djIdx in range(jCut):
                     jointJacobi[3 * djIdx:3 * djIdx+3,:3] = np.identity(3,dtype=np.float32)
@@ -270,7 +207,7 @@ class SkelSolver():
                                 dChainWarps[:,4 * jIdx:4 * jIdx+4] = np.matmul(dChainWarps[:,4 * prtIdx:4 * prtIdx+4], nodeWarps[:,4 * jIdx:4 * jIdx+4])
                                 jointJacobi[jIdx * 3:jIdx * 3+3,3 + djIdx * 3 + dAxis:3 + djIdx * 3 + dAxis+1] = dChainWarps[0:0+3,4 * jIdx + 3:4 * jIdx + 3+1]
 
-                if term.wJ3d > 0: #0
+                if term.wJ3d > 0: 
                     for jIdx in range(jCut):
                         if term.j3dTarget[3, jIdx] > 0:
                             w = term.wJ3d * term.j3dTarget[3, jIdx]
@@ -278,8 +215,7 @@ class SkelSolver():
                             ATA += w * np.matmul(jacobi.T, jacobi)
                             ATb += w * np.matmul(jacobi.T, (term.j3dTarget[0:0+3,jIdx:jIdx+1] - jFinal[:,jIdx].reshape((-1,1)))).reshape(-1)
         
-
-                if term.wJ2d > 0: #1e-5
+                if term.wJ2d > 0: 
                     for view in range(int(term.projs.shape[1]/4)):
                         j2dTarget = term.j2dTarget[:,view*n_kps:view*n_kps+n_kps]
                         if sum(j2dTarget[2] > 0) > 0 :
@@ -296,17 +232,16 @@ class SkelSolver():
                                     ATA += w * np.matmul(jacobi.T, jacobi)
                                     ATb += w * np.matmul(jacobi.T, j2dTarget[:2,jIdx:jIdx+1].reshape(-1) - abc[:2] / abc[2])
 
-                if term.wTemporalTrans > 0: #0.1
+                if term.wTemporalTrans > 0:
                     ATA[:3,:3] += term.wTemporalTrans * np.identity(3,dtype=np.float32)
-                    ATb[:3] += term.wTemporalTrans * (term.paramPrev.GetTrans() - param.GetTrans()) #param prev
+                    ATb[:3] += term.wTemporalTrans * (term.paramPrev.get_trans() - param.get_trans())
                 
-
-                if term.wTemporalPose > 0: #0.01
+                if term.wTemporalPose > 0:
                     ATA[-3 * jCut:,-3 * jCut:] += term.wTemporalPose * np.identity(3 * jCut,dtype=np.float32)
-                    ATb[-3 * jCut:] += term.wTemporalPose * (term.paramPrev.GetPose()[:3 * jCut]
-                        - param.GetPose()[:3 * jCut])
+                    ATb[-3 * jCut:] += term.wTemporalPose * (term.paramPrev.get_pose()[:3 * jCut]
+                        - param.get_pose()[:3 * jCut])
                 
-                if term.wRegularPose > 0: #0.001
+                if term.wRegularPose > 0:
                     ATA += term.wRegularPose * np.identity(3 + 3 * jCut,dtype=np.float32)
                 
                 delta = np.linalg.solve(ATA, ATb)
@@ -356,7 +291,6 @@ class SkelSolver():
                 if term.wJ2d > 0:
                     for view in range(int(len(term.projs[0])/4)):
                         j2dTarget = term.j2dTarget[view*n_kps:view*n_kps+n_kps]
-                        
                         if sum(j2dTarget[2] > 0) > 0:
                             proj = term.projs[view * 4: view * 4+4]
                             for jIdx in range(n_kps):
@@ -374,12 +308,11 @@ class SkelSolver():
                                 
             if term.wTemporalShape > 0:
                 ATA += term.wTemporalShape * np.identity(shapeSize,dtype=np.float32)
-                ATb += term.wTemporalShape * (term.paramPrev.GetShape() - param.GetShape())
+                ATb += term.wTemporalShape * (term.paramPrev.get_shape() - param.get_shape())
             
-
             if term.wSquareShape > 0:
                 ATA += term.wSquareShape * np.identity(shapeSize,dtype=np.float32)
-                ATb -= term.wSquareShape * param.GetShape()
+                ATb -= term.wSquareShape * param.get_shape()
             
             if term.wRegularShape > 0:
                 ATA += term.wRegularShape *np.identity(shapeSize,dtype=np.float32)
@@ -438,7 +371,7 @@ class FourDAGTriangulator():
         else:
             return self.triangulate_wo_filter(skels2d)
 
-    def TriangulatePerson(self, skel2d):
+    def triangulate_person(self, skel2d):
         skel = np.zeros((4, n_kps),dtype=np.float32)
         triangulator = Triangulator()
         triangulator.projs = self.projs
@@ -447,7 +380,7 @@ class FourDAGTriangulator():
             for view in range(int(self.projs.shape[1] / 4)):
                 skel_tmp = skel2d[:,view*n_kps:view*n_kps+n_kps]
                 triangulator.points[:,view] = skel_tmp[:,jIdx]
-            triangulator.Solve()
+            triangulator.solve()
             if triangulator.loss < self.triangulate_thresh:
                 skel[:,jIdx] = np.append(triangulator.pos, 1)
         return skel
@@ -471,11 +404,11 @@ class FourDAGTriangulator():
                     info_index += 1
 
                 if not info.shapeFixed:
-                    skel = self.TriangulatePerson(skels2d[corr_id])
+                    skel = self.triangulate_person(skels2d[corr_id])
                     if sum(skel[3] > 0) >= self.min_triangulate_cnt:
-                        info.PushPrevBones(skel)
+                        info.push_previous_bones(skel)
                         if min(info.boneCnt) >= self.bone_capacity:
-                            info.PushPrevBones(skel)
+                            info.push_previous_bones(skel)
                             shapeTerm = Term()
                             shapeTerm.bone3dTarget = np.row_stack((info.boneLen.T, np.ones(info.boneLen.shape[0],dtype=np.float32)))
                             shapeTerm.wBone3d = self.w_bone3d
@@ -523,12 +456,12 @@ class FourDAGTriangulator():
                     # update active
                     info.active = active
             else:
-                skel = self.TriangulatePerson(skels2d[corr_id])
+                skel = self.triangulate_person(skels2d[corr_id])
                 # alloc new person
                 if sum(skel[3]> 0) >= self.min_triangulate_cnt:
                     self.m_skelInfos.append((corr_id, SkelInfo()))
                     info = self.m_skelInfos[-1][1]
-                    info.PushPrevBones(skel)
+                    info.push_previous_bones(skel)
                     info.active = self.init_active
                     self.m_skels[corr_id] = skel
         return self.m_skels
@@ -550,7 +483,7 @@ class FourDAGTriangulator():
         skelIter = iter(self.m_skels.copy())
         prevCnt = len(self.m_skels)
         for pIdx, corr_id in enumerate(skels2d):
-            skel = self.TriangulatePerson(skels2d[corr_id])
+            skel = self.triangulate_person(skels2d[corr_id])
             active = sum(skel[3]> 0) >= self.min_triangulate_cnt
             if pIdx < prevCnt:
                 if active:
