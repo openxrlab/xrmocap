@@ -15,9 +15,7 @@ from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
 )
 from xrmocap.ops.top_down_association.identity_tracking.builder import BaseTracking, build_identity_tracking
-from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_keypoint_idx,
-)
+
 # yapf: enable
 
 class FourDAGAssociator:
@@ -131,16 +129,13 @@ class FourDAGAssociator:
         self.n_kps = len(kps2d_paf[0]['joints'])
         m_personsMap = self.fourd_matching(kps2d_paf, self.last_multi_kps3d)
         m_skels2d = self.cal_keypoints2d(m_personsMap, kps2d_paf)
-        ####
         multi_kps3d = []
         identities = []
         for person_id in m_skels2d:
-            #convert
             keypoints2d = np.zeros((self.n_views, self.n_kps, 3))
             for view in range(self.n_views):
                 for joint_id in range(self.n_kps):
                     keypoints2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
-            # keypoints2d = self.MappingToSkel17(m_skels2d[person_id])
             matched_mkps2d = np.zeros((self.n_views, self.n_kps, 2))
             matched_mkps2d_mask = np.zeros((self.n_views, self.n_kps, 1))
             matched_mkps2d_conf = np.zeros((self.n_views, self.n_kps, 1))
@@ -155,31 +150,17 @@ class FourDAGAssociator:
 
             if not np.isnan(kps3d).all():
                 multi_kps3d.append(kps3d)
-                # identities.append(person_id)
         multi_kps3d = np.array(multi_kps3d)
         
         if len(multi_kps3d) > 0:
             keypoints3d, identities = self.assign_identities_frame(multi_kps3d)
             self.last_multi_kps3d = dict()
-            # for pid in identities:
-            #     self.last_multi_kps3d[pid] = keypoints3d.get_keypoints()[0, pid,...].T
+            for pid in identities:
+                self.last_multi_kps3d[pid] = keypoints3d.get_keypoints()[0, pid,...].T
         else:
             keypoints3d = Keypoints()
             identities = []
             self.last_multi_kps3d = dict()
-        # ####
-
-        # ####
-        # multi_kps3d = self.triangulator.triangulate(m_skels2d)
-        # self.last_multi_kps3d = multi_kps3d
-        # kps_arr = np.zeros((1,len(multi_kps3d),self.n_kps,4))
-        # mask_arr = np.zeros((1,len(multi_kps3d),self.n_kps))
-        # for index, pid in enumerate(multi_kps3d):            
-        #     kps_arr[0,index,...] = multi_kps3d[pid][:,:self.n_kps].T
-        #     mask_arr[0,index,:] = multi_kps3d[pid][3,:self.n_kps]
-        # keypoints3d = Keypoints(kps=kps_arr, mask=mask_arr, convention=self.kps_convention)
-        # identities = multi_kps3d.keys()
-        ###
         
         return keypoints3d, identities
 

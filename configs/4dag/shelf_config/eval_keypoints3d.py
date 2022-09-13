@@ -5,7 +5,7 @@ __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
 output_dir = './output/4dag/shelf/'
-pred_kps3d_convention = 'fourdag19'
+pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
@@ -32,47 +32,12 @@ associator = dict(
     tracking_distance=0.7,
     tracking_kps3d_convention=pred_kps3d_convention,
     tracking_kps3d_name=[
-        'left_shoulder', 'right_shoulder', 'left_hip_extra',
-        'right_hip_extra'
+        'right_shoulder_openpose', 'left_shoulder_openpose', 'right_hip_openpose',
+        'left_hip_openpose'
     ]),
-    # point_selector=dict(
-    #     type='HybridKps2dSelector',
-    #     triangulator=dict(
-    #         type='AniposelibTriangulator', camera_parameters=[],
-    #         logger=logger),
-    #     verbose=False,
-    #     ignore_kps_name=['pelvis_openpose', 'neck_openpose', 'right_ear_openpose', 'left_ear_openpose','left_bigtoe_openpose','right_bigtoe_openpose'],
-    #     convention='fourdag19'),
-    # identity_tracking=dict(
-    # type='KeypointsDistanceTracking',
-    # tracking_distance=0.7,
-    # tracking_kps3d_convention=pred_kps3d_convention,
-    # tracking_kps3d_name=[
-    #     'right_shoulder_openpose', 'left_shoulder_openpose', 'right_hip_openpose',
-    #     'left_hip_openpose'
-    # ]),
-    # triangulator=dict(
-    #     type='FourDAGTriangulator',
-    #     m_filter = False,
-    #     active_rate=0.1,
-    #     min_track_cnt=5,
-    #     bone_capacity=100,
-    #     w_bone3d=1.0,
-    #     w_square_shape=1e-2,
-    #     shape_max_iter=5,
-    #     w_joint3d=1.0,
-    #     w_regular_pose=1e-3,
-    #     pose_max_iter=20,
-    #     w_joint2d=1e-5,
-    #     w_temporal_trans=1e-1,
-    #     w_temporal_pose=1e-2,
-    #     min_triangulate_cnt=15,
-    #     init_active=0.9,
-    #     triangulate_thresh=0.05,
-    #     logger=logger,
-    # ),
     fourd_matching=dict(
         type='FourDAGMatching',
+        kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
         max_temp_dist=0.2,
         w_epi=2,
@@ -100,7 +65,7 @@ dataset = dict(
     meta_path=__meta_path__,
     test_mode=True,
     shuffled=False,
-    kps2d_convention='fourdag19',
+    kps2d_convention=pred_kps3d_convention,
     gt_kps3d_convention='campus',
     cam_world2cam=True,
 )

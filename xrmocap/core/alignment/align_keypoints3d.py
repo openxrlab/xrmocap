@@ -31,7 +31,7 @@ def align_keypoints3d(pred_keypoints3d: Keypoints,
         pred_nose = pred_keypoints3d.get_keypoints()[:, :,
                                                         pred_nose_index, :3]
 
-    if pred_kps3d_convention == 'fourdag19':
+    if pred_kps3d_convention == 'fourdag_19':
         pred_nose_index = get_keypoint_idx(
             name='nose_openpose', convention=pred_kps3d_convention)
         pred_nose = pred_keypoints3d.get_keypoints()[:, :,

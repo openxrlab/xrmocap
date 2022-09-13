@@ -3,9 +3,9 @@ import numpy as np
 from typing import Union
 import heapq
 import copy
-from xrmocap.ops.triangulation.SKEL19 import paf_dict, hierarchy_map
 from .base_matching import BaseMatching
 from xrmocap.utils.fourdag_utils import *
+from xrmocap.utils.fourdag_utils import skel_info
 
 class Clique():
     def __init__(self, paf_id, proposal, score = -1) -> None:
@@ -62,6 +62,7 @@ class Camera():
 
 class FourDAGMatching(BaseMatching):
     def __init__(self,
+                 kps_convention = 'fourdag_19',
                  n_views=5,
                  n_joints=19,
                  n_pafs=18,
@@ -102,10 +103,8 @@ class FourDAGMatching(BaseMatching):
         self.min_asgn_cnt = min_asgn_cnt
         self.normalize_edges = normalize_edges
 
-        ######
-        self.paf_dict = paf_dict
-        self.hierarchy_map = hierarchy_map
-        #####
+        self.paf_dict = skel_info[kps_convention]['paf_dict']
+        self.hierarchy_map = skel_info[kps_convention]['hierarchy_map']
 
         self.m_pafHier = np.zeros(self.n_pafs)
         for paf_id in range(self.n_pafs):

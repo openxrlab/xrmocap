@@ -24,7 +24,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                  shuffled: bool = False,
                  metric_unit: Literal['meter', 'centimeter',
                                       'millimeter'] = 'meter',
-                 kps2d_convention = 'body25',
+                 kps2d_convention: str='fourdag19',
                  gt_kps3d_convention: Union[None, str] = None,
                  cam_world2cam: bool = False,
                  cam_k_dim: int = 3,
@@ -164,14 +164,13 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                 img_size = (self.fisheye_params[scene_idx][view_idx].width, self.fisheye_params[scene_idx][view_idx].height)
                 detections = multi_detections[view_idx]
                 convert_detections = convert_bottom_up_kps_paf(detections, src_convention, self.kps2d_convention,approximate=True)
-            
+                #resize
                 for frame_id in range(len(detections)):
-                    for joint_id in range(19):
+                    for joint_id in range(len(convert_detections[frame_id]['joints'])):
                         if len(convert_detections[frame_id]['joints'][joint_id]) > 0:
                             convert_detections[frame_id]['joints'][joint_id][:,0] = convert_detections[frame_id]['joints'][joint_id][:,0]*(img_size[0] - 1)
                             convert_detections[frame_id]['joints'][joint_id][:,1] = convert_detections[frame_id]['joints'][joint_id][:,1]*(img_size[1] - 1)
                     
-        
                 mview_kps2d.append(convert_detections)
             f.close()
             mscene_keypoints_list.append(mview_kps2d)

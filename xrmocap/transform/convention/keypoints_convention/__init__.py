@@ -12,12 +12,13 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from . import campus, human_data, panoptic, fourdag19  # noqa:F401
+from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
+from xrmocap.utils.fourdag_utils import *
 
 # yapf: enable
 KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
 KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
-KEYPOINTS_FACTORY['fourdag19'] = fourdag19.FOURDAG19_KEYPOINTS
+KEYPOINTS_FACTORY['fourdag_19'] = fourdag_19.FOURDAG19_KEYPOINTS
 
 
 def convert_keypoints(
@@ -138,14 +139,6 @@ def convert_bottom_up_kps_paf(
             An instance of Keypoints class, whose convention is dst,
             and dtype, device are same as input.
     """
-    # for joint_id in range(n_kps):
-    #     tmp_joint_id = joint_mapping[joint_id]
-    #     if tmp_joint_id != -1:
-    #         convert_detections[frame_id]['joints'][tmp_joint_id] = np.array(detections[frame_id]['joints'][joint_id], dtype=np.float32)
-    # for paf_id in range(n_pafs):
-    #     tmp_paf_id = pafs_mapping[paf_id]
-    #     if tmp_paf_id != -1: 
-    #         convert_detections[frame_id]['pafs'][tmp_paf_id]= np.array(detections[frame_id]['pafs'][paf_id], dtype=np.float32)
 
     n_frame = len(kps_paf)
     dst_n_kps = get_keypoint_num(
@@ -156,17 +149,15 @@ def convert_bottom_up_kps_paf(
         dst_detections.append(var)
     dst_idxs, src_idxs, _ = \
         get_mapping(src, dst, approximate, keypoints_factory)
-    pafs_mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, 16, -1, -1, 17, -1, -1]
-    # joint_mapping = [4, 1, 5, 11, 15, 6, 12, 16, 0, 2, 7, 13, 3, 8, 14, -1, -1, 9, 10, 17, -1, -1, 18, -1, -1]
+    paf_mapping = all_paf_mapping[src][dst]
 
     for frame_id in range(n_frame):
         for  i in range(len(dst_idxs)):
             dst_detections[frame_id]['joints'][dst_idxs[i]] = np.array(kps_paf[frame_id]['joints'][src_idxs[i]], dtype=np.float32)
 
-        for paf_id in range(len(pafs_mapping)):
-            tmp_paf_id = pafs_mapping[paf_id]
-            if tmp_paf_id != -1: 
-                dst_detections[frame_id]['pafs'][tmp_paf_id]= np.array(kps_paf[frame_id]['pafs'][paf_id], dtype=np.float32)
+        for i in range(len(paf_mapping)):
+            dst_detections[frame_id]['pafs'][i] = np.array(kps_paf[frame_id]['pafs'][paf_mapping[i]], dtype=np.float32)
+            
     return dst_detections
     
 def get_keypoints_factory() -> dict:
