@@ -43,9 +43,7 @@ extensions = [
     'sphinx_markdown_tables', 'sphinx_copybutton', 'myst_parser'
 ]
 
-autodoc_mock_imports = [
-    'xrprimer_cpp', 'pytorch3d', 'aniposelib', 'matplotlib', 'filterpy'
-]
+autodoc_mock_imports = ['pytorch3d', 'aniposelib', 'matplotlib', 'filterpy']
 
 # Parse `Returns` in docstr with parameter style
 napoleon_custom_sections = [('Returns', 'params_style')]
