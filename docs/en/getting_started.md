@@ -25,10 +25,9 @@ If you want to infer SMPL as well, you can prepare the body\_model as follows.
   - Neutral model can be downloaded from [SMPLify](https://smplify.is.tue.mpg.de/).
   - All body models have to be renamed in `SMPL_{GENDER}.pkl` format. <br/>
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
-- [smpl\_mean\_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
-- [gmm\_08.pkl](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip)
-
-- [gmm_08.pkl](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl?versionId=CAEQQRiBgMCH6YWAmRgiIDE4NTI0MDQ5NDBjYjQzY2U4NDM5MzQxMWZjNjY5NzRj)
+- [smpl\_mean\_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz)
+- [gmm\_08.zip from smplify-x repo](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip)
+- [gmm\_08.pkl from openxrlab backup](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl)
 
 Download the above resources and arrange them in the following file structure:
 
@@ -43,7 +42,6 @@ xrmocap
     └── body_models
         ├── gmm_08.pkl
         ├── smpl_mean_params.npz
-        ├── gmm_08.pkl (optional)
         └── smpl
             ├── SMPL_FEMALE.pkl
             ├── SMPL_MALE.pkl
