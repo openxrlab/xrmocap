@@ -44,8 +44,7 @@ extensions = [
 ]
 
 autodoc_mock_imports = [
-    'xrprimer_cpp', 'mmhuman3d', 'pytorch3d', 'aniposelib', 'matplotlib',
-    'filterpy'
+    'xrprimer_cpp', 'pytorch3d', 'aniposelib', 'matplotlib', 'filterpy'
 ]
 
 # Parse `Returns` in docstr with parameter style

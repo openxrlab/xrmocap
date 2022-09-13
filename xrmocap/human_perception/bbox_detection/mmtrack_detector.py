@@ -22,6 +22,7 @@ except (ImportError, ModuleNotFoundError):
 
 
 class MMtrackDetector:
+    """Detector wrapped from mmtracking."""
 
     def __init__(self,
                  mmtrack_kwargs: dict,
