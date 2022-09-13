@@ -98,17 +98,6 @@ class FourDAGAssociator:
 
             m_skels2d[identity] = skel2d
         return m_skels2d
-    
-    def MappingToSkel17(self,skel19):
-        keypoints2d = np.zeros((self.n_views, 19, 3))
-        for view in range(self.n_views):
-            for joint_id in range(19):
-                keypoints2d[view][joint_id] = skel19[:,view*self.n_kps+joint_id]
-        shelf17 = np.zeros((self.n_views, 17, 3), dtype=np.float)
-        mapping = [4,10,9,10,9,6,5,12,11,16,15,3,2,8,7,14,13]
-        for jIdx in range(len(mapping)):
-            shelf17[:,jIdx,:] = keypoints2d[:,mapping[jIdx],:]
-        return shelf17
 
     def associate_frame(
             self, kps2d_paf:list

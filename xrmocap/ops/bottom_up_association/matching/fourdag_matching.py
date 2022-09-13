@@ -599,7 +599,7 @@ class FourDAGMatching(BaseMatching):
 
         pafScore = sum(scores) / len(scores)
         var  = sum(np.array(clique.proposal[:self.n_views]) >= 0)
-        viewScore = Welsch(self.c_view_cnt, var)
+        viewScore = welsch(self.c_view_cnt, var)
         hierScore = 1 - pow(self.m_pafHier[clique.paf_id] / self.m_pafHierSize, 4)
         return (self.w_epi * epiScore + self.w_temp * tempScore + self.w_paf * pafScore + self.w_view * viewScore+ self.w_hier * hierScore) / (self.w_epi + self.w_temp + self.w_paf + self.w_view + self.w_hier)
 
