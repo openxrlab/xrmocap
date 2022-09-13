@@ -51,7 +51,7 @@ class ProjAttn(nn.Module):
                 The positional embedding mode of projective
                 attention. The mode includes 'use_rayconv',
                 'use_2d_coordconv' and 'ablation_not_use_rayconv'.
-                'use_raycon' uses camera ray dirction asd the positional
+                'use_raycon' uses camera ray dirction as the positional
                 information to embed, while 'use_2d_coordconv' uses
                 2D coordinates as the positional information to embed/
                 'ablation_not_use_rayconv' does the positional embedding
