@@ -208,8 +208,7 @@ class MultiViewMultiPersonTopDownEstimator(MultiPersonSMPLEstimator):
         selected_keypoints2d = []
         max_identity = 0
         for start_idx in tqdm(
-                range(0, n_frame, self.load_batch_size),
-                disable=not self.verbose):
+                range(0, n_frame, self.load_batch_size), disable=False):
             end_idx = min(n_frame, start_idx + self.load_batch_size)
             mview_batch_arr = load_clip_from_mview_src(
                 start_idx=start_idx,
