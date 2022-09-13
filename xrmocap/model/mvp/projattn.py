@@ -53,7 +53,7 @@ class ProjAttn(nn.Module):
                 'use_2d_coordconv' and 'ablation_not_use_rayconv'.
                 'use_raycon' uses camera ray dirction as the positional
                 information to embed, while 'use_2d_coordconv' uses
-                2D coordinates as the positional information to embed/
+                2D coordinates as the positional information to embed.
                 'ablation_not_use_rayconv' does the positional embedding
                 without camera ray direction or pixel coordinates information.
                 Defaults to 'use_rayconv'.
