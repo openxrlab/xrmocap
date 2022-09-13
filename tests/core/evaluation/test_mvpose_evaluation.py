@@ -9,6 +9,7 @@ from xrmocap.core.evaluation.builder import build_evaluation
 from xrmocap.data_structure.keypoints import Keypoints
 
 output_dir = 'tests/data/output/core/test_mvpose_evaluation'
+device = 'cpu' if not torch.cuda.is_available() else 'cuda'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -18,12 +19,11 @@ def fixture():
     os.makedirs(output_dir, exist_ok=False)
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_mvpose_evaluation():
     evaluation_config = dict(
         mmcv.Config.fromfile('configs/modules/core/evaluation/' +
                              'mview_mperson_eval_shelf_unittest.py'))
+    evaluation_config['associator']['device'] = device
     evaluation_config['output_dir'] = output_dir
     evaluation_config['dataset_visualization']['output_dir'] = output_dir
     evaluation_config['dataset_visualization']['pred_kps3d_paths'] = osp.join(

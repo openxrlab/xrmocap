@@ -27,6 +27,8 @@ If you want to infer SMPL as well, you can prepare the body_model as follows.
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
 
+- [gmm_08.pkl](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl?versionId=CAEQQRiBgMCH6YWAmRgiIDE4NTI0MDQ5NDBjYjQzY2U4NDM5MzQxMWZjNjY5NzRj)
+
 Download the above resources and arrange them in the following file structure:
 
 ```text
@@ -36,8 +38,9 @@ xrmocap
 ├── tests
 ├── tools
 ├── configs
-└── data
+└── xrmocap_data
     └── body_models
+        ├── gmm_08.pkl
         ├── smpl_mean_params.npz
         └── smpl
             ├── SMPL_FEMALE.pkl
@@ -54,31 +57,32 @@ We assume that the cameras have been calibrated. If you want to know more about 
 
 ### Perception Model
 
-Prepare perceptions models, including detection, 2d pose estimation, tracking and CamStyle models.
+Prepare perception models, including detection, 2d pose estimation, tracking and CamStyle models.
 
 ```
 sh scripts/download_weight.sh
 ```
-You could find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You could find perception models in `weight` file.
 
 ### Single Person
 
 Currently, we only provide optimization-based method for single person estimation.
 
-1. Download a `.smc` file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
-2. Extract the 7z file.
+1. Download body model. Please refer to [Body Model Preparation](#body-model-preparation-optional)
+2. Download a 7z file from [humman dataset](https://drive.google.com/drive/folders/17dinze70MWL5PmB9-Mw36zUjkrQvwb-J).
+3. Extract the 7z file.
 
 ```bash
+cd xrmocap_data/humman
 7z x p000127_a000007.7z
 ```
 
 3. Run [process_smc](./tools/process_smc.md) tool.
 
 ```bash
-mkdir xrmocap_data/humman
 python tools/process_smc.py \
-	--estimator_cofig configs/humman_mocap/mview_sperson_smpl_estimator.py \
-	--smc_path p000127_a000007.smc \
+	--estimator_config configs/humman_mocap/mview_sperson_smpl_estimator.py \
+	--smc_path xrmocap_data/humman/p000127_a000007.smc \
 	--output_dir xrmocap_data/humman/p000127_a000007_output \
 	--visualize
 ```
@@ -92,13 +96,31 @@ A small test dataset for quick demo can be downloaded [here](https://openxrlab-s
 
 For optimization-based approaches, it utilizes the association between 2D keypoints and generates 3D keypoints by triangulation or other methods. Taking [MVPose](../../configs/mvpose/) as an example, it can be run as
 
+1. Download data and body model
+
+- download data
+
 ```bash
-Coming soon!
+mkdir xrmocap_data
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
+cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 ```
+- download body model
 
-Some useful configs are explained here:
+Please refer to [Body Model Preparation](#body-model-preparation-optional)
 
- - If you want to use tracing on the input sequence, you can set `use_kalman_tracking` to True in config file.
+2. Run demo
+
+```python
+python tools/mview_mperson_topdown_estimator.py \
+      --estimator_config 'configs/mvpose_tracking/mview_mperson_topdown_estimator.py' \
+      --image_and_camera_param 'xrmocap_data/Shelf_50/image_and_camera_param.txt' \
+      --start_frame 300 \
+      --end_frame 350 \
+      --output_dir 'output/estimation' \
+      --enable_log_file
+```
+If all the configuration is OK, you could see the results in `output_dir`.
 
 #### Learning-based methods
 
@@ -118,7 +140,7 @@ sh make.sh
 ```bash
 # download data
 mkdir -p xrmocap_data
-wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_dataa
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
 cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 
 # download pretrained model

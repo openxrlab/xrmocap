@@ -23,6 +23,7 @@ from xrmocap.ops.triangulation.builder import (
 from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
 )
+from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .identity_tracking.builder import BaseTracking, build_identity_tracking
 
 # yapf: enable
@@ -126,7 +127,7 @@ class MvposeAssociator:
         Args:
             mview_img_arr (np.ndarray):
                 Multi-view image array, in shape
-                [n_frames, h, w, ch].
+                [n_frames, ch, h, w].
             mview_bbox2d (List[torch.Tensor]):
                 Multi-view bbox2d.
             mview_keypoints2d (List[Keypoints]):
@@ -164,7 +165,8 @@ class MvposeAssociator:
                 if data[-1] > self.bbox_thr
             ])
             mview_person_id.append(person_id)
-        image_tensor, kps2d, dim_group, n_kps2d, bbox2d = self.process_data(
+        n_kps2d = get_keypoint_num(convention=self.kps_convention)
+        image_tensor, kps2d, dim_group, bbox2d = self.process_data(
             mview_person_id, mview_img_arr, mview_bbox2d, mview_keypoints2d)
         if len(kps2d) > 0 and self.kalman_tracking is not None:
             if self.counter == 0:
@@ -312,10 +314,9 @@ class MvposeAssociator:
         if not (dim_group == 0).all():
             cropped_img = torch.stack(cropped_img)
             kps2d = np.concatenate(kps2d, axis=0)
-        n_kps2d = mview_keypoints2d[0].get_keypoints_number()
         ret_bbox2d = np.concatenate(ret_bbox2d, axis=0)
 
-        return cropped_img, kps2d, dim_group, n_kps2d, ret_bbox2d
+        return cropped_img, kps2d, dim_group, ret_bbox2d
 
     def calc_fundamental_mat(self, cam_world2cam=True):
         camera_parameter = {

@@ -28,6 +28,10 @@ sh scripts/download_weight.sh
 ```
 You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
 
+- **Download body model**
+
+Please refer to [Body Model Preparation](../../docs/en/getting_started.md#body-model-preparation-optional)
+
 - **Prepare the datasets**:
 
 Convert original dataset to our unified meta-data, with data converters controlled by configs,
@@ -41,28 +45,37 @@ xrmocap
 ├── docs
 ├── tools
 ├── configs
-└── weight
-    └── resnet50_reid_camstyle.pth.tar
+├── weight
+|   └── resnet50_reid_camstyle.pth.tar
 └── xrmocap_data
-    ├── Shelf
-        ├── Camera0
-        ├── ...
-        ├── Camera4
-        ├── xrmocap_meta_testset_fasterrcnn
-        └── xrmocap_meta_testset
+    ├── body_models
+    |   ├── gmm_08.pkl
+    |   ├── smpl_mean_params.npz
+    |   └── smpl
+    |       ├── SMPL_FEMALE.pkl
+    |       ├── SMPL_MALE.pkl
+    |       └── SMPL_NEUTRAL.pkl
+    |
     ├── CampusSeq1
-    └── panoptic
+    ├── Shelf
+    |   ├── Camera0
+    |   ├── ...
+    |   ├── Camera4
+    |   ├── xrmocap_meta_testset_fasterrcnn
+    |   └── xrmocap_meta_testset
+    └── Panoptic
         ├── xrmocap_meta_ian5
-            ├── hd_00_03
-            ├── ...
-            ├── hd_00_23
-            ├── camera_parameters
-            ├── keypoints3d_GT.npz
-            └── perception_2d.npz
+        |   ├── hd_00_03
+        |   ├── ...
+        |   ├── hd_00_23
+        |   ├── camera_parameters
+        |   ├── keypoints3d_GT.npz
+        |   └── perception_2d.npz
         ├── xrmocap_meta_pizza1
         ├── xrmocap_meta_band4
         └── xrmocap_meta_haggling1
 ```
+You can download just one dataset of Shelf, Campus and CMU-Panoptic.
 
 ## Results
 
