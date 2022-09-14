@@ -1,5 +1,5 @@
+git+https://github.com/yl-1993/mmhuman3d.git@install_with_pip
 mmcv
 torch
 torchvision
 xrprimer
-yl-1993 @ git+https://github.com/yl-1993/mmhuman3d.git@install_with_pip
