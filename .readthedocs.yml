@@ -5,5 +5,7 @@ formats: all
 python:
   version: 3.7
   install:
+    - method: pip
+      path: torch
     - requirements: requirements/docs.txt
     - requirements: requirements/readthedocs.txt
