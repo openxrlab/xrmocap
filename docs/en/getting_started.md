@@ -127,12 +127,9 @@ If all the configuration is OK, you could see the results in `output_dir`.
 For learning-based methods, it resorts to an end-to-end learning scheme so as to require training before inference.
 Taking [MvP](../../configs/mvp/) as an example, we can download [pretrained MvP model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth) and run it on Shelf_50 as:
 
-1. Install `Deformable` package
-
-Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) folder, rename and place the folder as `xrmocap/model/deformable`. Install `Deformable` by running:
+1. Install `Deformable` package by running the script:
 ```
-cd xrmocap/model/deformable/
-sh make.sh
+sh scripts/download_install_deformable.sh
 ```
 
 2. Download data and run demo

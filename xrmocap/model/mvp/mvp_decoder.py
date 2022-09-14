@@ -6,20 +6,6 @@ import xrmocap.utils.camera_utils as cameras
 from xrmocap.transform.point import affine_transform_pts
 from xrmocap.utils.mvp_utils import get_clones, inverse_sigmoid, norm2absolute
 
-try:
-    from xrmocap.model.deformable.modules import ProjAttn
-    has_deformable = True
-    import_exception = ''
-except (ImportError, ModuleNotFoundError):
-    has_deformable = False
-    import traceback
-    stack_str = ''
-    for line in traceback.format_stack():
-        if 'frozen' not in line:
-            stack_str += line + '\n'
-    import_exception = traceback.format_exc() + '\n'
-    import_exception = stack_str + import_exception
-
 
 class MvPDecoderLayer(nn.Module):
     """Decoderlayer for MVP.
@@ -28,6 +14,7 @@ class MvPDecoderLayer(nn.Module):
     """
 
     def __init__(self,
+                 proj_attn,
                  space_size: list,
                  space_center: list,
                  image_size: list,
@@ -35,13 +22,10 @@ class MvPDecoderLayer(nn.Module):
                  dim_feedforward: int = 1024,
                  dropout: int = 0.1,
                  activation: str = 'relu',
-                 n_feature_levels: int = 4,
                  n_heads: int = 8,
-                 dec_n_points: int = 4,
                  detach_refpoints_cameraprj: bool = True,
                  fuse_view_feats: str = 'mean',
-                 n_views: int = 5,
-                 projattn_pose_embed_mode: str = 'use_rayconv'):
+                 n_views: int = 5):
         """Create the decoder layer.
 
         Args:
@@ -60,13 +44,8 @@ class MvPDecoderLayer(nn.Module):
                 Defaults to 0.1.
             activation (str, optional):
                 Activation function.  Defaults to 'relu'.
-            n_feature_levels (int, optional):
-                Number of feature levels. Defaults to 4.
             n_heads (int, optional):
                 Number of attention heads. Defaults to 8.
-            dec_n_points (int, optional):
-                Number of sampling points per attention
-                head per feature level. Defaults to 4.
             detach_refpoints_cameraprj (bool, optional):
                 Whether to detach reference points
                 in reprojection. Defaults to True.
@@ -74,15 +53,11 @@ class MvPDecoderLayer(nn.Module):
                 Type of feature fuse function. Defaults to 'mean'.
             n_views (int, optional):
                 Number of views. Defaults to 5.
-            projattn_pose_embed_mode (str, optional):
-                The positional embedding mode of projective attention.
-                ['use_rayconv','use_2d_coordconv']. Defaults to 'use_rayconv'.
         """
         super().__init__()
 
-        # projective attention
-        self.proj_attn = ProjAttn(d_model, n_feature_levels, n_heads,
-                                  dec_n_points, projattn_pose_embed_mode)
+        self.proj_attn = proj_attn
+
         self.dropout1 = nn.Dropout(dropout)
         self.norm1 = nn.LayerNorm(d_model)
 

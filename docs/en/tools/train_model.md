@@ -10,12 +10,11 @@ This tool takes a config file and starts trainig MvP model with Shelf, Campus or
 
 ## Preparation
 
-1. Install `Deformable` package (Skip if you have done this step during model evaluation)
+1. Download and install the `Deformable` package (Skip if you have done this step during model evaluation)
 
-Download the [`./ops`](https://github.com/sail-sg/mvp/tree/main/lib/models/ops) folder, rename and place the folder as `ROOT/xrmocap/model/deformable`. Install `Deformable` by running:
+Run the script:
 ```
-cd ROOT/xrmocap/model/deformable/
-sh make.sh
+sh scripts/download_install_deformable.sh
 ```
 
 2. Prepare Datasets
