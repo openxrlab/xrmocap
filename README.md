@@ -6,7 +6,7 @@
 [![actions](https://github.com/openxrlab/xrmocap/workflows/build/badge.svg)](https://github.com/openxrlab/xrmocap/actions)
 [![codecov](https://codecov.io/gh/openxrlab/xrmocap/branch/main/graph/badge.svg)](https://codecov.io/gh/openxrlab/xrmocap)
 [![PyPI](https://img.shields.io/pypi/v/xrmocap)](https://pypi.org/project/xrmocap/)
-[![Percentage of issues still open](https://isitmaintained.com/badge/open/openxrlab/xrmocap.svg)](https://github.com/open-mmlab/xrmocap/issues)
+[![Percentage of issues still open](https://isitmaintained.com/badge/open/openxrlab/xrmocap.svg)](https://github.com/openxrlab/xrmocap/issues)
 
 </div>
 
