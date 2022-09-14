@@ -6,6 +6,7 @@ from xrmocap.data.dataset.base_dataset import BaseDataset
 
 
 class MVPEvaluation:
+    """Evaluation for MvP method."""
 
     def __init__(self, dataset: BaseDataset, kps_thr: float = 0.1):
         self.dataset = dataset

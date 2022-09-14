@@ -1,0 +1,5 @@
+mmcv
+mmhuman3d @ git+https://github.com/open-mmlab/mmhuman3d.git
+torch
+torchvision
+xrprimer

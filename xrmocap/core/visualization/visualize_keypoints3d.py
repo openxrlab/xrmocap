@@ -85,9 +85,7 @@ def visualize_project_keypoints3d(
     Args:
         keypoints (Keypoints):
             An keypoints3d instance of Keypoints.
-        cam_param (Union[
-                FisheyeCameraParameter,
-                PinholeCameraParameter]):
+        cam_param (Union[FisheyeCameraParameter, PinholeCameraParameter]):
             Camera parameter, either an instance of FisheyeCameraParameter
             or PinholeCameraParameter.
         output_path (str):

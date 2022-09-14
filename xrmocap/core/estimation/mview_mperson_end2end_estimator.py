@@ -21,18 +21,19 @@ from .mperson_smpl_estimator import MultiPersonSMPLEstimator
 
 
 class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
+    """Api for estimating keypoints3d and smpl in a multi-view multi-person
+    scene, using end2end learning-based method."""
 
     def __init__(self,
                  work_dir: str,
                  smplify: Union[dict, SMPLify],
-                 kps3d_model: Union[dict, torch.nn.module],
+                 kps3d_model: Union[dict, torch.nn.Module],
                  load_batch_size: int = 500,
                  kps3d_optimizers: Union[List[Union[BaseOptimizer, dict]],
                                          None] = None,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Api for estimating smpl parameters in a multi-view, single-person
-        scene.
+        """Initialization of the class.
 
         Args:
             work_dir (str):
@@ -41,7 +42,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                 or added by MultiViewSinglePersonSMPLEstimator.
             smplify (Union[dict, SMPLify]):
                 A SMPLify instance or its config.
-            kps3d_model (Union[dict, torch.nn.module]):
+            kps3d_model (Union[dict, torch.nn.Module]):
                 An end-to-end mview mperson keypoints3d predicting model.
             kps3d_optimizers (Union[
                     List[Union[BaseOptimizer, dict]], None], optional):

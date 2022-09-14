@@ -702,28 +702,21 @@ def validate_3d(model,
     """Evaluate model during training or testing.
 
     Args:
-        model:
-            Model to be evaluated.
-        loader:
-            Dataloader.
+        model: Model to be evaluated.
+        loader: Dataloader.
         logger (Union[None, str, logging.Logger]):
             Logger for logging. If None, root logger will be selected.
-        output_dir (str):
-            Path to output folder.
+        output_dir (str): Path to output folder.
         threshold (float):
             Confidence threshold to filter non-human keypoints.
-        print_freq (int):
-            Printing frequency during training.
-        n_views (int, optional):
-            Number of views. Defaults to 5.
+        print_freq (int): Printing frequency during training.
+        n_views (int, optional): Number of views. Defaults to 5.
         is_train (bool, optional):
             True if it is called during trainig. Defaults to False.
 
     Returns:
-        preds(torch.Tensor):
-            Predicted results of all the keypoints.
-        keypoints3d(Keypoints):
-            An instance of class keypoints.
+        preds(torch.Tensor): Predicted results of all the keypoints.
+        keypoints3d(Keypoints): An instance of class keypoints.
     """
     batch_time = AverageMeter()
     data_time = AverageMeter()
