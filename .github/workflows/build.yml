@@ -3,7 +3,20 @@
 
 name: build
 
-on: push
+on:
+  push:
+    branches:
+     - main
+    paths-ignore:
+      - 'README.md'
+      - 'README_CN.md'
+      - 'docs/**'
+
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'README_CN.md'
+      - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
