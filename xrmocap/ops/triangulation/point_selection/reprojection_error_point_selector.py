@@ -90,9 +90,9 @@ class ReprojectionErrorPointSelector(BaseSelector):
             selected_view = self.get_view_index(
                 point=points[:, point_idx],
                 init_point_mask=init_points_mask[:, point_idx])
-            for view_index in range(n_view):
-                if view_index not in selected_view:
-                    points2d_mask[view_index, point_idx] = 0
+            points2d_mask[:, point_idx] = 0
+            points2d_mask[np.array(selected_view), point_idx] = 1
+
         points_mask_shape = points2d_mask.shape
         # log stats
         if self.verbose:
@@ -127,9 +127,8 @@ class ReprojectionErrorPointSelector(BaseSelector):
         """
         # backup shape
         n_view = init_point_mask.shape[0]
-        # check if there's potential to search
-        remain_view = np.array([x for x in range(n_view)])
-        if n_view == 2:
+        remain_view = np.where(init_point_mask == 1)[0]
+        if n_view == 2 or len(remain_view) == self.target_camera_number:
             self.logger.warning(
                 'There\'s no potential to search a sub-triangulator' +
                 ' according to n_view.')
@@ -148,6 +147,7 @@ class ReprojectionErrorPointSelector(BaseSelector):
                 else:
                     mean_errors[view_idx] = np.nanmean(
                         abs_error[view_idx], keepdims=False)
+
             if self.target_camera_number + invalid_view_count > n_view:
                 self.logger.error(
                     'Too many invalid views.' +
@@ -156,7 +156,7 @@ class ReprojectionErrorPointSelector(BaseSelector):
                 raise ValueError
             # get mean error ignoring nan
             min_error_indexes = np.argpartition(
-                mean_errors,
+                mean_errors[np.where(init_point_mask == 1)[0]],
                 self.target_camera_number)[:self.target_camera_number]
-            remain_view = sorted(remain_view[min_error_indexes].tolist())
+            remain_view = sorted(min_error_indexes.tolist())
         return remain_view
