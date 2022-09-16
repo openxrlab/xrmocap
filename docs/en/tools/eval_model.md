@@ -19,12 +19,12 @@ sh scripts/download_install_deformable.sh
 
 2. Prepare Datasets
 
-Follow the [dataset tool](./prepare_dataset.md) tutorial to prepare the train and test data. Some pre-processed datasets are available for download [here](../dataset_preparation.md). Place the `trainset_pesudo_gt` and `testset` data including meta data under `ROOT/xrmocap_data`.
+Follow the [dataset tool](./prepare_dataset.md) tutorial to prepare the train and test data. Some pre-processed datasets are available for download [here](../dataset_preparation.md). Place the `trainset_pesudo_gt` and `testset` data including meta data under `ROOT/xrmocap_data/DATASET`.
 
 
 3. Prepare pre-trained model weights and model checkpoints
 
-Download pre-trained backbone weights or MvP model checkpoints from [here](../../../configs/mvp/README.md). Place the model weights under `ROOT/weight`.
+Download pre-trained backbone weights or MvP model checkpoints from [here](../../../configs/mvp/README.md). Place the model weights under `ROOT/weight/mvp`.
 
 4. Prepare config files
 
@@ -37,19 +37,20 @@ xrmocap
 ├── xrmocap
 ├── tools
 ├── configs
-└── weight
-    ├── xrmocap_mvp_campus.pth.tar
-    ├── xrmocap_mvp_shelf.pth.tar
-    ├── xrmocap_mvp_panoptic_5view.pth.tar
-    ├── xrmocap_mvp_panoptic_3view_3_12_23.pth.tar
-    └── xrmocap_pose_resnet50_panoptic.pth.tar
+├── weight
+    └── mvp
+        ├── xrmocap_mvp_campus.pth.tar
+        ├── xrmocap_mvp_shelf.pth.tar
+        ├── xrmocap_mvp_panoptic_5view.pth.tar
+        ├── xrmocap_mvp_panoptic_3view_3_12_23.pth.tar
+        └── xrmocap_pose_resnet50_panoptic.pth.tar
 └── xrmocap_data
-    └── meta  
-        └── shelf
-            └── xrmocap_meta_testset
-        ├── campus
-        └── panoptic
     ├── Shelf
+        ├── xrmocap_meta_testset
+        ├── xrmocap_meta_trainset_pesudo_gt
+        ├── Camera0
+        ├── ...
+        └── Camera4
     ├── CampusSeq1
     └── panoptic
         ├── 160906_band4
@@ -68,7 +69,7 @@ python -m torch.distributed.launch \
     --nproc_per_node=8 \
     --use_env tools/eval_model.py \
     --cfg configs/mvp/shelf_config/mvp_shelf.py \
-    --model_path weight/xrmocap_mvp_shelf.pth.tar
+    --model_path weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
 ```
 
 Alternatively, you can also run the script directly:
@@ -81,6 +82,7 @@ Example:
 ```shell
 sh ROOT/scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
 ```
+If you encounter a RuntimeError saying that dataloader's workers are out of shared memory, try changing the `workers` to 1 in the config file.
 
 If you can run XRMoCap on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script:
 ```shell

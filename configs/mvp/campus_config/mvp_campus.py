@@ -33,8 +33,8 @@ trainer_setup = dict(
     optimizer='adamw',
     end_epoch=25,
     pretrained_backbone='',
-    model_root='./weight',
-    finetune_model='xrmocap_mvp_panoptic_3view_3_12_23.pth.tar',
+    model_root='./weight/mvp',
+    finetune_model='xrmocap_mvp_panoptic_3view_3_12_23-4b391740_20220831.pth',
     resume=False,
     lr_decay_epoch=[10],
     inference_conf_thr=[0.0],
@@ -52,12 +52,13 @@ trainer_setup = dict(
         train_dataset_setup=dict(
             type='MVPDataset',
             test_mode=False,
-            meta_path='./xrmocap_data/meta/campus/campus_trainset',
+            meta_path=
+            './xrmocap_data/CampusSeq1/xrmocap_meta_trainset_pesudo_gt',  # noqa E501
         ),
         test_dataset_setup=dict(
             type='MVPDataset',
             test_mode=True,
-            meta_path='./xrmocap_data/meta/campus/campus_testset',
+            meta_path='./xrmocap_data/CampusSeq1/xrmocap_meta_testset',
         ),
         base_dataset_setup=dict(
             dataset=__dataset__,
