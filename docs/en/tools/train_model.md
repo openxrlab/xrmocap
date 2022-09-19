@@ -39,11 +39,11 @@ xrmocap
 ├── configs
 ├── weight
     └── mvp
-        ├── xrmocap_mvp_campus.pth.tar
-        ├── xrmocap_mvp_shelf.pth.tar
-        ├── xrmocap_mvp_panoptic_5view.pth.tar
-        ├── xrmocap_mvp_panoptic_3view_3_12_23.pth.tar
-        └── xrmocap_pose_resnet50_panoptic.pth.tar
+        ├── xrmocap_mvp_campus-[version].pth
+        ├── xrmocap_mvp_shelf-[version].pth
+        ├── xrmocap_mvp_panoptic_5view-[version].pth
+        ├── xrmocap_mvp_panoptic_3view_3_12_23-[version].pth
+        └── xrmocap_pose_resnet50_panoptic-[version].pth
 └── xrmocap_data
     ├── Shelf
         ├── xrmocap_meta_testset

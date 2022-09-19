@@ -39,11 +39,11 @@ xrmocap
 ├── configs
 ├── weight
     └── mvp
-        ├── xrmocap_mvp_campus.pth.tar
-        ├── xrmocap_mvp_shelf.pth.tar
-        ├── xrmocap_mvp_panoptic_5view.pth.tar
-        ├── xrmocap_mvp_panoptic_3view_3_12_23.pth.tar
-        └── xrmocap_pose_resnet50_panoptic.pth.tar
+        ├── xrmocap_mvp_campus-[version].pth
+        ├── xrmocap_mvp_shelf-[version].pth
+        ├── xrmocap_mvp_panoptic_5view-[version].pth
+        ├── xrmocap_mvp_panoptic_3view_3_12_23-[version].pth
+        └── xrmocap_pose_resnet50_panoptic-[version].pth
 └── xrmocap_data
     ├── Shelf
         ├── xrmocap_meta_testset
@@ -80,7 +80,7 @@ sh ROOT/scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 
 Example:
 ```shell
-sh ROOT/scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+sh ROOT/scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
 ```
 If you encounter a RuntimeError saying that dataloader's workers are out of shared memory, try changing the `workers` to 1 in the config file.
 
@@ -90,5 +90,5 @@ sh ROOT/scripts/slurm_eval_mvp.sh ${PARTITION} ${NUM_GPUS} ${CFG_FILE} ${MODEL_P
 ```
 Example:
 ```shell
-sh ROOT/scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/xrmocap_mvp_shelf.pth.tar
+sh ROOT/scripts/slurm_eval_mvp.sh MyPartition 8 configs/mvp/shelf_config/mvp_shelf.py weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
 ```
