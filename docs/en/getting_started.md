@@ -194,7 +194,10 @@ mkdir -p xrmocap_data
 wget https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2 -P xrmocap_data
 cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
 
-# download meta data TODO
+# download meta data
+mkdir -p xrmocap_data
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/xrmocap_meta/Shelf/xrmocap_meta_testset.zip -P xrmocap_data
+cd xrmocap_data/ && unzip xrmocap_meta_testset.zip && rm xrmocap_meta_testset.zip && mv xrmocap_meta_testset ./Shelf && cd ..
 
 # download pretrained model
 mkdir -p weight/mvp
@@ -241,7 +244,10 @@ mkdir -p xrmocap_data
 wget https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2 -P xrmocap_data
 cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
 
-# download meta data TODO
+# download meta data
+mkdir -p xrmocap_data
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/xrmocap_meta/Shelf/xrmocap_meta_trainset_pesudo_gt.zip -P xrmocap_data
+cd xrmocap_data/ && unzip xrmocap_meta_trainset_pesudo_gt.zip && rm xrmocap_meta_trainset_pesudo_gt.zip && mv xrmocap_meta_trainset_pesudo_gt ./Shelf && cd ..
 
 # download pretrained 5-view panoptic model to finetune with Shelf datasest
 mkdir -p weight/mvp
