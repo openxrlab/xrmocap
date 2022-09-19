@@ -38,19 +38,19 @@ xrmocap
 ├── tools
 ├── configs
 ├── weight
-    └── mvp
-        ├── xrmocap_mvp_campus-[version].pth
-        ├── xrmocap_mvp_shelf-[version].pth
-        ├── xrmocap_mvp_panoptic_5view-[version].pth
-        ├── xrmocap_mvp_panoptic_3view_3_12_23-[version].pth
-        └── xrmocap_pose_resnet50_panoptic-[version].pth
+|   └── mvp
+|       ├── xrmocap_mvp_campus-[version].pth
+|       ├── xrmocap_mvp_shelf-[version].pth
+|       ├── xrmocap_mvp_panoptic_5view-[version].pth
+|       ├── xrmocap_mvp_panoptic_3view_3_12_23-[version].pth
+|       └── xrmocap_pose_resnet50_panoptic-[version].pth
 └── xrmocap_data
     ├── Shelf
-        ├── xrmocap_meta_testset
-        ├── xrmocap_meta_trainset_pesudo_gt
-        ├── Camera0
-        ├── ...
-        └── Camera4
+    |   ├── xrmocap_meta_testset
+    |   ├── xrmocap_meta_trainset_pesudo_gt
+    |   ├── Camera0
+    |   ├── ...
+    |   └── Camera4
     ├── CampusSeq1
     └── panoptic
         ├── 160906_band4

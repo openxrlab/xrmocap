@@ -38,19 +38,19 @@ xrmocap
 ├── tools
 ├── configs
 ├── weight
-    └── mvp
-        ├── xrmocap_mvp_campus-[version].pth
-        ├── xrmocap_mvp_shelf-[version].pth
-        ├── xrmocap_mvp_panoptic_5view-[version].pth
-        ├── xrmocap_mvp_panoptic_3view_3_12_23-[version].pth
-        └── xrmocap_pose_resnet50_panoptic-[version].pth
+|   └── mvp
+|       ├── xrmocap_mvp_campus-[version].pth
+|       ├── xrmocap_mvp_shelf-[version].pth
+|       ├── xrmocap_mvp_panoptic_5view-[version].pth
+|       ├── xrmocap_mvp_panoptic_3view_3_12_23-[version].pth
+|       └── xrmocap_pose_resnet50_panoptic-[version].pth
 └── xrmocap_data
     ├── Shelf
-        ├── xrmocap_meta_testset
-        ├── xrmocap_meta_trainset_pesudo_gt
-        ├── Camera0
-        ├── ...
-        └── Camera4
+    |   ├── xrmocap_meta_testset
+    |   ├── xrmocap_meta_trainset_pesudo_gt
+    |   ├── Camera0
+    |   ├── ...
+    |   └── Camera4
     ├── CampusSeq1
     └── panoptic
         ├── 160906_band4
@@ -75,12 +75,12 @@ python -m torch.distributed.launch \
 Alternatively, you can also run the script directly:
 
 ```shell
-sh ROOT/scripts/val_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
+sh ROOT/scripts/eval_mvp.sh ${NUM_GPUS} ${CFG_FILE} ${MODEL_PATH}
 ```
 
 Example:
 ```shell
-sh ROOT/scripts/val_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
+sh ROOT/scripts/eval_mvp.sh 8 configs/mvp/shelf_config/mvp_shelf.py weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
 ```
 If you encounter a RuntimeError saying that dataloader's workers are out of shared memory, try changing the `workers` to 1 in the config file.
 
