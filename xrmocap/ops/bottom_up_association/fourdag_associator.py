@@ -1,5 +1,6 @@
 # yapf: disable
 import logging
+from tkinter import NO
 import numpy as np
 from typing import List, Tuple, Union
 from xrprimer.data_structure.camera import (
@@ -15,15 +16,17 @@ from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
 )
 from xrmocap.ops.top_down_association.identity_tracking.builder import BaseTracking, build_identity_tracking
-
+from xrmocap.utils.fourdag_utils import skel_info
+from xrmocap.ops.parametric_optimization.builder import build_parametric_optimization
 # yapf: enable
 
 class FourDAGAssociator:
 
     def __init__(self,
                  kps_convention: str,
-                 triangulator: Union[None, dict, BaseTriangulator],
+                 triangulator: Union[None, dict, BaseTriangulator]=None,
                  point_selector: Union[None, dict, BaseSelector] = None,
+                 parametric_optimization = None,
                  fourd_matching: Union[None, dict] = None,
                  identity_tracking: Union[None, dict, BaseTracking] = None,
                  min_asgn_cnt: int = 5 ,
@@ -36,6 +39,12 @@ class FourDAGAssociator:
             self.triangulator = build_triangulator(triangulator)
         else:
             self.triangulator = triangulator
+
+        if isinstance(parametric_optimization, dict):
+            parametric_optimization['logger'] = self.logger
+            self.parametric_optimization = build_parametric_optimization(parametric_optimization)
+        else:
+            self.parametric_optimization = parametric_optimization
         
         self.n_views = -1
         self.kps_convention = kps_convention
@@ -48,6 +57,8 @@ class FourDAGAssociator:
             self.point_selector = point_selector
         if isinstance(fourd_matching, dict):
             fourd_matching['logger'] = self.logger
+            fourd_matching['n_kps'] = skel_info[self.kps_convention]['n_kps']
+            fourd_matching['n_pafs'] = skel_info[self.kps_convention]['n_pafs']
             self.fourd_matching = build_matching(fourd_matching)
         else:
             self.fourd_matching = fourd_matching
@@ -61,8 +72,10 @@ class FourDAGAssociator:
         self, cameras: List[Union[FisheyeCameraParameter,
                                   PinholeCameraParameter]]
     ) -> None:
-        
-        self.triangulator.set_cameras(cameras)
+        if self.triangulator is not None:
+            self.triangulator.set_cameras(cameras)
+        if self.parametric_optimization is not None:
+            self.parametric_optimization.set_cameras(cameras)
         if hasattr(self.point_selector, 'triangulator'):
             self.point_selector.triangulator.set_cameras(cameras)
         self.fourd_matching.set_cameras(cameras)
@@ -70,7 +83,6 @@ class FourDAGAssociator:
 
 
     def cal_keypoints2d(self, m_personsMap, kps2d_paf):
-    
         for i, person_id in enumerate(m_personsMap.copy()):
             if i < len(self.last_multi_kps3d):
                 continue
@@ -95,7 +107,6 @@ class FourDAGAssociator:
                         skel2d[:,view*self.n_kps+joint_id] = kps2d_paf[view]['joints'][joint_id][index]
                     else:
                         continue
-
             m_skels2d[identity] = skel2d
         return m_skels2d
 
@@ -118,40 +129,64 @@ class FourDAGAssociator:
         self.n_kps = len(kps2d_paf[0]['joints'])
         m_personsMap = self.fourd_matching(kps2d_paf, self.last_multi_kps3d)
         m_skels2d = self.cal_keypoints2d(m_personsMap, kps2d_paf)
-        multi_kps3d = []
-        identities = []
-        for person_id in m_skels2d:
-            keypoints2d = np.zeros((self.n_views, self.n_kps, 3))
-            for view in range(self.n_views):
-                for joint_id in range(self.n_kps):
-                    keypoints2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
-            matched_mkps2d = np.zeros((self.n_views, self.n_kps, 2))
-            matched_mkps2d_mask = np.zeros((self.n_views, self.n_kps, 1))
-            matched_mkps2d_conf = np.zeros((self.n_views, self.n_kps, 1))
-            matched_mkps2d = keypoints2d[...,:2] 
-            matched_mkps2d_mask = np.ones_like(keypoints2d[..., 0:1])
-            matched_mkps2d_conf[...,0] = keypoints2d[...,2]
-            selected_mask = self.point_selector.get_selection_mask(
-                    np.concatenate((matched_mkps2d, matched_mkps2d_conf),
-                                   axis=-1), matched_mkps2d_mask)
-            kps3d = self.triangulator.triangulate(matched_mkps2d,
-                                                      selected_mask)            
 
-            if not np.isnan(kps3d).all():
-                multi_kps3d.append(kps3d)
-        multi_kps3d = np.array(multi_kps3d)
-        
-        if len(multi_kps3d) > 0:
-            keypoints3d, identities = self.assign_identities_frame(multi_kps3d)
-            self.last_multi_kps3d = dict()
-            for pid in identities:
-                self.last_multi_kps3d[pid] = keypoints3d.get_keypoints()[0, pid,...].T
+        if self.parametric_optimization is not None:
+            multi_kps3d = self.parametric_optimization.update(m_skels2d)
+            self.last_multi_kps3d = multi_kps3d
+            kps_arr = np.zeros((1,len(multi_kps3d),self.n_kps,4))
+            mask_arr = np.zeros((1,len(multi_kps3d),self.n_kps))
+            for index, pid in enumerate(multi_kps3d):            
+                kps_arr[0,index,...] = multi_kps3d[pid][:,:self.n_kps].T
+                mask_arr[0,index,:] = multi_kps3d[pid][3,:self.n_kps]
+            keypoints3d = Keypoints(kps=kps_arr, mask=mask_arr, convention=self.kps_convention)
+            identities = multi_kps3d.keys()
+
+            multi_kps2d = []
+            for person_id in m_skels2d:
+                keypoints2d = np.zeros((self.n_views, self.n_kps, 3))
+                for view in range(self.n_views):
+                    for joint_id in range(self.n_kps):
+                        keypoints2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
+                multi_kps2d.append(keypoints2d)
+            multi_kps2d = np.array(multi_kps2d)
         else:
-            keypoints3d = Keypoints()
+            multi_kps3d = []
             identities = []
-            self.last_multi_kps3d = dict()
-        
-        return keypoints3d, identities
+            multi_kps2d = []
+            for person_id in m_skels2d:
+                keypoints2d = np.zeros((self.n_views, self.n_kps, 3))
+                for view in range(self.n_views):
+                    for joint_id in range(self.n_kps):
+                        keypoints2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
+                multi_kps2d.append(keypoints2d)
+                matched_mkps2d = np.zeros((self.n_views, self.n_kps, 2))
+                matched_mkps2d_mask = np.zeros((self.n_views, self.n_kps, 1))
+                matched_mkps2d_conf = np.zeros((self.n_views, self.n_kps, 1))
+                matched_mkps2d = keypoints2d[...,:2] 
+                matched_mkps2d_mask = np.ones_like(keypoints2d[..., 0:1])
+                matched_mkps2d_conf[...,0] = keypoints2d[...,2]
+                selected_mask = self.point_selector.get_selection_mask(
+                        np.concatenate((matched_mkps2d, matched_mkps2d_conf),
+                                    axis=-1), matched_mkps2d_mask)
+                kps3d = self.triangulator.triangulate(matched_mkps2d,
+                                                        selected_mask)            
+
+                if not np.isnan(kps3d).all():
+                    multi_kps3d.append(kps3d)
+            multi_kps3d = np.array(multi_kps3d)
+            multi_kps2d = np.array(multi_kps2d)
+
+            if len(multi_kps3d) > 0:
+                keypoints3d, identities = self.assign_identities_frame(multi_kps3d)
+                self.last_multi_kps3d = dict()
+                for index, pid in enumerate(identities):
+                    self.last_multi_kps3d[pid] = keypoints3d.get_keypoints()[0, index,...].T
+            else:
+                keypoints3d = Keypoints()
+                identities = []
+                self.last_multi_kps3d = dict()
+            
+        return keypoints3d, identities, multi_kps2d
 
     def assign_identities_frame(self, curr_kps3d) -> Keypoints:
         """Process kps3d to Keypoints (an instance of class Keypoints,
@@ -173,5 +208,3 @@ class FourDAGAssociator:
         keypoints3d.set_mask(kps3d_mask)
 
         return keypoints3d, frame_identity
-
-    

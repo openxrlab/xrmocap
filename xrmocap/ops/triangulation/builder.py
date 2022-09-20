@@ -6,5 +6,3 @@ from .aniposelib_triangulator import AniposelibTriangulator
 
 TRIANGULATORS.register_module(
     name='AniposelibTriangulator', module=AniposelibTriangulator)
-
-

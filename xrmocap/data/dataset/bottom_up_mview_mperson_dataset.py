@@ -7,7 +7,7 @@ import json
 from typing import Tuple, Union
 from .mview_mperson_dataset import MviewMpersonDataset
 from xrmocap.transform.convention.keypoints_convention import convert_bottom_up_kps_paf
-
+import cv2
 try:
     from typing import Literal
 except ImportError:
@@ -158,9 +158,9 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
             json_data = json.load(f)
             src_convention = json_data['convention']
             multi_detections = json_data['data']            
-            n_view = len(multi_detections)
+            self.n_views = len(multi_detections)
             mview_kps2d = []
-            for view_idx in range(n_view):
+            for view_idx in range(self.n_views):
                 img_size = (self.fisheye_params[scene_idx][view_idx].width, self.fisheye_params[scene_idx][view_idx].height)
                 detections = multi_detections[view_idx]
                 convert_detections = convert_bottom_up_kps_paf(detections, src_convention, self.kps2d_convention,approximate=True)
@@ -174,4 +174,51 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                 mview_kps2d.append(convert_detections)
             f.close()
             mscene_keypoints_list.append(mview_kps2d)
+
+            ###
+            # self.visualize_bottom_up_gt(mview_kps2d)
+            # import pdb; pdb.set_trace()
+            ###
         self.percep_keypoints2d = mscene_keypoints_list 
+        
+
+    def visualize_bottom_up_gt(self, m_detection,output_dir='./result_debug'):
+        #person,view, 1, joint, 3
+        # n_kps = 17
+        # paf_dict = [[0, 0, 1, 2, 3, 4, 5, 5, 6, 7,  8, 5,  6,  11, 11, 12, 13, 14],
+        #             [1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13, 14, 15, 16]]
+        # n_kps = 25
+        # paf_dict = [[1, 9,  10, 8, 8,  12, 13, 1, 2, 3, 2,  1, 5, 6, 5,  1, 0,  0,  15, 16, 14, 19, 14, 11, 22, 11],
+        #             [8, 10, 11, 9, 12, 13, 14, 2, 3, 4, 17, 5, 6, 7, 18, 0, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]]
+        n_kps = 19
+        paf_dict = [[1, 2, 7,  0, 0, 3, 8,  1, 5,  11, 5, 1, 6,  12, 6, 1,  14, 13],
+                    [0, 7, 13, 2, 3, 8, 14, 5, 11, 15, 9, 6, 12, 16, 10, 4, 17, 18]]    
+        
+        for frame_id in range(len(self)):
+            for view in range(self.n_views):
+                img2 = np.ones((self.fisheye_params[0][view].height,self.fisheye_params[0][view].width,3), dtype=np.float32) * 200
+                for paf_id in range(len(paf_dict[0])):
+                    joint1 = paf_dict[0][paf_id]
+                    joint2 = paf_dict[1][paf_id]
+                    # cv2.imwrite(f'{output_dir}/cam{view}_frame{frame_id}_openpose.png',
+                    #         img2)
+                    # import pdb; pdb.set_trace()
+                    for joint1_candidate in range(len(m_detection[view][frame_id]['joints'][joint1])):
+                        for joint2_candidate in range(len(m_detection[view][frame_id]['joints'][joint2])):
+                            if m_detection[view][frame_id]['pafs'][paf_id][joint1_candidate,joint2_candidate] <= 0.0:
+                                continue
+                            # import pdb; pdb.set_trace()
+                            cv2.line(img2, m_detection[view][frame_id]['joints'][joint1][joint1_candidate,:2].astype(int), m_detection[view][frame_id]['joints'][joint2][joint2_candidate,:2].astype(int),
+                                (255, 0, 0), 2)
+                            cv2.putText(img2, str(round(m_detection[view][frame_id]['pafs'][paf_id][joint1_candidate,joint2_candidate],3)), ((m_detection[view][frame_id]['joints'][joint1][joint1_candidate,:2].astype(int)+ m_detection[view][frame_id]['joints'][joint2][joint2_candidate,:2].astype(int))/2).astype(int),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0))
+                        
+                for joint_id in range(n_kps):
+                    for candidate in range(len(m_detection[view][frame_id]['joints'][joint_id])):
+                        cv2.circle(img2, m_detection[view][frame_id]['joints'][joint_id][candidate,:2].astype(int) ,1, (255, 0, 0), 1)
+                        cv2.putText(img2, str(joint_id), m_detection[view][frame_id]['joints'][joint_id][candidate,:2].astype(int),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0))
+
+
+                cv2.imwrite(f'{output_dir}/cam{view}_frame{frame_id}_openpose.png',
+                            img2)

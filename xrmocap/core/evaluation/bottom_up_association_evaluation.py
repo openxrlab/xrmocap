@@ -70,7 +70,7 @@ class BottomUpAssociationEvaluation:
             self.dataset = build_dataset(dataset)
         else:
             self.dataset = dataset
-
+        self.n_views = self.dataset.n_views
         if isinstance(associator, dict):
             associator['logger'] = self.logger
             self.associator = build_bottom_up_associator(associator)
@@ -94,6 +94,7 @@ class BottomUpAssociationEvaluation:
         n_frame = len(self.dataset)
         n_kps = get_keypoint_num(convention=self.pred_kps3d_convention)
         pred_kps3d = np.zeros(shape=(n_frame, 1, n_kps, 4))
+        pred_kps2d = np.zeros(shape=(n_frame, 1, self.n_views, n_kps, 3))
         gt_kps3d = None
         max_identity = 0
         end_of_clip_idxs = []
@@ -107,7 +108,7 @@ class BottomUpAssociationEvaluation:
             
             self.associator.set_cameras(fisheye_list)
 
-            predict_keypoints3d, identities = \
+            predict_keypoints3d, identities, multi_kps2d = \
                 self.associator.associate_frame(kw_data)
             # save predict kps3d
             for idx, identity in enumerate(identities):
@@ -117,10 +118,16 @@ class BottomUpAssociationEvaluation:
                         (pred_kps3d,
                          np.zeros(shape=(n_frame, n_identity, n_kps, 4))),
                         axis=1)
+                    pred_kps2d = np.concatenate(
+                        (pred_kps2d,
+                        np.zeros(shape=(n_frame, n_identity, self.n_views, n_kps, 3))),
+                        axis=1)
                     max_identity = identity
                 pred_kps3d[frame_idx,
                            identity] = predict_keypoints3d.get_keypoints()[0,
                                                                            idx]
+                pred_kps2d[frame_idx,
+                            identity] = multi_kps2d[idx]
             # save ground truth kps3d
             if gt_kps3d is None:
                 gt_kps3d = kps3d.numpy()[np.newaxis]
@@ -155,6 +162,10 @@ class BottomUpAssociationEvaluation:
             scene_keypoints.dump(npz_path)
             mscene_keypoints_paths.append(npz_path)
             scene_start_idx = scene_end_idx + 1
+
+            npz_path = osp.join(self.output_dir,
+                                f'scene{scene_idx}_associate_keypoints2d')
+            np.save(npz_path, pred_kps2d)
 
         pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
             pred_keypoints3d, gt_keypoints3d,self.eval_kps3d_convention,self.selected_limbs_name,self.additional_limbs_names)
