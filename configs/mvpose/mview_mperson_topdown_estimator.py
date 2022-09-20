@@ -56,7 +56,7 @@ associator = dict(
             'left_shoulder', 'right_shoulder', 'left_hip_extra',
             'right_hip_extra'
         ]),
-    checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
+    checkpoint_path='./weight/mvpose/resnet50_reid_camstyle.pth.tar',
     bbox_thr=bbox_thr,
     device='cuda',
     logger=logger,

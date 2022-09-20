@@ -34,7 +34,7 @@ identity_tracking = dict(
     tracking_kps3d_name=[
         'left_shoulder', 'right_shoulder', 'left_hip_extra', 'right_hip_extra'
     ])
-checkpoint_path = './weight/resnet50_reid_camstyle.pth.tar'
+checkpoint_path = './weight/mvpose/resnet50_reid_camstyle.pth.tar'
 best_distance = 600
 interval = 5
 bbox_thr = __bbox_thr__

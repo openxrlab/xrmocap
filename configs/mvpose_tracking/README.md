@@ -25,16 +25,15 @@ We provide the config files for MVPose (Temporal tracking and filtering): [Fast 
 ```
 sh scripts/download_weight.sh
 ```
-You can find `resnet50_reid_camstyle.pth.tar` in `weight` file.
+You could find perception models in `weight` file.
 
 - **Download body model**
 
-Please refer to [Body Model Preparation](../../docs/en/getting_started.md#body-model-preparation-optional)
+Please refer to [Body Model Preparation](../../docs/en/getting_started.md#body-model-preparation-optional).
 
 - **Prepare the datasets**:
 
-Convert original dataset to our unified meta-data, with data converters controlled by configs,
-you can find more details in [dataset_preparation.md](../../docs/en/dataset_preparation.md).
+You could download Shelf, Campus or CMU-Panoptic datasets, and convert original dataset to our unified meta-data. Considering that it takes long to run a converter, we have done it for you. Please download compressed zip file for converted meta-data from [here](../../docs/en/dataset_preparation.md), and place meta-data under `ROOT/xrmocap_data/DATASET`.
 
 The final file structure would be like:
 
@@ -45,7 +44,10 @@ xrmocap
 ├── tools
 ├── configs
 ├── weight
-|   └── resnet50_reid_camstyle.pth.tar
+|   ├── mvpose
+|   |   └── resnet50_reid_camstyle.pth.tar
+|   ├── ...
+|   └── tracktor_reid_r50_iter25245-a452f51f.pth
 └── xrmocap_data
     ├── body_models
     |   ├── gmm_08.pkl
