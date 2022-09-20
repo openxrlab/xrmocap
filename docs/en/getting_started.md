@@ -189,7 +189,7 @@ sh scripts/download_install_deformable.sh
 2. Download dataset and pretrained model, taking Shelf dataset as an example:
 
 ```bash
-# download Shelf dataset
+# download Shelf dataset (16G)
 mkdir -p xrmocap_data
 wget https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2 -P xrmocap_data
 cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
@@ -239,7 +239,7 @@ sh scripts/download_install_deformable.sh
 2. Download dataset and pretrained models, taking Shelf dataset as an example:
 
 ```bash
-# download Shelf dataset
+# download Shelf dataset (16G)
 mkdir -p xrmocap_data
 wget https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2 -P xrmocap_data
 cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..

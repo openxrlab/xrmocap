@@ -1,5 +1,4 @@
 # finetune with the weight pretrained from panoptic dataset
-# yapf: disable
 
 __dataset__ = 'panoptic'
 __train_dataset__ = __dataset__
@@ -51,7 +50,8 @@ trainer_setup = dict(
         train_dataset_setup=dict(
             type='MVPDataset',
             test_mode=False,
-            meta_path='./xrmocap_data/panoptic/xrmocap_meta_trainset_5cam',  # noqa E501
+            meta_path=  # noqa E251
+            './xrmocap_data/panoptic/xrmocap_meta_trainset_5cam',
         ),
         test_dataset_setup=dict(
             type='MVPDataset',
