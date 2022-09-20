@@ -12,5 +12,6 @@ CFG_FILE=$2
 
 python -m torch.distributed.launch \
         --nproc_per_node=${GPUS_PER_NODE} \
+        --master_port 65530 \
         --use_env tools/train_model.py \
         --cfg ${CFG_FILE} \

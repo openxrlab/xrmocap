@@ -24,6 +24,7 @@ except (ImportError, ModuleNotFoundError):
 
 
 class MMdetDetector:
+    """Detector wrapped from mmdetection."""
 
     def __init__(self,
                  mmdet_kwargs: dict,

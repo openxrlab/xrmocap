@@ -30,6 +30,8 @@ jobs:
         shell: bash -l {0}
     container:
       image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
+      env:
+        GITHUB_ACTIONS: true
     steps:
       - uses: actions/checkout@v2
       - name: Show conda env
@@ -59,10 +61,17 @@ jobs:
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           pip install xrprimer
           pip install -e .
-      - name: Run unittests and generate coverage report
+      - name: Install pytest plugin
+        run: |
+          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
+          pip install pytest-github-actions-annotate-failures
+      - name: Run unittests
         run: |
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           coverage run --source xrmocap -m pytest tests/
+      - name: Generate coverage report
+        run: |
+          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           coverage xml
           coverage report -m
       - name: Upload coverage to Codecov

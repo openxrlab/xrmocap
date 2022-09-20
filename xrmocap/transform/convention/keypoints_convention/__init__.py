@@ -16,9 +16,9 @@ from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
 from xrmocap.utils.fourdag_utils import *
 
 # yapf: enable
-KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
-KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
-KEYPOINTS_FACTORY['fourdag_19'] = fourdag_19.FOURDAG19_KEYPOINTS
+if isinstance(KEYPOINTS_FACTORY, dict):
+    KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
+    KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
 
 
 def convert_keypoints(

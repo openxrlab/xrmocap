@@ -32,6 +32,7 @@ from xrmocap.utils.mvpose_utils import (
 
 
 class TopDownAssociationEvaluation:
+    """Top-down association evaluation."""
 
     def __init__(self,
                  output_dir: str,
@@ -44,7 +45,7 @@ class TopDownAssociationEvaluation:
                  pred_kps3d_convention: str = 'coco',
                  eval_kps3d_convention: str = 'campus',
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Top-down association evaluation.
+        """Initialization for the class.
 
         Args:
             output_dir (str): The path to save results.

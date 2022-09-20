@@ -4,7 +4,7 @@ from mmcv.runner import BaseModule
 
 
 class BaseArchitecture(BaseModule, metaclass=ABCMeta):
-    """Base class for mmhuman3d architecture."""
+    """Base class for xrmocap architecture."""
 
     def __init__(self, init_cfg=None):
         super(BaseArchitecture, self).__init__(init_cfg)
@@ -32,19 +32,23 @@ class BaseArchitecture(BaseModule, metaclass=ABCMeta):
 
     def train_step(self, data, optimizer):
         """The iteration step during training.
+
         This method defines an iteration step during training, except for the
         back propagation and optimizer updating, which are done in an optimizer
         hook. Note that in some complicated cases or models, the whole process
         including back propagation and optimizer updating is also defined in
         this method, such as GAN.
+
         Args:
             data (dict): The output of dataloader.
             optimizer (:obj:`torch.optim.Optimizer` | dict): The optimizer of
                 runner is passed to ``train_step()``. This argument is unused
                 and reserved.
+
         Returns:
-            dict: It should contain at least 3 keys: ``loss``, ``log_vars``, \
+            dict: It should contain at least 3 keys: ``loss``, ``log_vars``,
                 ``num_samples``.
+
                 - ``loss`` is a tensor for back propagation, which can be a
                   weighted sum of multiple losses.
                 - ``log_vars`` contains all the variables to be sent to the

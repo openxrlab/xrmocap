@@ -29,6 +29,7 @@ from .base_estimator import BaseEstimator
 
 
 class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
+    """Api for estimating smpl in a multi-view single-person scene."""
 
     def __init__(self,
                  work_dir: str,
@@ -44,8 +45,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                  load_batch_size: int = 500,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Api for estimating smpl parameters in a multi-view, single-person
-        scene.
+        """Initialization of the class.
 
         Args:
             work_dir (str):
