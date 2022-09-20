@@ -3,4 +3,3 @@
     with:
       actions: 'find-comments'
       token: ${{ secrets.GITHUB_TOKEN }}
-
