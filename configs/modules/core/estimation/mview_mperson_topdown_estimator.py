@@ -37,7 +37,7 @@ associator = dict(
         triangulator=dict(
             type='AniposelibTriangulator', camera_parameters=[],
             logger=logger),
-        verbose=False,
+        verbose=verbose,
         ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
         convention=pred_kps3d_convention),
     multi_way_matching=dict(
@@ -57,7 +57,7 @@ associator = dict(
             'right_hip_extra'
         ]),
     checkpoint_path='./weight/resnet50_reid_camstyle.pth.tar',
-    best_distance=800,
+    best_distance=600,
     interval=5,
     bbox_thr=bbox_thr,
     device='cuda',
@@ -198,19 +198,20 @@ triangulator = dict(
 )
 point_selectors = [
     dict(
-        type='HybridKps2dSelector',
+        type='ReprojectionErrorPointSelector',
+        target_camera_number=2,
         triangulator=dict(
             type='AniposelibTriangulator', camera_parameters=[],
             logger=logger),
         verbose=verbose,
-        ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
-        convention=pred_kps3d_convention,
+        logger=logger,
     )
 ]
 
 kps3d_optimizers = [
     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
     dict(type='NanInterpolation', verbose=verbose, logger=logger),
+    # SMPLShapeAwareOptimizer is optional.
     dict(
         type='SMPLShapeAwareOptimizer',
         smplify=smplify,

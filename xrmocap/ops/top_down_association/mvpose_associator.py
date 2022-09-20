@@ -168,6 +168,11 @@ class MvposeAssociator:
         n_kps2d = get_keypoint_num(convention=self.kps_convention)
         image_tensor, kps2d, dim_group, bbox2d = self.process_data(
             mview_person_id, mview_img_arr, mview_bbox2d, mview_keypoints2d)
+        if len(kps2d) > 0:
+            mkps2d_id = np.zeros(kps2d.shape[0], dtype=np.int32)
+            for i in range(self.n_views):
+                for j in range(dim_group[i + 1] - dim_group[i]):
+                    mkps2d_id[dim_group[i] + j] = j
         if len(kps2d) > 0 and self.kalman_tracking is not None:
             if self.counter == 0:
                 kalman_tracking_requires_init = True
@@ -185,7 +190,7 @@ class MvposeAssociator:
             if self.counter == self.interval:
                 self.counter = 0
 
-        if len(kps2d) > 0:  # detect the person
+        if len(kps2d) > 0:
             kps2d_conf = kps2d[..., 2:3]
             kps2d = kps2d[..., :2]
             image_tensor = image_tensor.to(self.device)
@@ -193,15 +198,17 @@ class MvposeAssociator:
                 kps2d, image_tensor, self.affinity_estimator,
                 self.fundamental_mat, affinity_type, n_kps2d, dim_group,
                 not_matched_idx)
-            mkps2d_id = np.zeros(sub_imgid2cam.shape, dtype=np.int32)
-            for i in range(self.n_views):
-                for j in range(dim_group[i + 1] - dim_group[i]):
-                    mkps2d_id[dim_group[i] + j] = j
+
             for person in matched_list:
                 if person.shape[0] < 2:
                     continue
                 matched_mkps2d_id = np.full(self.n_views, np.nan)
-                matched_mkps2d_id[sub_imgid2cam[person]] = mkps2d_id[person]
+                if not_matched_idx is None:
+                    matched_mkps2d_id[
+                        sub_imgid2cam[person]] = mkps2d_id[person]
+                else:
+                    matched_mkps2d_id[sub_imgid2cam[person]] = mkps2d_id[
+                        not_matched_idx[person]]
                 matched_mkps2d = np.zeros((self.n_views, n_kps2d, 2))
                 matched_mkps2d_mask = np.zeros((self.n_views, n_kps2d, 1))
                 matched_mkps2d_conf = np.zeros((self.n_views, n_kps2d, 1))
