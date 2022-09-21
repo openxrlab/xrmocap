@@ -23,7 +23,7 @@ backbone_layers = __resnet_n_layer__
 
 trainer_setup = dict(
     type='MVPTrainer',
-    workers=4,
+    workers=1,
     train_dataset=__train_dataset__,
     test_dataset=__test_dataset__,
     test_batch_size=1,
