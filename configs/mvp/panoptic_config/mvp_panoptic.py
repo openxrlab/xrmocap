@@ -1,5 +1,4 @@
 # finetune with the weight pretrained from panoptic dataset
-# yapf: disable
 
 __dataset__ = 'panoptic'
 __train_dataset__ = __dataset__
@@ -32,7 +31,7 @@ trainer_setup = dict(
     optimizer='adam',
     end_epoch=200,
     pretrained_backbone='xrmocap_pose_resnet50_panoptic-5a2e53c9_20220831.pth',
-    model_root='./weight',
+    model_root='./weight/mvp',
     finetune_model=None,
     resume=False,
     lr_decay_epoch=[40],
@@ -51,12 +50,13 @@ trainer_setup = dict(
         train_dataset_setup=dict(
             type='MVPDataset',
             test_mode=False,
-            meta_path='./xrmocap_data/meta/panoptic/xrmocap_meta_trainset_5cam',  # noqa E501
+            meta_path=  # noqa E251
+            './xrmocap_data/panoptic/xrmocap_meta_trainset_5cam',
         ),
         test_dataset_setup=dict(
             type='MVPDataset',
             test_mode=True,
-            meta_path='./xrmocap_data/meta/panoptic/xrmocap_meta_testset_5cam',
+            meta_path='./xrmocap_data/panoptic/xrmocap_meta_testset_5cam',
         ),
         base_dataset_setup=dict(
             dataset=__dataset__,
