@@ -3,7 +3,8 @@ import os
 import pytest
 import shutil
 
-from xrmocap.ops.bottom_up_association.builder import build_bottom_up_associator
+from xrmocap.ops.bottom_up_association.builder import (
+    build_bottom_up_associator, )
 
 output_dir = 'tests/data/output/ops/test_bottom_up_association'
 
@@ -17,9 +18,8 @@ def fixture():
 
 def test_run_bottom_up_associator():
     associator_cfg = dict(
-        mmcv.Config.fromfile('configs/modules/ops/' + 'bottom_up_association/' +
+        mmcv.Config.fromfile('configs/modules/ops/' +
+                             'bottom_up_association/' +
                              'bottom_up_association.py'))
     associator = build_bottom_up_associator(associator_cfg)
     assert associator is not None
-
-

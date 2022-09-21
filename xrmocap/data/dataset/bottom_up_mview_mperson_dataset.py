@@ -1,13 +1,16 @@
+import cv2
 import glob
+import json
 import logging
 import numpy as np
 import os
 import torch
-import json
 from typing import Tuple, Union
+
+from xrmocap.transform.convention.keypoints_convention import (
+    convert_bottom_up_kps_paf, )
 from .mview_mperson_dataset import MviewMpersonDataset
-from xrmocap.transform.convention.keypoints_convention import convert_bottom_up_kps_paf
-import cv2
+
 try:
     from typing import Literal
 except ImportError:
@@ -24,7 +27,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                  shuffled: bool = False,
                  metric_unit: Literal['meter', 'centimeter',
                                       'millimeter'] = 'meter',
-                 kps2d_convention: str='fourdag19',
+                 kps2d_convention: str = 'fourdag19',
                  gt_kps3d_convention: Union[None, str] = None,
                  cam_world2cam: bool = False,
                  cam_k_dim: int = 3,
@@ -77,8 +80,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
             cam_world2cam=cam_world2cam,
             cam_k_dim=cam_k_dim,
             logger=logger)
-        
-        
+
     def __getitem__(
         self, index: int
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
@@ -118,7 +120,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
             img_tensor = self.img_pipeline(img_path)
             mview_img_list.append(img_tensor)
         mview_img_tensor = torch.stack(mview_img_list)
-        
+
         k_list = []
         r_list = []
         t_list = []
@@ -143,9 +145,10 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         mview_kps2d_list = []
         n_view = mview_img_tensor.shape[0]
         for view_idx in range(n_view):
-            mview_kps2d_list.append(mview_keypoints2d_list[view_idx][frame_idx])
+            mview_kps2d_list.append(
+                mview_keypoints2d_list[view_idx][frame_idx])
         kw_data = mview_kps2d_list
-        
+
         return mview_img_tensor, k_tensor, r_tensor,\
             t_tensor, kps3d, end_of_clip, kw_data
 
@@ -153,100 +156,40 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         """Load multi-scene keypoints2d and paf."""
         mscene_keypoints_list = []
         for scene_idx in range(self.n_scene):
-            file_name = os.path.join(self.meta_path, f'scene_{scene_idx}', "kps2d_paf_301.json")
-            f = open(file_name,'r')
+            file_name = os.path.join(self.meta_path, f'scene_{scene_idx}',
+                                     'kps2d_paf_301.json')
+            f = open(file_name, 'r')
             json_data = json.load(f)
             src_convention = json_data['convention']
-            multi_detections = json_data['data']            
+            multi_detections = json_data['data']
             self.n_views = len(multi_detections)
             mview_kps2d = []
             for view_idx in range(self.n_views):
-                img_size = (self.fisheye_params[scene_idx][view_idx].width, self.fisheye_params[scene_idx][view_idx].height)
+                img_size = (self.fisheye_params[scene_idx][view_idx].width,
+                            self.fisheye_params[scene_idx][view_idx].height)
                 detections = multi_detections[view_idx]
-                convert_detections = convert_bottom_up_kps_paf(detections, src_convention, self.kps2d_convention,approximate=True)
+                convert_detections = convert_bottom_up_kps_paf(
+                    detections,
+                    src_convention,
+                    self.kps2d_convention,
+                    approximate=True)
                 #resize
                 for frame_id in range(len(detections)):
-                    for joint_id in range(len(convert_detections[frame_id]['joints'])):
-                        if len(convert_detections[frame_id]['joints'][joint_id]) > 0:
-                            convert_detections[frame_id]['joints'][joint_id][:,0] = convert_detections[frame_id]['joints'][joint_id][:,0]*(img_size[0] - 1)
-                            convert_detections[frame_id]['joints'][joint_id][:,1] = convert_detections[frame_id]['joints'][joint_id][:,1]*(img_size[1] - 1)
-                    
+                    for joint_id in range(
+                            len(convert_detections[frame_id]['joints'])):
+                        if len(convert_detections[frame_id]['joints']
+                               [joint_id]) > 0:
+                            convert_detections[frame_id]['joints'][
+                                joint_id][:, 0] = convert_detections[frame_id][
+                                    'joints'][joint_id][:, 0] * (
+                                        img_size[0] - 1)
+                            convert_detections[frame_id]['joints'][
+                                joint_id][:, 1] = convert_detections[frame_id][
+                                    'joints'][joint_id][:, 1] * (
+                                        img_size[1] - 1)
+
                 mview_kps2d.append(convert_detections)
             f.close()
             mscene_keypoints_list.append(mview_kps2d)
 
-            ### for debug
-            # self.visualize_bottom_up_gt(mview_kps2d)
-            # import pdb; pdb.set_trace()
-            gt_file = os.path.join(self.meta_path, f'scene_{scene_idx}', "gt.txt")
-            f = open(gt_file, 'r')
-            txt_file = f.read()
-            txt_file = txt_file.split()
-            jointSize = int(txt_file.pop(0))
-            frameSize = int(txt_file.pop(0))
-            skels = {i:{} for i in range(frameSize)}
-            for frame_id in range(frameSize):
-                personSize = int(txt_file.pop(0))
-                for pIdx in range(personSize):
-                    identidy = int(txt_file.pop(0))
-                    skel = np.zeros((4, jointSize))
-                    for i in range(4):
-                        for jIdx in range(jointSize):
-                            skel[i,jIdx] = float(txt_file.pop(0))
-                    skels[frame_id][identidy] = skel
-                
-            arr = np.zeros((300, 4, 14,4))
-            mask = np.zeros((300, 4, 14))
-            for frame_id in range(300):
-                for pid in skels[frame_id]:
-                    arr[frame_id, pid] = skels[frame_id][pid].T[:14,:]
-                    mask[frame_id, pid] = 1
-            self.gt3d[scene_idx].set_keypoints(arr)
-            self.gt3d[scene_idx].set_mask(mask)
-            # import pdb; pdb.set_trace()
-            # f.close()
-            ###
-
-        self.percep_keypoints2d = mscene_keypoints_list 
-        
-    ##for debug
-    def visualize_bottom_up_gt(self, m_detection,output_dir='./result_debug'):
-        #person,view, 1, joint, 3
-        # n_kps = 17
-        # paf_dict = [[0, 0, 1, 2, 3, 4, 5, 5, 6, 7,  8, 5,  6,  11, 11, 12, 13, 14],
-        #             [1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13, 14, 15, 16]]
-        # n_kps = 25
-        # paf_dict = [[1, 9,  10, 8, 8,  12, 13, 1, 2, 3, 2,  1, 5, 6, 5,  1, 0,  0,  15, 16, 14, 19, 14, 11, 22, 11],
-        #             [8, 10, 11, 9, 12, 13, 14, 2, 3, 4, 17, 5, 6, 7, 18, 0, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]]
-        n_kps = 19
-        paf_dict = [[1, 2, 7,  0, 0, 3, 8,  1, 5,  11, 5, 1, 6,  12, 6, 1,  14, 13],
-                    [0, 7, 13, 2, 3, 8, 14, 5, 11, 15, 9, 6, 12, 16, 10, 4, 17, 18]]    
-        
-        for frame_id in range(len(self)):
-            for view in range(self.n_views):
-                img2 = np.ones((self.fisheye_params[0][view].height,self.fisheye_params[0][view].width,3), dtype=np.float32) * 200
-                for paf_id in range(len(paf_dict[0])):
-                    joint1 = paf_dict[0][paf_id]
-                    joint2 = paf_dict[1][paf_id]
-                    # cv2.imwrite(f'{output_dir}/cam{view}_frame{frame_id}_openpose.png',
-                    #         img2)
-                    # import pdb; pdb.set_trace()
-                    for joint1_candidate in range(len(m_detection[view][frame_id]['joints'][joint1])):
-                        for joint2_candidate in range(len(m_detection[view][frame_id]['joints'][joint2])):
-                            if m_detection[view][frame_id]['pafs'][paf_id][joint1_candidate,joint2_candidate] <= 0.0:
-                                continue
-                            # import pdb; pdb.set_trace()
-                            cv2.line(img2, m_detection[view][frame_id]['joints'][joint1][joint1_candidate,:2].astype(int), m_detection[view][frame_id]['joints'][joint2][joint2_candidate,:2].astype(int),
-                                (255, 0, 0), 2)
-                            cv2.putText(img2, str(round(m_detection[view][frame_id]['pafs'][paf_id][joint1_candidate,joint2_candidate],3)), ((m_detection[view][frame_id]['joints'][joint1][joint1_candidate,:2].astype(int)+ m_detection[view][frame_id]['joints'][joint2][joint2_candidate,:2].astype(int))/2).astype(int),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0))
-                        
-                for joint_id in range(n_kps):
-                    for candidate in range(len(m_detection[view][frame_id]['joints'][joint_id])):
-                        cv2.circle(img2, m_detection[view][frame_id]['joints'][joint_id][candidate,:2].astype(int) ,1, (255, 0, 0), 1)
-                        cv2.putText(img2, str(joint_id), m_detection[view][frame_id]['joints'][joint_id][candidate,:2].astype(int),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0))
-
-
-                cv2.imwrite(f'{output_dir}/cam{view}_frame{frame_id}_openpose.png',
-                            img2)
+        self.percep_keypoints2d = mscene_keypoints_list

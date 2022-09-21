@@ -251,15 +251,17 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 os.path.join(self.data_root, rela_path.strip())
                 for rela_path in rela_path_list
             ]
-            kps2d = arr_data[:,:,idx,:,:]
+            kps2d = arr_data[:, :, idx, :, :]
             keypoints2d = Keypoints(
-                kps=kps2d, mask=kps2d[..., 2] > 0  , convention=self.kps2d_convention)
+                kps=kps2d,
+                mask=kps2d[..., 2] > 0,
+                convention=self.kps2d_convention)
             if self.kps2d_convention is not None:
                 keypoints2d = convert_keypoints(
                     keypoints2d, dst=self.kps2d_convention, approximate=True)
             scene_vis_dir = os.path.join(self.output_dir, f'scene_{scene_idx}')
-            video_path = os.path.join(scene_vis_dir,
-                                      f'associate_kps2d_view_{view_idx:02d}.mp4')
+            video_path = os.path.join(
+                scene_vis_dir, f'associate_kps2d_view_{view_idx:02d}.mp4')
             # import pdb; pdb.set_trace()
             plot_arr = visualize_keypoints2d(
                 keypoints=keypoints2d,

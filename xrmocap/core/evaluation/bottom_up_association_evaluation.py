@@ -7,21 +7,20 @@ from typing import List, Union
 from xrprimer.utils.log_utils import get_logger
 from xrprimer.utils.path_utils import prepare_output_path
 
+from xrmocap.core.alignment.align_keypoints3d import align_keypoints3d
+from xrmocap.core.metric.metrics import calc_limbs_accuracy, evaluate
 from xrmocap.data.data_visualization.builder import (
     BaseDataVisualization, build_data_visualization,
 )
 from xrmocap.data.dataset.builder import MviewMpersonDataset, build_dataset
 from xrmocap.data_structure.keypoints import Keypoints
-
 from xrmocap.ops.bottom_up_association.builder import (
-    FourDAGAssociator, build_bottom_up_associator
+    FourDAGAssociator, build_bottom_up_associator,
 )
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
-from xrmocap.core.metric.metrics import (
-    evaluate,calc_limbs_accuracy
-)
-from xrmocap.core.alignment.align_keypoints3d import align_keypoints3d
+
 # yapf: enable
+
 
 class BottomUpAssociationEvaluation:
 
@@ -105,7 +104,7 @@ class BottomUpAssociationEvaluation:
                 end_of_clip_idxs.append(frame_idx)
             fisheye_list = self.dataset.fisheye_params[0]
             # prepare input for associate single frame
-            
+
             self.associator.set_cameras(fisheye_list)
 
             predict_keypoints3d, identities, multi_kps2d = \
@@ -120,14 +119,15 @@ class BottomUpAssociationEvaluation:
                         axis=1)
                     pred_kps2d = np.concatenate(
                         (pred_kps2d,
-                        np.zeros(shape=(n_frame, n_identity, self.n_views, n_kps, 3))),
+                         np.zeros(
+                             shape=(n_frame, n_identity, self.n_views, n_kps,
+                                    3))),
                         axis=1)
                     max_identity = identity
                 pred_kps3d[frame_idx,
                            identity] = predict_keypoints3d.get_keypoints()[0,
                                                                            idx]
-                pred_kps2d[frame_idx,
-                            identity] = multi_kps2d[idx]
+                pred_kps2d[frame_idx, identity] = multi_kps2d[idx]
             # save ground truth kps3d
             if gt_kps3d is None:
                 gt_kps3d = kps3d.numpy()[np.newaxis]
@@ -168,10 +168,12 @@ class BottomUpAssociationEvaluation:
             np.save(npz_path, pred_kps2d)
 
         pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
-            pred_keypoints3d, gt_keypoints3d,self.eval_kps3d_convention,self.selected_limbs_name,self.additional_limbs_names)
-        calc_limbs_accuracy(pred_keypoints3d_, gt_keypoints3d_, limbs,logger=self.logger)
+            pred_keypoints3d, gt_keypoints3d, self.eval_kps3d_convention,
+            self.selected_limbs_name, self.additional_limbs_names)
+        calc_limbs_accuracy(
+            pred_keypoints3d_, gt_keypoints3d_, limbs, logger=self.logger)
         pck_50, pck_100, mpjpe, pa_mpjpe = evaluate(
-            pred_keypoints3d_, gt_keypoints3d_,logger=self.logger)
+            pred_keypoints3d_, gt_keypoints3d_, logger=self.logger)
 
         if self.dataset_visualization is not None:
             self.dataset_visualization.pred_kps3d_paths = \

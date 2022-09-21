@@ -12,14 +12,15 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
 from xrmocap.utils.fourdag_utils import *
+from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
 
 # yapf: enable
 if isinstance(KEYPOINTS_FACTORY, dict):
     KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
     KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
     KEYPOINTS_FACTORY['fourdag_19'] = fourdag_19.FOURDAG19_KEYPOINTS
+
 
 def convert_keypoints(
     keypoints: Keypoints,
@@ -112,6 +113,7 @@ def convert_keypoints(
         logger=keypoints.logger)
     return ret_kps
 
+
 def convert_bottom_up_kps_paf(
     kps_paf: List,
     src: str,
@@ -145,42 +147,65 @@ def convert_bottom_up_kps_paf(
     dst_idxs, src_idxs, _ = \
         get_mapping(src, dst, approximate, keypoints_factory)
     paf_mapping = all_paf_mapping[src][dst]
-    
+
     dst_detections = []
     for i in range(n_frame):
-        var = {'joints':[np.array([]) for j in range(dst_n_kps)], 'pafs':[np.array([]) for k in range(len(paf_mapping))]}
+        var = {
+            'joints': [np.array([]) for j in range(dst_n_kps)],
+            'pafs': [np.array([]) for k in range(len(paf_mapping))]
+        }
         dst_detections.append(var)
     for frame_id in range(n_frame):
-        for  i in range(len(dst_idxs)):
-            dst_detections[frame_id]['joints'][dst_idxs[i]] = np.array(kps_paf[frame_id]['joints'][src_idxs[i]], dtype=np.float32)
+        for i in range(len(dst_idxs)):
+            dst_detections[frame_id]['joints'][dst_idxs[i]] = np.array(
+                kps_paf[frame_id]['joints'][src_idxs[i]], dtype=np.float32)
         for i in range(len(paf_mapping)):
             if isinstance(paf_mapping[i], list):
                 if paf_mapping[i][0] < 0:
-                    dst_detections[frame_id]['pafs'][i] = np.array(kps_paf[frame_id]['pafs'][-paf_mapping[i][0]], dtype=np.float32).T
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][-paf_mapping[i][0]],
+                        dtype=np.float32).T
                 else:
-                    dst_detections[frame_id]['pafs'][i] = np.array(kps_paf[frame_id]['pafs'][paf_mapping[i][0]], dtype=np.float32)
-                dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i] * (dst_detections[frame_id]['pafs'][i] > 0.1)
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][paf_mapping[i][0]],
+                        dtype=np.float32)
+                dst_detections[frame_id]['pafs'][
+                    i] = dst_detections[frame_id]['pafs'][i] * (
+                        dst_detections[frame_id]['pafs'][i] > 0.1)
                 for path_id in paf_mapping[i][1:]:
                     if path_id < 0:
-                        arr = np.array(kps_paf[frame_id]['pafs'][-path_id], dtype=np.float32).T
+                        arr = np.array(
+                            kps_paf[frame_id]['pafs'][-path_id],
+                            dtype=np.float32).T
                     else:
-                        arr = np.array(kps_paf[frame_id]['pafs'][path_id], dtype=np.float32)
-                    dst_detections[frame_id]['pafs'][i] = np.matmul(dst_detections[frame_id]['pafs'][i], arr)
-                    dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i] * (dst_detections[frame_id]['pafs'][i] > 0.1)
+                        arr = np.array(
+                            kps_paf[frame_id]['pafs'][path_id],
+                            dtype=np.float32)
+                    dst_detections[frame_id]['pafs'][i] = np.matmul(
+                        dst_detections[frame_id]['pafs'][i], arr)
+                    dst_detections[frame_id]['pafs'][
+                        i] = dst_detections[frame_id]['pafs'][i] * (
+                            dst_detections[frame_id]['pafs'][i] > 0.1)
                 # dst_detections[frame_id]['pafs'][i] = np.power(dst_detections[frame_id]['pafs'][i], 2)
-                dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i] * len(paf_mapping[i])
+                dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id][
+                    'pafs'][i] * len(paf_mapping[i])
                 # import pdb; pdb.set_trace()
-                # if dst_detections[frame_id]['pafs'][i].shape[0] > 0 and dst_detections[frame_id]['pafs'][i].shape[1] > 0:                    
+                # if dst_detections[frame_id]['pafs'][i].shape[0] > 0 and dst_detections[frame_id]['pafs'][i].shape[1] > 0:
                 #     dst_detections[frame_id]['pafs'][i] =  dst_detections[frame_id]['pafs'][i] * (dst_detections[frame_id]['pafs'][i] == dst_detections[frame_id]['pafs'][i].max(1, keepdims=True))
             else:
                 if paf_mapping[i] < 0:
-                    dst_detections[frame_id]['pafs'][i] = np.array(kps_paf[frame_id]['pafs'][-paf_mapping[i]], dtype=np.float32).T
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][-paf_mapping[i]],
+                        dtype=np.float32).T
                 else:
-                    dst_detections[frame_id]['pafs'][i] = np.array(kps_paf[frame_id]['pafs'][paf_mapping[i]], dtype=np.float32)
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][paf_mapping[i]],
+                        dtype=np.float32)
             # dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i] * (dst_detections[frame_id]['pafs'][i] > 0.1)
-            
+
     return dst_detections
-    
+
+
 def get_keypoints_factory() -> dict:
     """Get the KEYPOINTS_FACTORY defined in keypoints convention.
 

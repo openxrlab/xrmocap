@@ -1,8 +1,9 @@
 from mmcv.utils import Registry
 
+from .bottom_up_association_evaluation import BottomUpAssociationEvaluation
 from .mvp_evaluation import MVPEvaluation
 from .top_down_association_evaluation import TopDownAssociationEvaluation
-from .bottom_up_association_evaluation import BottomUpAssociationEvaluation
+
 EVALUATION = Registry('evaluation')
 
 EVALUATION.register_module(

@@ -1,20 +1,23 @@
-import string
 import numpy as np
+import string
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_keypoint_idx,
+    convert_keypoints,
+    get_keypoint_idx,
 )
 from xrmocap.transform.limbs import get_limbs_from_keypoints
 from xrmocap.utils.mvpose_utils import (
-    add_campus_jaw_headtop, add_campus_jaw_headtop_mask,
+    add_campus_jaw_headtop,
+    add_campus_jaw_headtop_mask,
 )
-def align_keypoints3d(pred_keypoints3d: Keypoints,
-                        gt_keypoints3d: Keypoints,
-                        eval_kps3d_convention: string,
-                        selected_limbs_name: List[List[str]],
-                        additional_limbs_names: List[List[str]]):
+
+
+def align_keypoints3d(pred_keypoints3d: Keypoints, gt_keypoints3d: Keypoints,
+                      eval_kps3d_convention: string,
+                      selected_limbs_name: List[List[str]],
+                      additional_limbs_names: List[List[str]]):
     ret_limbs = []
     gt_nose = None
     pred_nose = None
@@ -28,15 +31,12 @@ def align_keypoints3d(pred_keypoints3d: Keypoints,
     if pred_kps3d_convention == 'coco':
         pred_nose_index = get_keypoint_idx(
             name='nose', convention=pred_kps3d_convention)
-        pred_nose = pred_keypoints3d.get_keypoints()[:, :,
-                                                        pred_nose_index, :3]
+        pred_nose = pred_keypoints3d.get_keypoints()[:, :, pred_nose_index, :3]
 
     if pred_kps3d_convention == 'fourdag_19' or pred_kps3d_convention == 'openpose_25':
         pred_nose_index = get_keypoint_idx(
             name='nose_openpose', convention=pred_kps3d_convention)
-        pred_nose = pred_keypoints3d.get_keypoints()[:, :,
-                                                        pred_nose_index, :3]
-
+        pred_nose = pred_keypoints3d.get_keypoints()[:, :, pred_nose_index, :3]
 
     if pred_kps3d_convention != eval_kps3d_convention:
         pred_keypoints3d = convert_keypoints(
@@ -78,17 +78,13 @@ def align_keypoints3d(pred_keypoints3d: Keypoints,
         gt_kps3d = add_campus_jaw_headtop(gt_nose, gt_kps3d)
         gt_kps3d_mask = add_campus_jaw_headtop_mask(gt_kps3d_mask)
 
-    pred_kps3d = np.concatenate(
-        (pred_kps3d, pred_kps3d_mask[..., np.newaxis]), axis=-1)
-    pred_keypoints3d = Keypoints(
-        kps=pred_kps3d,
-        mask=pred_kps3d_mask,
-        convention=eval_kps3d_convention)
-    gt_kps3d = np.concatenate((gt_kps3d, gt_kps3d_mask[..., np.newaxis]),
+    pred_kps3d = np.concatenate((pred_kps3d, pred_kps3d_mask[..., np.newaxis]),
                                 axis=-1)
+    pred_keypoints3d = Keypoints(
+        kps=pred_kps3d, mask=pred_kps3d_mask, convention=eval_kps3d_convention)
+    gt_kps3d = np.concatenate((gt_kps3d, gt_kps3d_mask[..., np.newaxis]),
+                              axis=-1)
     gt_keypoints3d = Keypoints(
-        kps=gt_kps3d,
-        mask=gt_kps3d_mask,
-        convention=eval_kps3d_convention)
+        kps=gt_kps3d, mask=gt_kps3d_mask, convention=eval_kps3d_convention)
 
     return pred_keypoints3d, gt_keypoints3d, ret_limbs

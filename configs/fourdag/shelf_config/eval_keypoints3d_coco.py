@@ -5,7 +5,7 @@ __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
 output_dir = './output/4dag/shelf_coco_debug/'
-pred_kps3d_convention = 'coco' #openpose_25, fourdag_19, coco are implemented
+pred_kps3d_convention = 'coco'  #openpose_25, fourdag_19, coco are implemented
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
@@ -23,10 +23,7 @@ associator = dict(
         logger=logger,
     ),
     point_selector=dict(
-        type='AutoThresholdSelector',
-        verbose=False,
-        logger=logger
-        ),
+        type='AutoThresholdSelector', verbose=False, logger=logger),
     # point_selector=dict(
     #     type='HybridKps2dSelector',
     #     triangulator=dict(
@@ -36,10 +33,10 @@ associator = dict(
     #     ignore_kps_name=['pelvis_openpose', 'neck_openpose', 'right_ear_openpose', 'left_ear_openpose','left_bigtoe_openpose','right_bigtoe_openpose'],
     #     convention=pred_kps3d_convention),
     identity_tracking=dict(
-    type='KeypointsDistanceTracking',
-    tracking_distance=0.7,
-    tracking_kps3d_convention=pred_kps3d_convention,
-    tracking_kps3d_name=[
+        type='KeypointsDistanceTracking',
+        tracking_distance=0.7,
+        tracking_kps3d_convention=pred_kps3d_convention,
+        tracking_kps3d_name=[
             'left_shoulder', 'right_shoulder', 'left_hip_extra',
             'right_hip_extra'
         ]),
@@ -50,13 +47,13 @@ associator = dict(
         max_temp_dist=0.2,
         w_epi=2,
         w_temp=2,
-        w_view= 2,
-        w_paf= 1 ,
-        w_hier= 0.5,
-        c_view_cnt= 1.5,
-        min_check_cnt= 1,
-        min_asgn_cnt= 5 ,
-        normalize_edges = True,
+        w_view=2,
+        w_paf=1,
+        w_hier=0.5,
+        c_view_cnt=1.5,
+        min_check_cnt=1,
+        min_asgn_cnt=5,
+        normalize_edges=True,
         logger=logger,
     ),
     logger=logger,
@@ -87,6 +84,6 @@ dataset_visualization = dict(
     vis_percep2d=False,
     kps2d_convention=pred_kps3d_convention,
     vis_gt_kps3d=False,
-    vis_bottom_up =True,
+    vis_bottom_up=True,
     gt_kps3d_convention=None,
 )

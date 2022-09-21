@@ -2,9 +2,9 @@
 from mmcv.utils import Registry
 
 from .base_dataset import BaseDataset
+from .bottom_up_mview_mperson_dataset import BottomUpMviewMpersonDataset
 from .mview_mperson_dataset import MviewMpersonDataset
 from .mvp_dataset import MVPDataset
-from .bottom_up_mview_mperson_dataset import BottomUpMviewMpersonDataset
 
 # yapf: enable
 

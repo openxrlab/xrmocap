@@ -1,7 +1,7 @@
-type='BottomUpAssociator'
-min_asgn_cnt=5
+type = 'BottomUpAssociator'
+min_asgn_cnt = 5
 m_filter = False
-triangulator=dict(
+triangulator = dict(
     type='FourDAGTriangulator',
     active_rate=0.1,
     min_track_cnt=5,
@@ -19,17 +19,17 @@ triangulator=dict(
     init_active=0.9,
     triangulate_thresh=0.05,
 )
-fourd_matching=dict(
+fourd_matching = dict(
     type='FourdMatching',
     max_epi_dist=0.15,
     max_temp_dist=0.2,
     w_epi=2,
     w_temp=2,
-    w_view= 2,
-    w_paf= 1 ,
-    w_hier= 0.5,
-    c_view_cnt= 1.5,
-    min_check_cnt= 1,
-    min_asgn_cnt= 5 ,
-    normalize_edges = True,
+    w_view=2,
+    w_paf=1,
+    w_hier=0.5,
+    c_view_cnt=1.5,
+    min_check_cnt=1,
+    min_asgn_cnt=5,
+    normalize_edges=True,
 )
