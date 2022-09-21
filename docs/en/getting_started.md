@@ -19,15 +19,15 @@ Please refer to [data\_preparation.md](./dataset_preparation.md) for data prepar
 ## Body Model Preparation (Optional)
 
 If you want to obtain keypoints3d, the body model is not necessary.
-If you want to infer SMPL as well, you can prepare the body\_model as follows.
+If you want to infer SMPL as well, you can prepare the body model as follows.
 
-- [SMPL](https://smpl.is.tue.mpg.de/) v1.0 is used in our experiments.
-  - Neutral model can be downloaded from [SMPLify](https://smplify.is.tue.mpg.de/).
+- SMPL v1.0.0 is used in our experiments. Please register to get access to the downloads section.
+  - Download male and female models from [SMPL](https://smpl.is.tue.mpg.de/) and neutral model from [SMPLify](https://smplify.is.tue.mpg.de/).
   - All body models have to be renamed in `SMPL_{GENDER}.pkl` format. <br/>
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
-- [smpl\_mean\_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz)
-- [gmm\_08.zip from smplify-x repo](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip)
-- [gmm\_08.pkl from openxrlab backup](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl)
+- Download `smpl_mean_params.npz` from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz).
+- [gmm_08.zip](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip) from smplify-x repo.
+- [gmm_08.pkl](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl) from openxrlab backup.
 
 Download the above resources and arrange them in the following file structure:
 
@@ -107,7 +107,7 @@ cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 ```
 - download body model
 
-Please refer to [Body Model Preparation](#body-model-preparation-optional)
+In this section, the `smplify` in the config file is not None, and you will get SMPL model. Please download the body model and refer to [Body Model Preparation](#body-model-preparation-optional) for details.
 
 2. Run demo
 
@@ -156,9 +156,39 @@ For detailed tutorials about dataset preparation, model weights and checkpoints 
 
 ## Evaluation
 
+### Perception Model
+
+Prepare perception models, including detection, 2d pose estimation, tracking and CamStyle models.
+
+```
+sh scripts/download_weight.sh
+```
+
 ### Evaluate with a single GPU / multiple GPUs
 
 #### Optimization-based methods
+
+1. Download data and body model
+
+- download Shelf dataset and meta-data
+
+```bash
+# download Shelf dataset (16G)
+mkdir xrmocap_data
+wget https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2 -P xrmocap_data
+cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
+
+# download meta-data
+mkdir -p xrmocap_data/Shelf
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/xrmocap_meta/Shelf/xrmocap_meta_testset_fasterrcnn.zip -P xrmocap_data/Shelf
+cd xrmocap_data/Shelf && unzip xrmocap_meta_testset_fasterrcnn.zip && rm xrmocap_meta_testset_fasterrcnn.zip && cd ../..
+```
+- download body model
+
+In this section, the `smplify` in config file is not None, and you will get SMPL model. Please download the body model and refer to [Body Model Preparation](#body-model-preparation-optional) for details.
+
+
+2. Run demo
 
 - Evaluate on the Shelf dataset and run the tool without tracking.
 
@@ -175,6 +205,8 @@ python tools/mview_mperson_evaluation.py \
       --enable_log_file \
       --evaluation_config configs/mvpose_tracking/shelf_config/eval_keypoints3d.py
 ```
+
+More details about dataset preparation and evaluation can be found at [MVPose evaluation](../../configs/mvpose/README.md) or [MVPose tracking evaluation](../../configs/mvpose_tracking/README.md).
 
 #### Learning-based methods
 
