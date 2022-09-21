@@ -153,7 +153,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         """Load multi-scene keypoints2d and paf."""
         mscene_keypoints_list = []
         for scene_idx in range(self.n_scene):
-            file_name = os.path.join(self.meta_path, f'scene_{scene_idx}', "kps2d_paf.json")
+            file_name = os.path.join(self.meta_path, f'scene_{scene_idx}', "kps2d_paf_301.json")
             f = open(file_name,'r')
             json_data = json.load(f)
             src_convention = json_data['convention']
@@ -175,13 +175,41 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
             f.close()
             mscene_keypoints_list.append(mview_kps2d)
 
-            ###
+            ### for debug
             # self.visualize_bottom_up_gt(mview_kps2d)
             # import pdb; pdb.set_trace()
+            gt_file = os.path.join(self.meta_path, f'scene_{scene_idx}', "gt.txt")
+            f = open(gt_file, 'r')
+            txt_file = f.read()
+            txt_file = txt_file.split()
+            jointSize = int(txt_file.pop(0))
+            frameSize = int(txt_file.pop(0))
+            skels = {i:{} for i in range(frameSize)}
+            for frame_id in range(frameSize):
+                personSize = int(txt_file.pop(0))
+                for pIdx in range(personSize):
+                    identidy = int(txt_file.pop(0))
+                    skel = np.zeros((4, jointSize))
+                    for i in range(4):
+                        for jIdx in range(jointSize):
+                            skel[i,jIdx] = float(txt_file.pop(0))
+                    skels[frame_id][identidy] = skel
+                
+            arr = np.zeros((300, 4, 14,4))
+            mask = np.zeros((300, 4, 14))
+            for frame_id in range(300):
+                for pid in skels[frame_id]:
+                    arr[frame_id, pid] = skels[frame_id][pid].T[:14,:]
+                    mask[frame_id, pid] = 1
+            self.gt3d[scene_idx].set_keypoints(arr)
+            self.gt3d[scene_idx].set_mask(mask)
+            # import pdb; pdb.set_trace()
+            # f.close()
             ###
+
         self.percep_keypoints2d = mscene_keypoints_list 
         
-
+    ##for debug
     def visualize_bottom_up_gt(self, m_detection,output_dir='./result_debug'):
         #person,view, 1, joint, 3
         # n_kps = 17

@@ -143,28 +143,29 @@ class FourDAGAssociator:
 
             multi_kps2d = []
             for person_id in m_skels2d:
-                keypoints2d = np.zeros((self.n_views, self.n_kps, 3))
+                kps2d = np.zeros((self.n_views, self.n_kps, 3))
                 for view in range(self.n_views):
                     for joint_id in range(self.n_kps):
-                        keypoints2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
-                multi_kps2d.append(keypoints2d)
+                        kps2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
+                multi_kps2d.append(kps2d)
             multi_kps2d = np.array(multi_kps2d)
-        else:
+            
+        elif self.triangulator is not None:
             multi_kps3d = []
             identities = []
             multi_kps2d = []
             for person_id in m_skels2d:
-                keypoints2d = np.zeros((self.n_views, self.n_kps, 3))
+                kps2d = np.zeros((self.n_views, self.n_kps, 3))
                 for view in range(self.n_views):
                     for joint_id in range(self.n_kps):
-                        keypoints2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
-                multi_kps2d.append(keypoints2d)
+                        kps2d[view][joint_id] = m_skels2d[person_id][:,view*self.n_kps+joint_id]
+                multi_kps2d.append(kps2d)
                 matched_mkps2d = np.zeros((self.n_views, self.n_kps, 2))
                 matched_mkps2d_mask = np.zeros((self.n_views, self.n_kps, 1))
                 matched_mkps2d_conf = np.zeros((self.n_views, self.n_kps, 1))
-                matched_mkps2d = keypoints2d[...,:2] 
-                matched_mkps2d_mask = np.ones_like(keypoints2d[..., 0:1])
-                matched_mkps2d_conf[...,0] = keypoints2d[...,2]
+                matched_mkps2d = kps2d[...,:2] 
+                matched_mkps2d_mask = np.ones_like(kps2d[..., 0:1])
+                matched_mkps2d_conf[...,0] = kps2d[...,2]
                 selected_mask = self.point_selector.get_selection_mask(
                         np.concatenate((matched_mkps2d, matched_mkps2d_conf),
                                     axis=-1), matched_mkps2d_mask)
