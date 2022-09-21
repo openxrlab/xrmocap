@@ -46,7 +46,7 @@ xrmocap
 ├── configs
 ├── weight
 |   ├── mvpose
-|   |   └── resnet50_reid_camstyle.pth.tar
+|   |   └── resnet50_reid_camstyle-98d61e41_20220921.pth
 |   ├── ...
 |   └── tracktor_reid_r50_iter25245-a452f51f.pth
 └── xrmocap_data

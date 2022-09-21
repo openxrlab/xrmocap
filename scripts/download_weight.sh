@@ -5,5 +5,5 @@ wget https://download.openmmlab.com/mmpose/top_down/hrnet/hrnet_w48_coco_wholebo
 wget https://download.openmmlab.com/mmtracking/mot/faster_rcnn/faster-rcnn_r50_fpn_4e_mot17-half-64ee2ed4.pth
 wget https://download.openmmlab.com/mmtracking/mot/reid/tracktor_reid_r50_iter25245-a452f51f.pth
 cd mvpose
-wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/resnet50_reid_camstyle.pth.tar
+wget https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/resnet50_reid_camstyle-98d61e41_20220921.pth
 cd ../..

@@ -21,13 +21,13 @@ Please refer to [data\_preparation.md](./dataset_preparation.md) for data prepar
 If you want to obtain keypoints3d, the body model is not necessary.
 If you want to infer SMPL as well, you can prepare the body model as follows.
 
-- [SMPL](https://smpl.is.tue.mpg.de/) v1.0.0 is used in our experiments. Please register to get access to the downloads section.
-  - Neutral model can be downloaded from [SMPLify](https://smplify.is.tue.mpg.de/).
+- SMPL v1.0.0 is used in our experiments. Please register to get access to the downloads section.
+  - Download male and female models from [SMPL](https://smpl.is.tue.mpg.de/) and neutral model from [SMPLify](https://smplify.is.tue.mpg.de/).
   - All body models have to be renamed in `SMPL_{GENDER}.pkl` format. <br/>
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
-- [smpl\_mean\_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz)
-- [gmm\_08.zip from smplify-x repo](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip)
-- [gmm\_08.pkl from openxrlab backup](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl)
+- Download `smpl_mean_params.npz` from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz).
+- Download `gmm_08.zip` from [smplify-x repo](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip) (optional).
+- Download `gmm_08.pkl` from [openxrlab backup](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/gmm_08.pkl).
 
 Download the above resources and arrange them in the following file structure:
 
