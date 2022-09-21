@@ -5,7 +5,7 @@ __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
 output_dir = './output/4dag/shelf_openpose_25_debug/'
-pred_kps3d_convention = 'openpose_25'  #openpose_25, fourdag_19, coco are implemented
+pred_kps3d_convention = 'openpose_25'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
@@ -30,7 +30,9 @@ associator = dict(
     #         type='AniposelibTriangulator', camera_parameters=[],
     #         logger=logger),
     #     verbose=False,
-    #     ignore_kps_name=['pelvis_openpose', 'neck_openpose', 'right_ear_openpose', 'left_ear_openpose','left_bigtoe_openpose','right_bigtoe_openpose'],
+    #     ignore_kps_name=['pelvis_openpose', 'neck_openpose',
+    # 'right_ear_openpose', 'left_ear_openpose',
+    # 'left_bigtoe_openpose','right_bigtoe_openpose'],
     #     convention=pred_kps3d_convention),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',

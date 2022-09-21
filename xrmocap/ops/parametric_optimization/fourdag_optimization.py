@@ -3,7 +3,12 @@ import numpy as np
 
 from xrmocap.ops.parametric_optimization.base_optimization import (
     BaseOptimization, )
-from xrmocap.utils.fourdag_utils import *
+from xrmocap.utils.fourdag_utils import (
+    rodrigues,
+    rodrigues_jacobi,
+    skel_info,
+    welsch,
+)
 
 
 class SkelInfo():

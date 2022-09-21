@@ -1,6 +1,6 @@
 import numpy as np
 
-from xrmocap.utils.fourdag_utils import *
+from xrmocap.utils.fourdag_utils import skel_info
 
 
 class Triangulator():

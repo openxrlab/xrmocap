@@ -1,8 +1,5 @@
-import cv2
-import glob
 import json
 import logging
-import numpy as np
 import os
 import torch
 from typing import Tuple, Union
@@ -157,7 +154,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         mscene_keypoints_list = []
         for scene_idx in range(self.n_scene):
             file_name = os.path.join(self.meta_path, f'scene_{scene_idx}',
-                                     'kps2d_paf_301.json')
+                                     'kps2d_paf.json')
             f = open(file_name, 'r')
             json_data = json.load(f)
             src_convention = json_data['convention']

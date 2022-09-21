@@ -680,14 +680,14 @@ def skew(vec):
 
 def rodrigues(vec):
     theta = np.linalg.norm(vec)
-    I = np.identity(3, dtype=np.float32)
+    identity = np.identity(3, dtype=np.float32)
     if abs(theta) < 1e-5:
-        return I
+        return identity
     else:
         c = np.cos(theta)
         s = np.sin(theta)
         r = vec / theta
-        return c * I + np.matmul((1 - c) * r.reshape(
+        return c * identity + np.matmul((1 - c) * r.reshape(
             (-1, 1)), r.reshape((1, -1))) + s * skew(r)
 
 
@@ -706,10 +706,13 @@ def rodrigues_jacobi(vec):
         r = vec / theta
         rrt = np.matmul(r.reshape((-1, 1)), r.reshape((1, -1)))
         m_skew = skew(r)
-        I = np.identity(3, dtype=np.float32)
-        drrt = np.array([r[0] + r[0], r[1], r[2], r[1], 0, 0, r[2], 0, 0,\
-            0, r[0], 0, r[0], r[1] + r[1], r[2], 0, r[2], 0,\
-            0, 0, r[0], 0, 0, r[1], r[0], r[1], r[2] + r[2]], dtype=np.float32).reshape((3,9))
+        identity = np.identity(3, dtype=np.float32)
+        drrt = np.array([
+            r[0] + r[0], r[1], r[2], r[1], 0, 0, r[2], 0, 0, 0, r[0], 0, r[0],
+            r[1] + r[1], r[2], 0, r[2], 0, 0, 0, r[0], 0, 0, r[1], r[0], r[1],
+            r[2] + r[2]
+        ],
+                        dtype=np.float32).reshape((3, 9))
         jaocbi = np.zeros((3, 9), dtype=np.float32)
         a = np.zeros((5, 1), dtype=np.float32)
         for i in range(3):
@@ -721,7 +724,8 @@ def rodrigues_jacobi(vec):
             for j in range(3):
                 for k in range(3):
 
-                    jaocbi[i, k + k + k + j] = (a[0] * I[j, k] + a[1] * rrt[j, k] +\
-                        a[2] * drrt[i, j + j + j + k] + a[3] * m_skew[j, k] +\
+                    jaocbi[i, k + k + k + j] = (
+                        a[0] * identity[j, k] + a[1] * rrt[j, k] +
+                        a[2] * drrt[i, j + j + j + k] + a[3] * m_skew[j, k] +
                         a[4] * dSkew[i, j + j + j + k])
         return jaocbi

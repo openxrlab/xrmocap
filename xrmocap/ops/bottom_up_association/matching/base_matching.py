@@ -31,10 +31,5 @@ class BaseMatching:
                 BaseMatching has not been implemented.
 
         Returns:
-            Tuple[list, list, list]:
-                matched_kps2d (list): Matched human keypoints.
-                matched_human_idx (list): Matched human index.
-                matched_observation (list): Matched human observed
-                    camera number.
         """
         raise NotImplementedError

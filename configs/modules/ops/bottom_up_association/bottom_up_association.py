@@ -1,8 +1,9 @@
-type = 'BottomUpAssociator'
+type = 'FourDAGAssociator'
+kps_convention = 'fourdag_19'
 min_asgn_cnt = 5
-m_filter = False
-triangulator = dict(
-    type='FourDAGTriangulator',
+use_tracking_edges = True,
+parametric_optimization = dict(
+    type='FourDAGOptimization',
     active_rate=0.1,
     min_track_cnt=5,
     bone_capacity=100,
@@ -18,9 +19,10 @@ triangulator = dict(
     min_triangulate_cnt=15,
     init_active=0.9,
     triangulate_thresh=0.05,
-)
+    logger=None)
 fourd_matching = dict(
-    type='FourdMatching',
+    type='FourDAGMatching',
+    kps_convention='fourdag_19',
     max_epi_dist=0.15,
     max_temp_dist=0.2,
     w_epi=2,
@@ -32,4 +34,5 @@ fourd_matching = dict(
     min_check_cnt=1,
     min_asgn_cnt=5,
     normalize_edges=True,
-)
+    logger=None)
+logger = None

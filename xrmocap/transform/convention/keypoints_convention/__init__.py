@@ -12,7 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.utils.fourdag_utils import *
+from xrmocap.utils.fourdag_utils import all_paf_mapping
 from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
 
 # yapf: enable
@@ -186,12 +186,16 @@ def convert_bottom_up_kps_paf(
                     dst_detections[frame_id]['pafs'][
                         i] = dst_detections[frame_id]['pafs'][i] * (
                             dst_detections[frame_id]['pafs'][i] > 0.1)
-                # dst_detections[frame_id]['pafs'][i] = np.power(dst_detections[frame_id]['pafs'][i], 2)
+                # dst_detections[frame_id]['pafs'][i] = np.power(
+                #               dst_detections[frame_id]['pafs'][i], 2)
                 dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id][
                     'pafs'][i] * len(paf_mapping[i])
-                # import pdb; pdb.set_trace()
-                # if dst_detections[frame_id]['pafs'][i].shape[0] > 0 and dst_detections[frame_id]['pafs'][i].shape[1] > 0:
-                #     dst_detections[frame_id]['pafs'][i] =  dst_detections[frame_id]['pafs'][i] * (dst_detections[frame_id]['pafs'][i] == dst_detections[frame_id]['pafs'][i].max(1, keepdims=True))
+                # if dst_detections[frame_id]['pafs'][i].shape[0] > 0
+                #       and dst_detections[frame_id]['pafs'][i].shape[1] > 0:
+                #     dst_detections[frame_id]['pafs'][i] =
+                #           dst_detections[frame_id]['pafs'][i] *
+                # (dst_detections[frame_id]['pafs'][i] ==
+                #   dst_detections[frame_id]['pafs'][i].max(1, keepdims=True))
             else:
                 if paf_mapping[i] < 0:
                     dst_detections[frame_id]['pafs'][i] = np.array(
@@ -201,7 +205,8 @@ def convert_bottom_up_kps_paf(
                     dst_detections[frame_id]['pafs'][i] = np.array(
                         kps_paf[frame_id]['pafs'][paf_mapping[i]],
                         dtype=np.float32)
-            # dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i] * (dst_detections[frame_id]['pafs'][i] > 0.1)
+            # dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i]
+            #               * (dst_detections[frame_id]['pafs'][i] > 0.1)
 
     return dst_detections
 

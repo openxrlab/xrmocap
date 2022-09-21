@@ -5,7 +5,7 @@ __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
 output_dir = './output/fourdag/shelf_fourdag_19_FourDAGOptimization/'
-pred_kps3d_convention = 'fourdag_19'  #openpose_25, fourdag_19, coco are implemented
+pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
@@ -17,6 +17,7 @@ associator = dict(
     type='FourDAGAssociator',
     kps_convention=pred_kps3d_convention,
     min_asgn_cnt=5,
+    use_tracking_edges=True,
     parametric_optimization=dict(
         type='FourDAGOptimization',
         active_rate=0.1,

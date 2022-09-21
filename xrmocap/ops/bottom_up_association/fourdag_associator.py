@@ -30,13 +30,14 @@ from xrmocap.utils.fourdag_utils import skel_info
 class FourDAGAssociator:
 
     def __init__(self,
-                 kps_convention: str,
+                 kps_convention: str = 'fourdag_19',
                  triangulator: Union[None, dict, BaseTriangulator] = None,
                  point_selector: Union[None, dict, BaseSelector] = None,
                  parametric_optimization=None,
                  fourd_matching: Union[None, dict] = None,
                  identity_tracking: Union[None, dict, BaseTracking] = None,
                  min_asgn_cnt: int = 5,
+                 use_tracking_edges: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
 
         self.logger = get_logger(logger)
@@ -57,6 +58,7 @@ class FourDAGAssociator:
         self.n_views = -1
         self.kps_convention = kps_convention
         self.last_multi_kps3d = dict()
+        self.use_tracking_edges = use_tracking_edges
         self.min_asgn_cnt = min_asgn_cnt
         if isinstance(point_selector, dict):
             point_selector['logger'] = self.logger
@@ -138,7 +140,8 @@ class FourDAGAssociator:
 
         if self.parametric_optimization is not None:
             multi_kps3d = self.parametric_optimization.update(m_skels2d)
-            self.last_multi_kps3d = multi_kps3d
+            if self.use_tracking_edges:
+                self.last_multi_kps3d = multi_kps3d
             kps_arr = np.zeros((1, len(multi_kps3d), self.n_kps, 4))
             mask_arr = np.zeros((1, len(multi_kps3d), self.n_kps))
             for index, pid in enumerate(multi_kps3d):
@@ -190,9 +193,10 @@ class FourDAGAssociator:
                 keypoints3d, identities = self.assign_identities_frame(
                     multi_kps3d)
                 self.last_multi_kps3d = dict()
-                for index, pid in enumerate(identities):
-                    self.last_multi_kps3d[pid] = keypoints3d.get_keypoints()[
-                        0, index, ...].T
+                if self.use_tracking_edges:
+                    for index, pid in enumerate(identities):
+                        self.last_multi_kps3d[pid] = keypoints3d.get_keypoints(
+                        )[0, index, ...].T
             else:
                 keypoints3d = Keypoints()
                 identities = []

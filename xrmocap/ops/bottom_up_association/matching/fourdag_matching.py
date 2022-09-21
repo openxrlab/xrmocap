@@ -561,9 +561,12 @@ class FourDAGMatching(BaseMatching):
                             else:
                                 continue
 
-                        elif assigned == -1 and voting.fstCnt[valid_id] >= 2 and voting.secCnt[valid_id] == 0  \
-                                and (person[joint_pair[0], view] == -1 or person[joint_pair[0],view]==node[0]) \
-                                and (person[joint_pair[1], view] == -1 or person[joint_pair[1],view]==node[1]):
+                        elif assigned == -1 and voting.fstCnt[valid_id] >= 2\
+                             and voting.secCnt[valid_id] == 0 \
+                             and (person[joint_pair[0], view] == -1 \
+                             or person[joint_pair[0],view]==node[0]) \
+                             and (person[joint_pair[1], view] == -1 \
+                             or person[joint_pair[1],view]==node[1]):
                             if self.check_joint_compatibility(view, joint_pair[0], node[0],master_id) >= 0 \
                                 and self.check_joint_compatibility(view, joint_pair[1], node[1],master_id) >= 0 :
                                 for i in range(2):
