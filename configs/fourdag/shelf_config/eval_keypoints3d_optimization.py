@@ -18,8 +18,9 @@ associator = dict(
     kps_convention=pred_kps3d_convention,
     min_asgn_cnt=5,
     use_tracking_edges=True,
-    parametric_optimization=dict(
-        type='FourDAGOptimization',
+    keypoints3d_optimizer=dict(
+        type='FourDAGOptimizer',
+        triangulator=dict(type='JacobiTriangulator', ),
         active_rate=0.1,
         min_track_cnt=5,
         bone_capacity=100,
@@ -37,14 +38,8 @@ associator = dict(
         triangulate_thresh=0.05,
         logger=logger,
     ),
-    # parametric_optimization=dict(
-    #     type='BaseOptimization',
-    #     min_triangulate_cnt=15,
-    #     triangulate_thresh=0.05,
-    #     logger=logger,
-    # ),
-    fourd_matching=dict(
-        type='FourDAGMatching',
+    associate_graph=dict(
+        type='FourDAGAssociate',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
         max_temp_dist=0.2,

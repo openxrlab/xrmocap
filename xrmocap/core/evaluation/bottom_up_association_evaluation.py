@@ -7,8 +7,8 @@ from typing import List, Union
 from xrprimer.utils.log_utils import get_logger
 from xrprimer.utils.path_utils import prepare_output_path
 
-from xrmocap.core.alignment.align_keypoints3d import align_keypoints3d
-from xrmocap.core.metric.metrics import calc_limbs_accuracy, evaluate
+from xrmocap.core.evaluation.align_keypoints3d import align_keypoints3d
+from xrmocap.core.evaluation.metrics import calc_limbs_accuracy, evaluate
 from xrmocap.data.data_visualization.builder import (
     BaseDataVisualization, build_data_visualization,
 )
@@ -99,7 +99,7 @@ class BottomUpAssociationEvaluation:
         end_of_clip_idxs = []
         identities = []
         for frame_idx, frame_item in enumerate(tqdm(self.dataset)):
-            _, _, _, _, kps3d, end_of_clip, kw_data = frame_item
+            _, _, _, _, kps3d, end_of_clip, kps2d, pafs = frame_item
             if end_of_clip:
                 end_of_clip_idxs.append(frame_idx)
             fisheye_list = self.dataset.fisheye_params[0]
@@ -107,8 +107,8 @@ class BottomUpAssociationEvaluation:
 
             self.associator.set_cameras(fisheye_list)
 
-            predict_keypoints3d, identities, multi_kps2d = \
-                self.associator.associate_frame(kw_data)
+            predict_keypoints3d, identities, multi_kps2d, _ = \
+                self.associator.associate_frame(kps2d, pafs, end_of_clip)
             # save predict kps3d
             for idx, identity in enumerate(identities):
                 if identity > max_identity:
@@ -161,11 +161,15 @@ class BottomUpAssociationEvaluation:
                                 f'scene{scene_idx}_pred_keypoints3d.npz')
             scene_keypoints.dump(npz_path)
             mscene_keypoints_paths.append(npz_path)
-            scene_start_idx = scene_end_idx + 1
 
             npz_path = osp.join(self.output_dir,
                                 f'scene{scene_idx}_associate_keypoints2d')
-            np.save(npz_path, pred_kps2d)
+            # import pdb; pdb.set_trace()
+            associate_kps2d = pred_kps2d[scene_start_idx:scene_end_idx + 1,
+                                         ...]
+            np.save(npz_path, associate_kps2d)
+
+            scene_start_idx = scene_end_idx + 1
 
         pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
             pred_keypoints3d, gt_keypoints3d, self.eval_kps3d_convention,

@@ -1,15 +1,16 @@
 import copy
 import numpy as np
-
-from xrmocap.ops.parametric_optimization.base_optimization import (
-    BaseOptimization, )
+from typing import Union
+from xrmocap.transform.keypoints3d.optim.fourdag_base_optimizer import (
+    FourDAGBaseOptimizer, )
 from xrmocap.utils.fourdag_utils import (
     rodrigues,
     rodrigues_jacobi,
     skel_info,
     welsch,
 )
-
+from xrmocap.ops.triangulation.builder import (
+    BaseTriangulator, )
 
 class SkelInfo():
 
@@ -426,9 +427,10 @@ class SkelSolver():
                 break
 
 
-class FourDAGOptimization(BaseOptimization):
+class FourDAGOptimizer(FourDAGBaseOptimizer):
 
     def __init__(self,
+                 triangulator: Union[None, dict, BaseTriangulator] = None,
                  active_rate: float = 0.1,
                  min_track_cnt: int = 5,
                  bone_capacity: int = 100,
@@ -446,7 +448,9 @@ class FourDAGOptimization(BaseOptimization):
                  triangulate_thresh: float = 0.05,
                  kps_convention: str = 'fourdag_19',
                  logger=None):
-
+        super().__init__(triangulator=triangulator,kps_convention=kps_convention,
+                        min_triangulate_cnt=min_triangulate_cnt,
+                        triangulate_thresh=triangulate_thresh,logger=logger)
         self.active_rate = active_rate
         self.min_track_cnt = min_track_cnt
         self.bone_capacity = bone_capacity
@@ -459,27 +463,26 @@ class FourDAGOptimization(BaseOptimization):
         self.w_joint2d = w_joint2d
         self.w_temporal_trans = w_temporal_trans
         self.w_temporal_pose = w_temporal_pose
-        self.min_triangulate_cnt = min_triangulate_cnt
         self.init_active = init_active
-        self.triangulate_thresh = triangulate_thresh
 
         self.projs = None
         self.m_skels = dict()
-        self.m_skelInfos = []
+        self.m_skelInfos = dict()
         self.m_solver = SkelSolver(kps_convention)
 
-        self.kps_convention = kps_convention
 
     def update(self, skels2d):
         prevCnt = len(self.m_skels)
-        info_index = 0
+        # info_index = 0
+        info_iter = iter(copy.deepcopy(self.m_skelInfos))
         for pid, corr_id in enumerate(skels2d):
             if len(self.m_skels) != len(self.m_skelInfos):
                 import pdb
                 pdb.set_trace()
             if pid < prevCnt:
-                info = self.m_skelInfos[info_index][1]
-                info_id = self.m_skelInfos[info_index][0]
+                info_id = next(info_iter)
+                info = self.m_skelInfos[info_id]
+                # info_id = self.m_skelInfos[info_index][0]
                 skel = self.m_skels[info_id]
                 active = min(
                     info.active + self.active_rate *
@@ -487,10 +490,11 @@ class FourDAGOptimization(BaseOptimization):
                                   sum(skels2d[corr_id][2] > 0)) - 1.0), 1.0)
                 if info.active < 0:
                     self.m_skels.pop(info_id)
-                    self.m_skelInfos.pop(info_index)
+                    self.m_skelInfos.pop(info_id)
                     continue
                 else:
-                    info_index += 1
+                    pass
+                    # info_index += 1
 
                 if not info.shapeFixed:
                     skel = self.triangulate_person(skels2d[corr_id])
@@ -516,7 +520,6 @@ class FourDAGOptimization(BaseOptimization):
                             self.m_solver.AlignRT(poseTerm, info)
                             self.m_solver.SolvePose(poseTerm, info,
                                                     self.pose_max_iter)
-
                             skel[:3] = self.m_solver.CalcJFinal_2(info)
                             info.shapeFixed = True
                     self.m_skels[info_id] = skel
@@ -527,7 +530,6 @@ class FourDAGOptimization(BaseOptimization):
                     poseTerm.wJ2d = self.w_joint2d
                     poseTerm.projs = self.projs
                     poseTerm.j2dTarget = copy.deepcopy(skels2d[corr_id])
-
                     # filter single view correspondence
                     corrCnt = np.zeros(
                         skel_info[self.kps_convention]['n_kps'],
@@ -565,10 +567,12 @@ class FourDAGOptimization(BaseOptimization):
                 skel = self.triangulate_person(skels2d[corr_id])
                 # alloc new person
                 if sum(skel[3] > 0) >= self.min_triangulate_cnt:
-                    self.m_skelInfos.append(
-                        (corr_id, SkelInfo(self.kps_convention)))
-                    info = self.m_skelInfos[-1][1]
+                    # self.m_skelInfos.append(
+                    #     (corr_id, SkelInfo(self.kps_convention)))
+                    self.m_skelInfos[corr_id] = SkelInfo(self.kps_convention)
+                    info = self.m_skelInfos[corr_id] 
                     info.push_previous_bones(skel)
                     info.active = self.init_active
                     self.m_skels[corr_id] = skel
+        # if len(self.m_skels)
         return self.m_skels

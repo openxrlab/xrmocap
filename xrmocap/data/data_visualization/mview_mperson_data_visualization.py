@@ -237,7 +237,6 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         n_view = len(cam_names)
         mview_plot_arr = []
         arr_data = np.load(npz_path)
-
         for idx in range(n_view):
             view_idx = view_idxs[idx]
             if self.verbose:
@@ -262,7 +261,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             scene_vis_dir = os.path.join(self.output_dir, f'scene_{scene_idx}')
             video_path = os.path.join(
                 scene_vis_dir, f'associate_kps2d_view_{view_idx:02d}.mp4')
-            # import pdb; pdb.set_trace()
+            print('visiulize:', keypoints2d.get_person_number())
             plot_arr = visualize_keypoints2d(
                 keypoints=keypoints2d,
                 output_path=video_path,

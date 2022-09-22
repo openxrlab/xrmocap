@@ -4,7 +4,7 @@ __data_root__ = '../data/Shelf'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
-output_dir = './output/4dag/shelf_coco_debug/'
+output_dir = './output/fourdag/shelf_coco_AniposelibTriangulator_HybridKps2dSelector/'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -23,17 +23,13 @@ associator = dict(
         logger=logger,
     ),
     point_selector=dict(
-        type='AutoThresholdSelector', verbose=False, logger=logger),
-    # point_selector=dict(
-    #     type='HybridKps2dSelector',
-    #     triangulator=dict(
-    #         type='AniposelibTriangulator', camera_parameters=[],
-    #         logger=logger),
-    #     verbose=False,
-    #     ignore_kps_name=['pelvis_openpose', 'neck_openpose',
-    # 'right_ear_openpose', 'left_ear_openpose',
-    # 'left_bigtoe_openpose','right_bigtoe_openpose'],
-    #     convention=pred_kps3d_convention),
+        type='HybridKps2dSelector',
+        triangulator=dict(
+            type='AniposelibTriangulator', camera_parameters=[],
+            logger=logger),
+        verbose=False,
+        ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
+        convention=pred_kps3d_convention),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',
         tracking_distance=0.7,
@@ -42,7 +38,7 @@ associator = dict(
             'left_shoulder', 'right_shoulder', 'left_hip_extra',
             'right_hip_extra'
         ]),
-    fourd_matching=dict(
+    associate_graph=dict(
         type='FourDAGMatching',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,

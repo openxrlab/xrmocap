@@ -1,62 +1,26 @@
 import numpy as np
 
 from xrmocap.utils.fourdag_utils import skel_info
+from xrmocap.ops.triangulation.builder import (
+    BaseTriangulator, build_triangulator,
+)
+from typing import Union
 
 
-class Triangulator():
-
-    def __init__(self):
-        self.points = None
-        self.projs = None
-        self.convergent = False
-        self.loss = 0
-        self.pos = np.zeros(3, dtype=np.float32)
-
-    def solve(self, maxIterTime=20, updateTolerance=1e-4, regularTerm=1e-4):
-        self.convergent = False
-        self.loss = 10e9
-        self.pos = np.zeros(3, dtype=np.float32)
-
-        if sum(self.points[2] > 0) < 2:
-            return
-
-        for iterTime in range(maxIterTime):
-            if self.convergent:
-                break
-            ATA = regularTerm * np.identity(3, dtype=np.float32)
-            ATb = np.zeros(3, dtype=np.float32)
-            for view in range(self.points.shape[1]):
-                if self.points[2, view] > 0:
-                    proj = self.projs[:, 4 * view:4 * view + 4]
-                    xyz = np.matmul(proj, np.append(self.pos, 1))
-                    jacobi = np.zeros((2, 3), dtype=np.float32)
-                    jacobi = np.array([
-                        1.0 / xyz[2], 0.0, -xyz[0] / (xyz[2] * xyz[2]), 0.0,
-                        1.0 / xyz[2], -xyz[1] / (xyz[2] * xyz[2])
-                    ],
-                                      dtype=np.float32).reshape((2, 3))
-                    jacobi = np.matmul(jacobi, proj[:, :3])
-                    w = self.points[2, view]
-                    ATA += w * np.matmul(jacobi.T, jacobi)
-                    ATb += w * np.matmul(
-                        jacobi.T,
-                        (self.points[:, view][:2] - xyz[:2] / xyz[2]))
-
-            delta = np.linalg.solve(ATA, ATb)
-            self.loss = np.linalg.norm(delta)
-            if np.linalg.norm(delta) < updateTolerance:
-                self.convergent = True
-            else:
-                self.pos += delta
-
-
-class BaseOptimization():
+class FourDAGBaseOptimizer():
 
     def __init__(self,
+                 triangulator: Union[None, dict, BaseTriangulator] = None,
                  kps_convention='fourdag_19',
                  min_triangulate_cnt: int = 15,
                  triangulate_thresh: float = 0.05,
                  logger=None):
+
+        if isinstance(triangulator, dict):
+            triangulator['logger'] = self.logger
+            self.triangulator = build_triangulator(triangulator)
+        else:
+            self.triangulator = triangulator
 
         self.kps_convention = kps_convention
         self.min_triangulate_cnt = min_triangulate_cnt
@@ -69,9 +33,8 @@ class BaseOptimization():
     def triangulate_person(self, skel2d):
         skel = np.zeros((4, skel_info[self.kps_convention]['n_kps']),
                         dtype=np.float32)
-        triangulator = Triangulator()
-        triangulator.projs = self.projs
-        triangulator.points = np.zeros((3, int(self.projs.shape[1] / 4)),
+        self.triangulator.projs = self.projs
+        self.triangulator.points = np.zeros((3, int(self.projs.shape[1] / 4)),
                                        dtype=np.float32)
         for jIdx in range(skel_info[self.kps_convention]['n_kps']):
             for view in range(int(self.projs.shape[1] / 4)):
@@ -80,10 +43,10 @@ class BaseOptimization():
                                             kps_convention]['n_kps']:view *
                                   skel_info[self.kps_convention]['n_kps'] +
                                   skel_info[self.kps_convention]['n_kps']]
-                triangulator.points[:, view] = skel_tmp[:, jIdx]
-            triangulator.solve()
-            if triangulator.loss < self.triangulate_thresh:
-                skel[:, jIdx] = np.append(triangulator.pos, 1)
+                self.triangulator.points[:, view] = skel_tmp[:, jIdx]
+            self.triangulator.solve()
+            if self.triangulator.loss < self.triangulate_thresh:
+                skel[:, jIdx] = np.append(self.triangulator.pos, 1)
         return skel
 
     def set_cameras(self, cameras):

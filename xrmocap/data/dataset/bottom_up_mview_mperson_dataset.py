@@ -135,19 +135,20 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         kps3d = keypoints3d.get_keypoints()[frame_idx]
         # if this frame is the end of clip(scene)
         end_of_clip = end_of_clip and not self.shuffled
-        # prepare keyword data
-        kw_data = {}
 
+        kps2d = []
+        pafs = []
         mview_keypoints2d_list = self.percep_keypoints2d[scene_idx]
         mview_kps2d_list = []
         n_view = mview_img_tensor.shape[0]
         for view_idx in range(n_view):
             mview_kps2d_list.append(
                 mview_keypoints2d_list[view_idx][frame_idx])
-        kw_data = mview_kps2d_list
+            kps2d.append(mview_keypoints2d_list[view_idx][frame_idx]['joints'])
+            pafs.append(mview_keypoints2d_list[view_idx][frame_idx]['pafs'])
 
         return mview_img_tensor, k_tensor, r_tensor,\
-            t_tensor, kps3d, end_of_clip, kw_data
+            t_tensor, kps3d, end_of_clip, kps2d, pafs
 
     def load_perception_2d(self):
         """Load multi-scene keypoints2d and paf."""

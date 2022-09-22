@@ -205,8 +205,10 @@ def convert_bottom_up_kps_paf(
                     dst_detections[frame_id]['pafs'][i] = np.array(
                         kps_paf[frame_id]['pafs'][paf_mapping[i]],
                         dtype=np.float32)
-            # dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id]['pafs'][i]
-            #               * (dst_detections[frame_id]['pafs'][i] > 0.1)
+            #refine the pafs weight
+            dst_detections[frame_id]['pafs'][
+                i] = dst_detections[frame_id]['pafs'][i] * (
+                    dst_detections[frame_id]['pafs'][i] > 0.1)
 
     return dst_detections
 

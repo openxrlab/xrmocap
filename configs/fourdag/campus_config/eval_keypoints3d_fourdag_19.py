@@ -1,10 +1,10 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = '../data/Shelf'
+__data_root__ = '../data/CampusSeq1'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
-output_dir = './output/fourdag/shelf_fourdag_19_AniposelibTriangulator/'
+output_dir = './output/fourdag/campusseq1_fourdag_19_AniposelibTriangulator/'
 pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -17,7 +17,6 @@ associator = dict(
     type='FourDAGAssociator',
     kps_convention=pred_kps3d_convention,
     min_asgn_cnt=5,
-    use_tracking_edges=True,
     triangulator=dict(
         type='AniposelibTriangulator',
         camera_parameters=[],
@@ -51,6 +50,7 @@ associator = dict(
     ),
     logger=logger,
 )
+
 dataset = dict(
     type='BottomUpMviewMpersonDataset',
     data_root=__data_root__,

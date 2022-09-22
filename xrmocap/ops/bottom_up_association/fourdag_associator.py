@@ -9,10 +9,7 @@ from xrprimer.data_structure.camera import (
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.ops.bottom_up_association.matching.builder import build_matching
-from xrmocap.ops.parametric_optimization.builder import (
-    build_parametric_optimization,
-)
+from xrmocap.ops.bottom_up_association.associate.builder import build_associate
 from xrmocap.ops.top_down_association.identity_tracking.builder import (
     BaseTracking, build_identity_tracking,
 )
@@ -21,6 +18,9 @@ from xrmocap.ops.triangulation.builder import (
 )
 from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
+)
+from xrmocap.transform.keypoints3d.optim.builder import (
+    build_keypoints3d_optimizer,
 )
 from xrmocap.utils.fourdag_utils import skel_info
 
@@ -33,8 +33,8 @@ class FourDAGAssociator:
                  kps_convention: str = 'fourdag_19',
                  triangulator: Union[None, dict, BaseTriangulator] = None,
                  point_selector: Union[None, dict, BaseSelector] = None,
-                 parametric_optimization=None,
-                 fourd_matching: Union[None, dict] = None,
+                 keypoints3d_optimizer=None,
+                 associate_graph: Union[None, dict] = None,
                  identity_tracking: Union[None, dict, BaseTracking] = None,
                  min_asgn_cnt: int = 5,
                  use_tracking_edges: bool = True,
@@ -48,12 +48,12 @@ class FourDAGAssociator:
         else:
             self.triangulator = triangulator
 
-        if isinstance(parametric_optimization, dict):
-            parametric_optimization['logger'] = self.logger
-            self.parametric_optimization = build_parametric_optimization(
-                parametric_optimization)
+        if isinstance(keypoints3d_optimizer, dict):
+            keypoints3d_optimizer['logger'] = self.logger
+            self.keypoints3d_optimizer = build_keypoints3d_optimizer(
+                keypoints3d_optimizer)
         else:
-            self.parametric_optimization = parametric_optimization
+            self.keypoints3d_optimizer = keypoints3d_optimizer
 
         self.n_views = -1
         self.kps_convention = kps_convention
@@ -65,13 +65,14 @@ class FourDAGAssociator:
             self.point_selector = build_point_selector(point_selector)
         else:
             self.point_selector = point_selector
-        if isinstance(fourd_matching, dict):
-            fourd_matching['logger'] = self.logger
-            fourd_matching['n_kps'] = skel_info[self.kps_convention]['n_kps']
-            fourd_matching['n_pafs'] = skel_info[self.kps_convention]['n_pafs']
-            self.fourd_matching = build_matching(fourd_matching)
+        if isinstance(associate_graph, dict):
+            associate_graph['logger'] = self.logger
+            associate_graph['n_kps'] = skel_info[self.kps_convention]['n_kps']
+            associate_graph['n_pafs'] = skel_info[
+                self.kps_convention]['n_pafs']
+            self.associate_graph = build_associate(associate_graph)
         else:
-            self.fourd_matching = fourd_matching
+            self.associate_graph = associate_graph
         if isinstance(identity_tracking, dict):
             identity_tracking['logger'] = self.logger
             self.identity_tracking = build_identity_tracking(identity_tracking)
@@ -84,26 +85,26 @@ class FourDAGAssociator:
     ) -> None:
         if self.triangulator is not None:
             self.triangulator.set_cameras(cameras)
-        if self.parametric_optimization is not None:
-            self.parametric_optimization.set_cameras(cameras)
+        if self.keypoints3d_optimizer is not None:
+            self.keypoints3d_optimizer.set_cameras(cameras)
         if hasattr(self.point_selector, 'triangulator'):
             self.point_selector.triangulator.set_cameras(cameras)
-        self.fourd_matching.set_cameras(cameras)
+        self.associate_graph.set_cameras(cameras)
         self.n_views = len(cameras)
 
-    def cal_keypoints2d(self, m_personsMap, kps2d_paf):
-        for i, person_id in enumerate(m_personsMap.copy()):
+    def cal_keypoints2d(self, m_persons_map, kps2d):
+        for i, person_id in enumerate(m_persons_map.copy()):
             if i < len(self.last_multi_kps3d):
                 continue
-            if sum(sum(m_personsMap[person_id] >= 0)) >= self.min_asgn_cnt:
+            if sum(sum(m_persons_map[person_id] >= 0)) >= self.min_asgn_cnt:
                 continue
             else:
-                m_personsMap.pop(person_id)
+                m_persons_map.pop(person_id)
 
         m_skels2d = {}
-        for person_id in m_personsMap:
+        for person_id in m_persons_map:
             if person_id < len(self.last_multi_kps3d):
-                identity = person_id
+                identity = list(self.last_multi_kps3d.keys())[person_id]
             elif len(m_skels2d) == 0:
                 identity = 0
             else:
@@ -111,16 +112,19 @@ class FourDAGAssociator:
             skel2d = np.zeros((3, self.n_views * self.n_kps))
             for view in range(self.n_views):
                 for joint_id in range(self.n_kps):
-                    index = m_personsMap[person_id][joint_id, view]
+                    index = m_persons_map[person_id][joint_id, view]
                     if index != -1:
-                        skel2d[:, view * self.n_kps + joint_id] = kps2d_paf[
-                            view]['joints'][joint_id][index]
+                        skel2d[:, view * self.n_kps +
+                               joint_id] = kps2d[view][joint_id][index]
                     else:
                         continue
             m_skels2d[identity] = skel2d
         return m_skels2d
 
-    def associate_frame(self, kps2d_paf: list) -> Tuple[Keypoints, List[int]]:
+    def associate_frame(self,
+                        kps2d: list,
+                        pafs: list,
+                        end_of_clip=False) -> Tuple[Keypoints, List[int]]:
         """Associate and triangulate keypoints2d in one frame.
 
         Args:
@@ -134,12 +138,15 @@ class FourDAGAssociator:
             indentities (List[int]):
                 A list of indentities, whose length.
         """
-        self.n_kps = len(kps2d_paf[0]['joints'])
-        m_personsMap = self.fourd_matching(kps2d_paf, self.last_multi_kps3d)
-        m_skels2d = self.cal_keypoints2d(m_personsMap, kps2d_paf)
+        if end_of_clip:
+            self.last_multi_kps3d = dict()
+        self.n_kps = len(kps2d[0])
+        m_persons_map = self.associate_graph(kps2d, pafs,
+                                             self.last_multi_kps3d)
+        m_skels2d = self.cal_keypoints2d(m_persons_map, kps2d)
 
-        if self.parametric_optimization is not None:
-            multi_kps3d = self.parametric_optimization.update(m_skels2d)
+        if self.keypoints3d_optimizer is not None:
+            multi_kps3d = self.keypoints3d_optimizer.update(m_skels2d)
             if self.use_tracking_edges:
                 self.last_multi_kps3d = multi_kps3d
             kps_arr = np.zeros((1, len(multi_kps3d), self.n_kps, 4))
@@ -202,7 +209,7 @@ class FourDAGAssociator:
                 identities = []
                 self.last_multi_kps3d = dict()
 
-        return keypoints3d, identities, multi_kps2d
+        return keypoints3d, identities, multi_kps2d, m_persons_map
 
     def assign_identities_frame(self, curr_kps3d) -> Keypoints:
         """Process kps3d to Keypoints (an instance of class Keypoints,
