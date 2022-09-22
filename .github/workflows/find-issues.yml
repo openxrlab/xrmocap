@@ -1,6 +1,0 @@
-- name: Find issues
-    uses: actions-cool/issues-helper@v3
-    with:
-      actions: 'find-issues'
-      token: ${{ secrets.GITHUB_TOKEN }}
-      issue-state: 'open'

@@ -1,5 +1,0 @@
-- name: Get Issue
-    uses: actions-cool/issues-helper@v3
-    with:
-      actions: 'get-issue'
-      token: ${{ secrets.GITHUB_TOKEN }}

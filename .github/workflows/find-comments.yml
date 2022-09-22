@@ -1,5 +1,18 @@
-- name: Find comments
-    uses: actions-cool/issues-helper@v3
-    with:
-      actions: 'find-comments'
-      token: ${{ secrets.GITHUB_TOKEN }}
+name: check comments
+
+on:
+  schedule:
+    - cron: "0 0 */2 * *"
+
+jobs:
+  check-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find comments
+        uses: actions-cool/issues-helper@v2.2.1
+        with:
+          actions: 'find-comments'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: 'true'
+          comment-auth: 'true'
+          body-includes: 'true'
