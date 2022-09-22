@@ -1,0 +1,19 @@
+name: Issue Welcome
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  issue-welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - name: welcome
+        uses: actions-cool/issues-helper@v2.2.1
+        with:
+          actions: 'welcome'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: hi @${{ github.event.issue.user.login }}, welcome!
+          labels: 'welcome1, welcome2'
+          assignees: 'xx1'
+          issue-contents: '+1, -1, eyes'
