@@ -4,7 +4,7 @@ __data_root__ = '../data/Shelf'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
-output_dir = './output/fourdag/shelf_fourdag_19_FourDAGOptimization/'
+output_dir = './output/fourdag/shelf_301_fourdag_19_FourDAGOptimization/'
 pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [

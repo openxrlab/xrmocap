@@ -17,7 +17,6 @@ class FourDAGBaseOptimizer():
                  logger=None):
 
         if isinstance(triangulator, dict):
-            triangulator['logger'] = self.logger
             self.triangulator = build_triangulator(triangulator)
         else:
             self.triangulator = triangulator
@@ -29,37 +28,16 @@ class FourDAGBaseOptimizer():
         self.projs = None
         self.m_skels = dict()
         self.m_skelInfos = []
-
+    
     def triangulate_person(self, skel2d):
-        skel = np.zeros((4, skel_info[self.kps_convention]['n_kps']),
-                        dtype=np.float32)
-        self.triangulator.projs = self.projs
-        self.triangulator.points = np.zeros((3, int(self.projs.shape[1] / 4)),
-                                       dtype=np.float32)
-        for jIdx in range(skel_info[self.kps_convention]['n_kps']):
-            for view in range(int(self.projs.shape[1] / 4)):
-                skel_tmp = skel2d[:, view *
-                                  skel_info[self.
-                                            kps_convention]['n_kps']:view *
-                                  skel_info[self.kps_convention]['n_kps'] +
-                                  skel_info[self.kps_convention]['n_kps']]
-                self.triangulator.points[:, view] = skel_tmp[:, jIdx]
-            self.triangulator.solve()
-            if self.triangulator.loss < self.triangulate_thresh:
-                skel[:, jIdx] = np.append(self.triangulator.pos, 1)
+        points2d = skel2d.T.reshape((-1, skel_info[self.kps_convention]['n_kps'], 3))
+        points3d = self.triangulator.triangulate(points2d)
+        mask = self.triangulator.loss < self.triangulate_thresh
+        skel = np.concatenate((points3d.T, mask.reshape(1,-1)), axis=0)
         return skel
 
     def set_cameras(self, cameras):
-        self.projs = np.zeros((3, len(cameras) * 4))
-        for view in range(len(cameras)):
-            K = cameras[view].intrinsic33()
-            T = np.array(cameras[view].get_extrinsic_t())
-            R = np.array(cameras[view].get_extrinsic_r())
-            Proj = np.zeros((3, 4), dtype=np.float)
-            for i in range(3):
-                for j in range(4):
-                    Proj[i, j] = R[i, j] if j < 3 else T[i]
-            self.projs[:, 4 * view:4 * view + 4] = np.matmul(K, Proj)
+        self.triangulator.set_cameras(cameras)
 
     def update(self, skels2d):
         skelIter = iter(self.m_skels.copy())

@@ -1,4 +1,5 @@
 # yapf: disable
+from asyncio.log import logger
 import logging
 import numpy as np
 from tkinter import NO
@@ -102,9 +103,10 @@ class FourDAGAssociator:
                 m_persons_map.pop(person_id)
 
         m_skels2d = {}
+        
         for person_id in m_persons_map:
             if person_id < len(self.last_multi_kps3d):
-                identity = list(self.last_multi_kps3d.keys())[person_id]
+                identity = list(self.last_multi_kps3d.keys())[person_id] ###change 
             elif len(m_skels2d) == 0:
                 identity = 0
             else:
@@ -143,10 +145,13 @@ class FourDAGAssociator:
         self.n_kps = len(kps2d[0])
         m_persons_map = self.associate_graph(kps2d, pafs,
                                              self.last_multi_kps3d)
+        self.logger.info('m_persons_map:{}'.format(list(m_persons_map.keys())))
         m_skels2d = self.cal_keypoints2d(m_persons_map, kps2d)
 
         if self.keypoints3d_optimizer is not None:
+            self.logger.info('m_skels2d:{}'.format(list(m_skels2d.keys())))
             multi_kps3d = self.keypoints3d_optimizer.update(m_skels2d)
+            self.logger.info('multi_kps3d:{}'.format(list(multi_kps3d.keys())))
             if self.use_tracking_edges:
                 self.last_multi_kps3d = multi_kps3d
             kps_arr = np.zeros((1, len(multi_kps3d), self.n_kps, 4))

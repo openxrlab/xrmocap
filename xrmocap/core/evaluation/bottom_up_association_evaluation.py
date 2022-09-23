@@ -106,7 +106,7 @@ class BottomUpAssociationEvaluation:
             # prepare input for associate single frame
 
             self.associator.set_cameras(fisheye_list)
-
+            self.logger.info("#####################frame id:{}####################".format(frame_idx))
             predict_keypoints3d, identities, multi_kps2d, _ = \
                 self.associator.associate_frame(kps2d, pafs, end_of_clip)
             # save predict kps3d
