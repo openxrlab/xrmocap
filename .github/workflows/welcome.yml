@@ -13,7 +13,7 @@ jobs:
         with:
           actions: 'welcome'
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: hi @${{ github.event.issue.user.login }}, welcome!
+          body: hi @${{ github.event.issue.user.login }}, welcome! to commit your issue here , we will check and reply you as soon.
           labels: 'welcome1, welcome2'
           assignees: 'xx1'
           issue-contents: '+1, -1, eyes'
