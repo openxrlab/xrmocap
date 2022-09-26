@@ -17,4 +17,6 @@ jobs:
           issue-number: ${{ github.event.issue.number }}
           body: |
             Hello @${{ github.event.issue.user.login }}. welcome to commit your issue here , we have received it and will reply you as soon.
+            
             你好 @${{ github.event.issue.user.login }}，非常欢迎提交你的问题和需求，我们已经收到了您帮助的请求，会尽快确认并回复你~~
+          emoji: '+1,heart'
