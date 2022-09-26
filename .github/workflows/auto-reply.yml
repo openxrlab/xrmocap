@@ -1,13 +1,15 @@
 name: Issue Reply
+
 on:
   issues:
     types: [labeled]
+
 jobs:
   reply-helper:
     runs-on: ubuntu-latest
     steps:
       - name: help wanted
-        if: github.event.label.name = 'help wanted' or  
+        if: github.event.label.name = 'help wanted' 
         uses: actions-cool/issues-helper@v1.2
         with:
           actions: 'create-comment'
