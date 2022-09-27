@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from typing import Union
 
-from xrmocap.utils.fourdag_utils import skel_info, line2linedist, point2linedist,welsch
+from xrmocap.utils.ourdag_utils import LIMB_INFO, line2linedist, point2linedist,welsch
 
 
 class Clique():
@@ -26,13 +26,13 @@ class Voting():
     def __init__(self) -> None:
         self.fst = np.zeros(2, dtype=np.int8)
         self.sec = np.zeros(2, dtype=np.int8)
-        self.fstCnt = np.zeros(2, dtype=np.int8)
-        self.secCnt = np.zeros(2, dtype=np.int8)
+        self.fst_cnt = np.zeros(2, dtype=np.int8)
+        self.sec_cnt = np.zeros(2, dtype=np.int8)
         self.vote = dict()
 
     def parse(self):
-        self.fstCnt = np.zeros(2)
-        self.secCnt = np.zeros(2)
+        self.fst_cnt = np.zeros(2)
+        self.sec_cnt = np.zeros(2)
         if len(self.vote) == 0:
             return
 
@@ -43,10 +43,10 @@ class Voting():
 
                 if i == 0:
                     self.fst[index] = person_id
-                    self.fstCnt[index] = _vote[person_id][index]
+                    self.fst_cnt[index] = _vote[person_id][index]
                 else:
                     self.sec[index] = person_id
-                    self.secCnt[index] = _vote[person_id][index]
+                    self.sec_cnt[index] = _vote[person_id][index]
                 _vote[person_id][index] = 0
 
 
@@ -61,7 +61,7 @@ class Camera():
         self.c_Rt_Ki = np.matmul(c_R.T, c_Ki)
         self.Pos = -np.matmul(c_R.T, c_T)
 
-    def calcRay(self, uv):
+    def cal_ray(self, uv):
         var = -self.c_Rt_Ki.dot(np.append(uv, 1).T)
         return var / np.linalg.norm(var)
 
@@ -82,13 +82,39 @@ class FourDAGAssociate():
                  w_hier: float = 0.5,
                  c_view_cnt: float = 1.5,
                  min_check_cnt: int = 1,
-                 min_asgn_cnt: int = 5,
                  normalize_edges: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """
+        """ 
 
         Args:
-
+            kps_convention (str):
+                The name of destination convention.
+            n_views (int):
+                views number of dataset
+            n_kps (int):
+                keypoints number
+            n_pafs (int):
+                paf number
+            max_epi_dist (float):
+                maximal epipolar distance to be accepted
+            max_temp_dist (float):
+                maximal temporal tracking distance to be accepted
+            w_epi (float):
+                clique score weight for epipolar distance
+            w_temp (float):
+                clique score weight for temporal tracking distance
+            w_view (float):
+                clique score weight for view number
+            w_paf (float):
+                clique score weight for paf edge
+            w_hier (float):
+                clique score weight for hierarchy
+            c_view_cnt (float):
+                maximal view number
+            min_check_cnt (int):
+                minimum check number
+            normalize_edges (bool):
+                indicator to normalize all edges
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -106,11 +132,10 @@ class FourDAGAssociate():
         self.w_hier = w_hier
         self.c_view_cnt = c_view_cnt
         self.min_check_cnt = min_check_cnt
-        self.min_asgn_cnt = min_asgn_cnt
         self.normalize_edges = normalize_edges
 
-        self.paf_dict = skel_info[kps_convention]['paf_dict']
-        self.hierarchy_map = skel_info[kps_convention]['hierarchy_map']
+        self.paf_dict = LIMB_INFO[kps_convention]['paf_dict']
+        self.hierarchy_map = LIMB_INFO[kps_convention]['hierarchy_map']
 
         self.m_paf_hier = np.zeros(self.n_pafs)
         for paf_id in range(self.n_pafs):
@@ -133,7 +158,7 @@ class FourDAGAssociate():
             }
             for i in range(self.n_kps)
         }
-        self.m_tempEdges = {
+        self.m_temp_edges = {
             i: {j: -1
                 for j in range(self.n_views)}
             for i in range(self.n_kps)
@@ -195,14 +220,14 @@ class FourDAGAssociate():
         return self.m_persons_map
 
     def construct_graph(self):
-        self.__calculate_joint_rays()
-        self.__calculate_paf_edges()
-        self.__calculate_epi_edges()
-        self.__calculate_temp_edges()
+        self._calculate_joint_rays()
+        self._calculate_paf_edges()
+        self._calculate_epi_edges()
+        self._calculate_temp_edges()
 
-        self.__calculate_bone_nodes()
-        self.__calculate_bone_epi_edges()
-        self.__calculate_bone_temp_edges()
+        self._calculate_bone_nodes()
+        self._calculate_bone_epi_edges()
+        self._calculate_bone_temp_edges()
     
     def solve_graph(self):
         self.initialize()
@@ -210,7 +235,7 @@ class FourDAGAssociate():
         while len(self.cliques) > 0:
             self.assign_top_clique()
 
-    def __calculate_joint_rays(self):
+    def _calculate_joint_rays(self):
         for view in range(self.n_views):
             cam = self.cameras[view]
             for joint_id in range(self.n_kps):
@@ -218,9 +243,9 @@ class FourDAGAssociate():
                 joints = self.kps2d[view][joint_id]
                 for joint_candidate in range(len(joints)):
                     self.m_joint_rays[view][joint_id].append(
-                        cam.calcRay(joints[joint_candidate][:2]))
+                        cam.cal_ray(joints[joint_candidate][:2]))
 
-    def __calculate_paf_edges(self):
+    def _calculate_paf_edges(self):
         if self.normalize_edges:
             for paf_id in range(self.n_pafs):
                 for detection in self.pafs:
@@ -234,7 +259,7 @@ class FourDAGAssociate():
                             pafs[:, j] /= col_factor[j]
                     detection[paf_id] = pafs
 
-    def __calculate_epi_edges(self):
+    def _calculate_epi_edges(self):
         for joint_id in range(self.n_kps):
             for view1 in range(self.n_views - 1):
                 cam1 = self.cameras[view1]
@@ -267,7 +292,7 @@ class FourDAGAssociate():
                         self.m_epi_edges[joint_id][view1][view2] = epi
                         self.m_epi_edges[joint_id][view2][view1] = epi.T
 
-    def __calculate_temp_edges(self):
+    def _calculate_temp_edges(self):
         for joint_id in range(self.n_kps):
             for view in range(self.n_views):
                 rays = self.m_joint_rays[view][joint_id]
@@ -275,10 +300,10 @@ class FourDAGAssociate():
                     temp = np.full((len(self.last_multi_kps3d), len(rays)),
                                    -1.0)
                     for pid, person_id in enumerate(self.last_multi_kps3d):
-                        skel = self.last_multi_kps3d[person_id]
-                        if skel[3, joint_id] > 0:
+                        limb = self.last_multi_kps3d[person_id]
+                        if limb[3, joint_id] > 0:
                             for joint_candidate in range(len(rays)):
-                                dist = point2linedist(skel[:, joint_id][:3],
+                                dist = point2linedist(limb[:, joint_id][:3],
                                                       self.cameras[view].Pos,
                                                       rays[joint_candidate])
                                 if dist < self.max_temp_dist:
@@ -293,9 +318,9 @@ class FourDAGAssociate():
                             temp[i] /= row_factor[i]
                         for j in range(len(col_factor)):
                             temp[:, j] /= col_factor[j]
-                    self.m_tempEdges[joint_id][view] = temp
+                    self.m_temp_edges[joint_id][view] = temp
 
-    def __calculate_bone_nodes(self):
+    def _calculate_bone_nodes(self):
         for paf_id in range(self.n_pafs):
             joint1, joint2 = self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]
             for view in range(self.n_views):
@@ -309,7 +334,7 @@ class FourDAGAssociate():
                             self.m_bone_nodes[paf_id][view].append(
                                 (joint1_candidate, joint2_candidate))
 
-    def __calculate_bone_epi_edges(self):
+    def _calculate_bone_epi_edges(self):
         for paf_id in range(self.n_pafs):
             joint_pair = [self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]]
             for view1 in range(self.n_views - 1):
@@ -332,7 +357,7 @@ class FourDAGAssociate():
                     self.m_bone_epi_edges[paf_id][view1][view2] = epi
                     self.m_bone_epi_edges[paf_id][view2][view1] = epi.T
 
-    def __calculate_bone_temp_edges(self):
+    def _calculate_bone_temp_edges(self):
         for paf_id in range(self.n_pafs):
             joint_pair = [self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]]
             for view in range(self.n_views):
@@ -343,7 +368,7 @@ class FourDAGAssociate():
                         node = nodes[node_candidate]
                         tempdist = []
                         for i in range(2):
-                            tempdist.append(self.m_tempEdges[joint_pair[i]]
+                            tempdist.append(self.m_temp_edges[joint_pair[i]]
                                             [view][pid][node[i]])
                         if min(tempdist) > 0:
                             temp[
@@ -358,11 +383,11 @@ class FourDAGAssociate():
                     len(self.kps2d[view][joint_id]), -1)
 
         self.m_persons_map = {}
-        for pid in range(len(self.last_multi_kps3d)):
-            self.m_persons_map[pid] = np.full((self.n_kps, self.n_views), -1)
+        for person_id in self.last_multi_kps3d:
+            self.m_persons_map[person_id] = np.full((self.n_kps, self.n_views), -1)
 
     def enumerate_clques(self):
-        tmpCliques = {i: [] for i in range(self.n_pafs)}
+        tmp_cliques = {i: [] for i in range(self.n_pafs)}
         for paf_id in range(self.n_pafs):
             nodes = self.m_bone_nodes[paf_id]
             pick = [-1] * (self.n_views + 1)
@@ -388,10 +413,14 @@ class FourDAGAssociate():
                         clique = Clique(paf_id, [-1] * len(pick))
                         for i in range(len(pick)):
                             if pick[i] != -1:
-                                clique.proposal[i] = available_node[i][i][
-                                    pick[i]]
-                        clique.score = self.calculate_clique_score(clique)
-                        tmpCliques[paf_id].append(clique)
+                                if i == len(pick) - 1:
+                                    clique.proposal[i] = list(self.last_multi_kps3d.keys())[available_node[i][i][
+                                        pick[i]]]
+                                else:
+                                    clique.proposal[i] = available_node[i][i][
+                                        pick[i]]
+                        clique.score = self.cal_clique_score(clique)
+                        tmp_cliques[paf_id].append(clique)
                     pick[index] += 1
 
                 else:
@@ -426,14 +455,14 @@ class FourDAGAssociate():
 
                         if pick[self.n_views - 1] > 0:
                             available_node[index][self.n_views] = []
-                            tempEdge = self.m_bone_temp_edges[paf_id][
+                            temp_edge = self.m_bone_temp_edges[paf_id][
                                 self.n_views - 1]
                             bone1_id = available_node[self.n_views -
                                                       1][self.n_views -
                                                          1][pick[self.n_views -
                                                                  1]]
                             for pid in available_node[index - 1][self.n_views]:
-                                if tempEdge[pid, bone1_id] > 0:
+                                if temp_edge[pid, bone1_id] > 0:
                                     available_node[index][self.n_views].append(
                                         pid)
                         else:
@@ -442,7 +471,7 @@ class FourDAGAssociate():
                                     self.n_views][:]
 
         for paf_id in range(self.n_pafs):
-            self.cliques.extend(tmpCliques[paf_id])
+            self.cliques.extend(tmp_cliques[paf_id])
         heapq.heapify(self.cliques)
 
     def assign_top_clique(self):
@@ -453,7 +482,7 @@ class FourDAGAssociate():
         ]
         if clique.proposal[self.n_views] != -1:
             person_id = clique.proposal[self.n_views]
-            if self.checkCnt(clique, joint_pair, nodes, person_id) != -1:
+            if self.check_cnt(clique, joint_pair, nodes, person_id) != -1:
                 person = self.m_persons_map[person_id]
                 _proposal = [-1] * (self.n_views + 1)
                 for view in range(self.n_views):
@@ -483,7 +512,7 @@ class FourDAGAssociate():
             voting = self.clique2voting(clique, voting)
             voting.parse()
 
-            if sum(voting.fstCnt) == 0:
+            if sum(voting.fst_cnt) == 0:
 
                 def allocFlag():
                     if sum(np.array(clique.proposal) >= 0) == 0:
@@ -494,7 +523,7 @@ class FourDAGAssociate():
                     person_candidate = []
                     for person_id in self.m_persons_map:
 
-                        def checkCnt():
+                        def check_cnt():
                             cnt = 0
                             for i in range(2):
                                 _cnt = self.check_joint_compatibility(
@@ -504,7 +533,7 @@ class FourDAGAssociate():
                                 cnt += _cnt
                             return cnt
 
-                        cntt = checkCnt()
+                        cntt = check_cnt()
                         if cntt >= self.min_check_cnt:
                             person_candidate.append([cntt, person_id])
                     if len(person_candidate) == 0:
@@ -518,8 +547,7 @@ class FourDAGAssociate():
 
                     self.m_persons_map[person_id] = person
                     return False
-
-                # print('1. A & B not assigned yet')
+                # ('1. A & B not assigned yet')
                 if allocFlag():
                     person = np.full((self.n_kps, self.n_views), -1)
                     if len(self.m_persons_map) == 0:
@@ -536,9 +564,9 @@ class FourDAGAssociate():
                                     node[i]] = person_id
                     self.m_persons_map[person_id] = person
 
-            elif min(voting.fstCnt) == 0:
-                # print('2. A assigned but not B: Add B to person with A ')
-                valid_id = 0 if voting.fstCnt[0] > 0 else 1
+            elif min(voting.fst_cnt) == 0:
+                # ('2. A assigned but not B: Add B to person with A ')
+                valid_id = 0 if voting.fst_cnt[0] > 0 else 1
                 master_id = voting.fst[valid_id]
                 unassignj_id = joint_pair[1 - valid_id]
                 person = self.m_persons_map[master_id]
@@ -562,8 +590,8 @@ class FourDAGAssociate():
                             else:
                                 continue
 
-                        elif assigned == -1 and voting.fstCnt[valid_id] >= 2\
-                             and voting.secCnt[valid_id] == 0 \
+                        elif assigned == -1 and voting.fst_cnt[valid_id] >= 2\
+                             and voting.sec_cnt[valid_id] == 0 \
                              and (person[joint_pair[0], view] == -1 \
                              or person[joint_pair[0],view]==node[0]) \
                              and (person[joint_pair[1], view] == -1 \
@@ -584,7 +612,7 @@ class FourDAGAssociate():
                     self.push_clique(clique.paf_id, _proposal[:])
 
             elif voting.fst[0] == voting.fst[1]:
-                # print('4. A & B already assigned to same person')
+                # ('4. A & B already assigned to same person')
                 master_id = voting.fst[0]
                 person = self.m_persons_map[master_id]
                 _proposal = [-1] * (self.n_views + 1)
@@ -619,7 +647,7 @@ class FourDAGAssociate():
                             else:
                                 _proposal[view] = clique.proposal[view]
                         elif max(assign_id) == -1 and sum(
-                                voting.secCnt) == 0 and (
+                                voting.sec_cnt) == 0 and (
                                     person[joint_pair[0], view] == -1
                                     or person[joint_pair[0], view] == node[0]
                                 ) and (person[joint_pair[1], view] == -1 or
@@ -636,9 +664,9 @@ class FourDAGAssociate():
                 self.m_persons_map[master_id] = person
 
             else:
-                # print('5. A & B already assigned to different people')
+                # ('5. A & B already assigned to different people')
                 for index in range(2):
-                    while voting.secCnt[index] != 0:
+                    while voting.sec_cnt[index] != 0:
                         master_id = min(voting.fst[index], voting.sec[index])
                         slave_id = max(voting.fst[index], voting.sec[index])
                         if slave_id > max(self.m_persons_map):
@@ -657,7 +685,7 @@ class FourDAGAssociate():
                                 voting.vote,
                                 key=lambda x: voting.vote[x][index])
                             voting.sec[index] = iter
-                            voting.secCnt[index] = voting.vote[iter][index]
+                            voting.sec_cnt[index] = voting.vote[iter][index]
 
                 if voting.fst[0] != voting.fst[1]:
                     conflict = [0] * self.n_views
@@ -703,7 +731,7 @@ class FourDAGAssociate():
                                 _proposal[i] = clique.proposal[i]
                                 self.push_clique(clique.paf_id, _proposal[:])
 
-    def calculate_clique_score(self, clique):
+    def cal_clique_score(self, clique):
         scores = []
         for view1 in range(self.n_views - 1):
             if clique.proposal[view1] == -1:
@@ -715,9 +743,9 @@ class FourDAGAssociate():
                     clique.proposal[view1], clique.proposal[view2]])
 
         if len(scores) > 0:
-            epiScore = sum(scores) / len(scores)
+            epi_score = sum(scores) / len(scores)
         else:
-            epiScore = 1
+            epi_score = 1
 
         scores = []
         person_id = clique.proposal[self.n_views]
@@ -726,12 +754,12 @@ class FourDAGAssociate():
                 if clique.proposal[view] == -1:
                     continue
                 scores.append(self.m_bone_temp_edges[clique.paf_id][view][
-                    person_id, clique.proposal[view]])
+                    list(self.last_multi_kps3d.keys()).index(person_id), clique.proposal[view]])
 
         if len(scores) > 0:
-            tempScore = sum(scores) / len(scores)
+            temp_score = sum(scores) / len(scores)
         else:
-            tempScore = 0
+            temp_score = 0
 
         scores = []
         for view in range(self.n_views):
@@ -748,13 +776,13 @@ class FourDAGAssociate():
         view_score = welsch(self.c_view_cnt, var)
         hier_score = 1 - pow(self.m_paf_hier[clique.paf_id] / self.m_paf_hier_size,
                             4)
-        return (self.w_epi * epiScore + self.w_temp * tempScore +
+        return (self.w_epi * epi_score + self.w_temp * temp_score +
                 self.w_paf * paf_score + self.w_view * view_score +
                 self.w_hier * hier_score) / (
                     self.w_epi + self.w_temp + self.w_paf + self.w_view +
                     self.w_hier)
 
-    def checkCnt(self, clique, joint_pair, nodes, person_id):
+    def check_cnt(self, clique, joint_pair, nodes, person_id):
         cnt = 0
         for view in range(self.n_views):
             index = clique.proposal[view]
@@ -770,23 +798,23 @@ class FourDAGAssociate():
 
     def check_joint_compatibility(self, view, joint_id, candidate, pid):
         person = self.m_persons_map[pid]
-        checkCnt = 0
+        check_cnt = 0
         if person[joint_id][view] != -1 and person[joint_id][view] != candidate:
             return -1
 
         for paf_id in self.m_joint2paf[joint_id]:
-            checkJIdx = self.paf_dict[0][paf_id] + self.paf_dict[1][
+            check_joint_id = self.paf_dict[0][paf_id] + self.paf_dict[1][
                 paf_id] - joint_id
-            if person[checkJIdx, view] == -1:
+            if person[check_joint_id, view] == -1:
                 continue
             joint_candidate1 = candidate
-            joint_candidate2 = person[checkJIdx, view]
+            joint_candidate2 = person[check_joint_id, view]
             if joint_id == self.paf_dict[1][paf_id]:
                 joint_candidate1, joint_candidate2 = joint_candidate2, joint_candidate1
 
             if self.pafs[view][paf_id][joint_candidate1,
                                                     joint_candidate2] > 0:
-                checkCnt = checkCnt + 1
+                check_cnt = check_cnt + 1
             else:
                 return -1
 
@@ -796,23 +824,23 @@ class FourDAGAssociate():
             if self.m_epi_edges[joint_id][view][i][candidate,
                                                   int(person[joint_id,
                                                              i])] > 0:
-                checkCnt = checkCnt + 1
+                check_cnt = check_cnt + 1
             else:
                 return -1
-        return checkCnt
+        return check_cnt
 
     def push_clique(self, paf_id, proposal):
         if max(proposal[:self.n_views]) == -1:
             return
         clique = Clique(paf_id, proposal)
-        clique.score = self.calculate_clique_score(clique)
+        clique.score = self.cal_clique_score(clique)
         heapq.heappush(self.cliques, clique)
 
     def check_person_compatibility_sview(self, master_id, slave_id, view):
         assert master_id < slave_id
         if slave_id < len(self.last_multi_kps3d):
             return -1
-        checkCnt = 0
+        check_cnt = 0
         master = self.m_persons_map[master_id]
         slave = self.m_persons_map[slave_id]
 
@@ -825,9 +853,9 @@ class FourDAGAssociate():
         if master_id < len(self.last_multi_kps3d):
             for joint_id in range(self.n_kps):
                 if slave[joint_id, view] != -1:
-                    if self.m_tempEdges[joint_id][view][
+                    if self.m_temp_edges[joint_id][view][
                             master_id, slave[joint_id][view]] > 0:
-                        checkCnt = checkCnt + 1
+                        check_cnt = check_cnt + 1
                     else:
                         return -1
 
@@ -843,27 +871,27 @@ class FourDAGAssociate():
                               ]]:
                 if min(candidate) >= 0:
                     if paf[candidate[0], candidate[1]] > 0:
-                        checkCnt = checkCnt + 1
+                        check_cnt = check_cnt + 1
                     else:
                         return -1
-        return checkCnt
+        return check_cnt
 
     def check_person_compatibility(self, master_id, slave_id):
         assert master_id < slave_id
         if slave_id < len(self.last_multi_kps3d):
             return -1
 
-        checkCnt = 0
+        check_cnt = 0
         master = self.m_persons_map[master_id]
         slave = self.m_persons_map[slave_id]
 
         for view in range(self.n_views):
-            _checkCnt = self.check_person_compatibility_sview(
+            _check_cnt = self.check_person_compatibility_sview(
                 master_id, slave_id, view)
-            if _checkCnt == -1:
+            if _check_cnt == -1:
                 return -1
             else:
-                checkCnt += _checkCnt
+                check_cnt += _check_cnt
 
         for joint_id in range(self.n_kps):
             for view1 in range(self.n_views - 1):
@@ -874,10 +902,10 @@ class FourDAGAssociate():
                         if candidate2_id != -1:
                             if self.m_epi_edges[joint_id][view1][view2][
                                     candidate1_id, candidate2_id] > 0:
-                                checkCnt += 1
+                                check_cnt += 1
                             else:
                                 return -1
-        return checkCnt
+        return check_cnt
 
     def merge_person(self, master_id, slave_id):
         assert master_id < slave_id

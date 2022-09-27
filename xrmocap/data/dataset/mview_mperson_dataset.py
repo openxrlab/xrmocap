@@ -228,6 +228,7 @@ class MviewMpersonDataset(BaseDataset):
                 for idx in range(n_view):
                     sframe_list.append(mview_list[idx][frame_idx].strip())
                 mframe_list.append(sframe_list)
+            mframe_list = mframe_list[:10] #for debug
             mscene_list.append(mframe_list)
         self.image_list = mscene_list
 

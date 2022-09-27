@@ -1,17 +1,21 @@
 import numpy as np
-from typing import Union 
+from typing import Union, List
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
+from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from xrprimer.data_structure.camera import (
+    FisheyeCameraParameter,
+)
+class JacobiTriangulator(BaseTriangulator):
 
-class JacobiTriangulator():
-
-    def __init__(self,maxIterTime=20, updateTolerance=1e-4, regularTerm=1e-4, logger=None):
+    def __init__(self,camera_parameters: List[FisheyeCameraParameter]=[], maxIter_time=20, update_tolerance=1e-4, regular_term=1e-4, logger=None):
+        super().__init__(camera_parameters=camera_parameters, logger=logger)
         self.projs = None
         self.loss = None
 
-        self.maxIterTime = maxIterTime
-        self.updateTolerance = updateTolerance
-        self.regularTerm = regularTerm
-        self.camera_parameters = None
+        self.maxIter_time = maxIter_time
+        self.update_tolerance = update_tolerance
+        self.regular_term = regular_term
+
         self.logger = logger
 
     def __solve(self, points, points_c):
@@ -23,10 +27,10 @@ class JacobiTriangulator():
         if sum(points_c > 0) < 2:
             return pos, loss
 
-        for iterTime in range(self.maxIterTime):
+        for iter_time in range(self.maxIter_time):
             if convergent:
                 break
-            ATA = self.regularTerm * np.identity(3, dtype=np.float32)
+            ATA = self.regular_term * np.identity(3, dtype=np.float32)
             ATb = np.zeros(3, dtype=np.float32)
             for view in range(points.shape[1]):
                 if points_c[view] > 0:
@@ -47,7 +51,7 @@ class JacobiTriangulator():
 
             delta = np.linalg.solve(ATA, ATb)
             loss = np.linalg.norm(delta)
-            if np.linalg.norm(delta) < self.updateTolerance:
+            if np.linalg.norm(delta) < self.update_tolerance:
                 convergent = True
             else:
                 pos += delta
@@ -74,7 +78,7 @@ class JacobiTriangulator():
         points2d_c = points2d_c.reshape(n_view, -1, 1)
         points2d_c[ignored_indexes[0], ignored_indexes[1], :] = 0
         n_points = points2d.shape[1]
-        self.loss = np.full(n_points, 10e9) ###
+        self.loss = np.full(n_points, 10e9)
         points3d = []
         for point_id in range(n_points):
             pos, loss = self.__solve(points2d[:,point_id], points2d_c[:,point_id])
@@ -87,17 +91,6 @@ class JacobiTriangulator():
         points3d = points3d.reshape(*output_points3d_shape)
         return points3d
 
-    def set_cameras(self, camera_parameters):
-        self.camera_parameters = camera_parameters
-        self.projs = np.zeros((3, len(camera_parameters) * 4))
-        for view in range(len(camera_parameters)):
-            K = camera_parameters[view].intrinsic33()
-            T = np.array(camera_parameters[view].get_extrinsic_t())
-            R = np.array(camera_parameters[view].get_extrinsic_r())
-            Proj = np.zeros((3, 4), dtype=np.float)
-            for i in range(3):
-                for j in range(4):
-                    Proj[i, j] = R[i, j] if j < 3 else T[i]
-            self.projs[:, 4 * view:4 * view + 4] = np.matmul(K, Proj)
-            
+    def set_proj_mat(self,projs):
+        self.projs = projs
 

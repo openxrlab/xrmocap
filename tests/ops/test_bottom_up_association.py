@@ -16,7 +16,7 @@ def fixture():
     os.makedirs(output_dir, exist_ok=False)
 
 
-def test_run_bottom_up_associator():
+def test_build_bottom_up_associator():
     associator_cfg = dict(
         mmcv.Config.fromfile('configs/modules/ops/' +
                              'bottom_up_association/' +

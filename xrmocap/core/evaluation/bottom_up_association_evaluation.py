@@ -23,7 +23,7 @@ from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 
 
 class BottomUpAssociationEvaluation:
-
+    """Bottom-up association evaluation."""
     def __init__(self,
                  output_dir: str,
                  selected_limbs_name: List[List[str]],
@@ -35,7 +35,7 @@ class BottomUpAssociationEvaluation:
                  pred_kps3d_convention: str = 'coco',
                  eval_kps3d_convention: str = 'campus',
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Top-down association evaluation.
+        """Initialization for the class.
 
         Args:
             output_dir (str): The path to save results.
@@ -72,6 +72,7 @@ class BottomUpAssociationEvaluation:
         self.n_views = self.dataset.n_views
         if isinstance(associator, dict):
             associator['logger'] = self.logger
+            associator['n_views'] = self.n_views
             self.associator = build_bottom_up_associator(associator)
         else:
             self.associator = associator
@@ -106,7 +107,6 @@ class BottomUpAssociationEvaluation:
             # prepare input for associate single frame
 
             self.associator.set_cameras(fisheye_list)
-            self.logger.info("#####################frame id:{}####################".format(frame_idx))
             predict_keypoints3d, identities, multi_kps2d, _ = \
                 self.associator.associate_frame(kps2d, pafs, end_of_clip)
             # save predict kps3d
@@ -127,7 +127,9 @@ class BottomUpAssociationEvaluation:
                 pred_kps3d[frame_idx,
                            identity] = predict_keypoints3d.get_keypoints()[0,
                                                                            idx]
-                pred_kps2d[frame_idx, identity] = multi_kps2d[idx]
+                #prepare 2d associate result
+                if identity in multi_kps2d:
+                    pred_kps2d[frame_idx, identity] = multi_kps2d[identity]
             # save ground truth kps3d
             if gt_kps3d is None:
                 gt_kps3d = kps3d.numpy()[np.newaxis]
@@ -148,6 +150,8 @@ class BottomUpAssociationEvaluation:
             convention=self.dataset.gt_kps3d_convention,
             logger=self.logger)
         mscene_keypoints_paths = []
+
+        #prepare result
         scene_start_idx = 0
         for scene_idx, scene_end_idx in enumerate(end_of_clip_idxs):
             scene_keypoints = pred_keypoints3d.clone()
@@ -164,21 +168,27 @@ class BottomUpAssociationEvaluation:
 
             npz_path = osp.join(self.output_dir,
                                 f'scene{scene_idx}_associate_keypoints2d')
-            # import pdb; pdb.set_trace()
             associate_kps2d = pred_kps2d[scene_start_idx:scene_end_idx + 1,
                                          ...]
             np.save(npz_path, associate_kps2d)
 
             scene_start_idx = scene_end_idx + 1
 
+        #evaluation
         pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
             pred_keypoints3d, gt_keypoints3d, self.eval_kps3d_convention,
             self.selected_limbs_name, self.additional_limbs_names)
-        calc_limbs_accuracy(
+        _, eval_table = calc_limbs_accuracy(
             pred_keypoints3d_, gt_keypoints3d_, limbs, logger=self.logger)
-        pck_50, pck_100, mpjpe, pa_mpjpe = evaluate(
+        self.logger.info('\n' + eval_table.get_string())
+        evel_dict = evaluate(
             pred_keypoints3d_, gt_keypoints3d_, logger=self.logger)
+        self.logger.info(f'MPJPE: {evel_dict["mpjpe_mean"]:.2f} ± {evel_dict["mpjpe_std"]:.2f} mm')
+        self.logger.info(f'PA-MPJPE: {evel_dict["pa_mpjpe_mean"]:.2f} ±' f'{evel_dict["pa_mpjpe_std"]:.2f} mm')
+        self.logger.info(f'PCK@50mm: {evel_dict["pck_50"]:.2f} %')
+        self.logger.info(f'PCK@100mm: {evel_dict["pck_100"]:.2f} %')
 
+        #visualization
         if self.dataset_visualization is not None:
             self.dataset_visualization.pred_kps3d_paths = \
                 mscene_keypoints_paths

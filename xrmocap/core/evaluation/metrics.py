@@ -83,18 +83,12 @@ def evaluate(pred_keypoints3d: Keypoints,
     pa_mpjpe_mean, pa_mpjpe_std = np.mean(pa_mpjpe), np.std(pa_mpjpe)
     pck_50 = np.mean(pck_50) * 100.  # percentage
     pck_100 = np.mean(pck_100) * 100.  # percentage
-    logger.info(f'MPJPE: {mpjpe_mean:.2f} ± {mpjpe_std:.2f} mm')
-    logger.info(f'PA-MPJPE: {pa_mpjpe_mean:.2f} ±' f'{pa_mpjpe_std:.2f} mm')
-    logger.info(f'PCK@{pck_50_thres}mm: {pck_50:.2f} %')
-    logger.info(f'PCK@{pck_100_thres}mm: {pck_100:.2f} %')
-    return pck_50, pck_100, mpjpe, pa_mpjpe
-
+    return dict(mpjpe_mean=mpjpe_mean,mpjpe_std=mpjpe_std,pa_mpjpe_mean=pa_mpjpe_mean,pa_mpjpe_std=pa_mpjpe_std,pck_50=pck_50,pck_100=pck_100)
 
 def calc_limbs_accuracy(
     pred_keypoints3d,
     gt_keypoints3d,
     limbs,
-    dump_dir=None,
     logger: Union[None, str,
                   logging.Logger] = None) -> Tuple[np.ndarray, list]:
     n_frame = gt_keypoints3d.get_frame_number()
@@ -165,36 +159,14 @@ def calc_limbs_accuracy(
     tb.field_names = ['Bone Group'] + [
         f'Actor {i}' for i in range(bone_person_wise_result['Head'].shape[0])
     ] + ['Average']
-    list_tb = [tb.field_names]
     for k, v in bone_person_wise_result.items():
         this_row = [k] + [np.char.mod('%.4f', i) for i in v
                           ] + [np.char.mod('%.4f',
                                            np.sum(v) / len(v))]
-        list_tb.append([
-            float(i) if isinstance(i, type(np.array([]))) else i
-            for i in this_row
-        ])
         tb.add_row(this_row)
     this_row = ['Total'] + [
         np.char.mod('%.4f', i) for i in person_wise_avg
     ] + [np.char.mod('%.4f',
                      np.sum(person_wise_avg) / len(person_wise_avg))]
     tb.add_row(this_row)
-    list_tb.append([
-        float(i) if isinstance(i, type(np.array([]))) else i for i in this_row
-    ])
-    if dump_dir:
-        np.save(
-            osp.join(
-                dump_dir,
-                time.strftime('%Y_%m_%d_%H_%M', time.localtime(time.time()))),
-            check_result)
-        with open(
-                osp.join(
-                    dump_dir,
-                    time.strftime('%Y_%m_%d_%H_%M.csv',
-                                  time.localtime(time.time()))), 'w') as f:
-            writer = csv.writer(f)
-            writer.writerows(list_tb)
-    logger.info('\n' + tb.get_string())
-    return check_result, list_tb
+    return check_result, tb

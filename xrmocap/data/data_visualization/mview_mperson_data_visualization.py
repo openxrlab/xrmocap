@@ -212,9 +212,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 mview_plot_arr, video_path, logger=self.logger)
 
     def visualize_perception_2d_bottm_up(self, scene_idx: int) -> None:
-        """Visualize converted 2D perception keypoints2d data. If bbox was
-        tracked, tracking relationship will be represented by color of
-        keypoints.
+        """Visualize bottom-up associated 2D perception keypoints2d data. 
 
         Args:
             scene_idx (int):
@@ -261,7 +259,6 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             scene_vis_dir = os.path.join(self.output_dir, f'scene_{scene_idx}')
             video_path = os.path.join(
                 scene_vis_dir, f'associate_kps2d_view_{view_idx:02d}.mp4')
-            print('visiulize:', keypoints2d.get_person_number())
             plot_arr = visualize_keypoints2d(
                 keypoints=keypoints2d,
                 output_path=video_path,

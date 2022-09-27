@@ -105,6 +105,10 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                 it is always False.
             kw_data (dict):
                 Dict for keyword data. bbox and kps2d can be found here.
+            kps2d (list):
+                List for keypoints data with bottom-up manner.
+            pafs (list):
+                List for pafs data obtained with openpose.
         """
         if index >= len(self):
             raise StopIteration
@@ -155,7 +159,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         mscene_keypoints_list = []
         for scene_idx in range(self.n_scene):
             file_name = os.path.join(self.meta_path, f'scene_{scene_idx}',
-                                     'kps2d_paf_301.json')
+                                     'kps2d_paf_new.json')
             f = open(file_name, 'r')
             json_data = json.load(f)
             src_convention = json_data['convention']

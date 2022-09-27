@@ -1,6 +1,6 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = '../data/Shelf'
+__data_root__ = './xrmocap_data/Shelf'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
@@ -57,7 +57,6 @@ dataset = dict(
     img_pipeline=[
         dict(type='LoadImagePIL'),
         dict(type='ToTensor'),
-        dict(type='BGR2RGB'),
     ],
     meta_path=__meta_path__,
     test_mode=True,

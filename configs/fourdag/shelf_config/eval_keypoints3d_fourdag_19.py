@@ -1,6 +1,6 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = '../data/Shelf'
+__data_root__ = './xrmocap_data/Shelf'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
@@ -16,7 +16,7 @@ additional_limbs_names = [['jaw', 'headtop']]
 associator = dict(
     type='FourDAGAssociator',
     kps_convention=pred_kps3d_convention,
-    min_asgn_cnt=5,
+    min_asgn_cnt=30,
     use_tracking_edges=True,
     triangulator=dict(
         type='AniposelibTriangulator',
@@ -34,7 +34,7 @@ associator = dict(
             'right_hip_openpose', 'left_hip_openpose'
         ]),
     associate_graph=dict(
-        type='FourDAGMatching',
+        type='FourDAGAssociate',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
         max_temp_dist=0.2,
@@ -57,7 +57,6 @@ dataset = dict(
     img_pipeline=[
         dict(type='LoadImagePIL'),
         dict(type='ToTensor'),
-        dict(type='BGR2RGB'),
     ],
     meta_path=__meta_path__,
     test_mode=True,

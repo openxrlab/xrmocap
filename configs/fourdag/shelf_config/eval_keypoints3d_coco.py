@@ -1,6 +1,6 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = '../data/Shelf'
+__data_root__ = './xrmocap_data/Shelf'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
@@ -30,16 +30,16 @@ associator = dict(
         verbose=False,
         ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
         convention=pred_kps3d_convention),
-    identity_tracking=dict(
-        type='KeypointsDistanceTracking',
-        tracking_distance=0.7,
-        tracking_kps3d_convention=pred_kps3d_convention,
-        tracking_kps3d_name=[
-            'left_shoulder', 'right_shoulder', 'left_hip_extra',
-            'right_hip_extra'
-        ]),
+    # identity_tracking=dict(
+    #     type='KeypointsDistanceTracking',
+    #     tracking_distance=0.7,
+    #     tracking_kps3d_convention=pred_kps3d_convention,
+    #     tracking_kps3d_name=[
+    #         'left_shoulder', 'right_shoulder', 'left_hip_extra',
+    #         'right_hip_extra'
+    #     ]),
     associate_graph=dict(
-        type='FourDAGMatching',
+        type='FourDAGAssociate',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
         max_temp_dist=0.2,
@@ -63,7 +63,6 @@ dataset = dict(
     img_pipeline=[
         dict(type='LoadImagePIL'),
         dict(type='ToTensor'),
-        dict(type='BGR2RGB'),
     ],
     meta_path=__meta_path__,
     test_mode=True,

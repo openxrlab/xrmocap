@@ -12,7 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.utils.fourdag_utils import all_paf_mapping
+from .paf import ALL_PAF_MAPPING
 from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
 
 # yapf: enable
@@ -120,13 +120,15 @@ def convert_bottom_up_kps_paf(
     dst: str,
     approximate: bool = False,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
-) -> Keypoints:
-    """Convert keypoints following the mapping correspondence between src and
+) :
+    """Convert keypoints and pafs following the mapping correspondence between src and
     dst keypoints definition.
 
     Args:
-        keypoints (Keypoints):
-            An instance of Keypoints class.
+        kps_paf (List):
+            A list of dict of 2D keypoints and pafs in shape [{'joints':[],'pafs':[]},...]
+        src (str):
+            The name of source convention.
         dst (str):
             The name of destination convention.
         approximate (bool, optional):
@@ -137,16 +139,14 @@ def convert_bottom_up_kps_paf(
             Defaults to KEYPOINTS_FACTORY.
 
     Returns:
-        Keypoints:
-            An instance of Keypoints class, whose convention is dst,
-            and dtype, device are same as input.
+        
     """
     n_frame = len(kps_paf)
     dst_n_kps = get_keypoint_num(
         convention=dst, keypoints_factory=keypoints_factory)
     dst_idxs, src_idxs, _ = \
         get_mapping(src, dst, approximate, keypoints_factory)
-    paf_mapping = all_paf_mapping[src][dst]
+    paf_mapping = ALL_PAF_MAPPING[src][dst]
 
     dst_detections = []
     for i in range(n_frame):
@@ -186,16 +186,8 @@ def convert_bottom_up_kps_paf(
                     dst_detections[frame_id]['pafs'][
                         i] = dst_detections[frame_id]['pafs'][i] * (
                             dst_detections[frame_id]['pafs'][i] > 0.1)
-                # dst_detections[frame_id]['pafs'][i] = np.power(
-                #               dst_detections[frame_id]['pafs'][i], 2)
                 dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id][
                     'pafs'][i] * len(paf_mapping[i])
-                # if dst_detections[frame_id]['pafs'][i].shape[0] > 0
-                #       and dst_detections[frame_id]['pafs'][i].shape[1] > 0:
-                #     dst_detections[frame_id]['pafs'][i] =
-                #           dst_detections[frame_id]['pafs'][i] *
-                # (dst_detections[frame_id]['pafs'][i] ==
-                #   dst_detections[frame_id]['pafs'][i].max(1, keepdims=True))
             else:
                 if paf_mapping[i] < 0:
                     dst_detections[frame_id]['pafs'][i] = np.array(
@@ -205,11 +197,6 @@ def convert_bottom_up_kps_paf(
                     dst_detections[frame_id]['pafs'][i] = np.array(
                         kps_paf[frame_id]['pafs'][paf_mapping[i]],
                         dtype=np.float32)
-            #refine the pafs weight
-            dst_detections[frame_id]['pafs'][
-                i] = dst_detections[frame_id]['pafs'][i] * (
-                    dst_detections[frame_id]['pafs'][i] > 0.1)
-
     return dst_detections
 
 

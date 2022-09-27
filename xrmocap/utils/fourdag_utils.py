@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-skel_info = dict(
+LIMB_INFO = dict(
     fourdag_19=dict(
         n_kps=19,
         n_pafs=18,
@@ -39,7 +39,7 @@ skel_info = dict(
             -0.05510310083627701, -0.05260920152068138, 0.08009690046310425,
             0.08515729755163193
         ],
-        m_jShapeBlend=[
+        shape_blend=[
             -0.0003980599867645651,
             -0.00011868900037370622,
             -2.9507400540751405e-05,
@@ -638,17 +638,6 @@ skel_info = dict(
     ),
 )
 
-all_paf_mapping = dict(
-    openpose_25=dict(
-        openpose_25=list(range(26)),
-        fourdag_19=[
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 23
-        ],
-        coco=[
-            17, 16, 19, 18, -14, -10, [-11, 7], 12, 8, 13, 9, [-11, 0, 4],
-            [-7, 0, 3], [-4, 3], 5, 1, 6, 2
-        ]))
-
 
 def welsch(c, x):
     x = x / c
@@ -693,11 +682,11 @@ def rodrigues(vec):
 
 def rodrigues_jacobi(vec):
     theta = np.linalg.norm(vec)
-    dSkew = np.zeros((3, 9), dtype=np.float32)
-    dSkew[0, 5] = dSkew[1, 6] = dSkew[2, 1] = -1
-    dSkew[0, 7] = dSkew[1, 2] = dSkew[2, 3] = 1
+    d_skew = np.zeros((3, 9), dtype=np.float32)
+    d_skew[0, 5] = d_skew[1, 6] = d_skew[2, 1] = -1
+    d_skew[0, 7] = d_skew[1, 2] = d_skew[2, 3] = 1
     if abs(theta) < 1e-5:
-        return -dSkew
+        return -d_skew
     else:
         c = np.cos(theta)
         s = np.sin(theta)
@@ -727,5 +716,5 @@ def rodrigues_jacobi(vec):
                     jaocbi[i, k + k + k + j] = (
                         a[0] * identity[j, k] + a[1] * rrt[j, k] +
                         a[2] * drrt[i, j + j + j + k] + a[3] * m_skew[j, k] +
-                        a[4] * dSkew[i, j + j + j + k])
+                        a[4] * d_skew[i, j + j + j + k])
         return jaocbi
