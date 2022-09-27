@@ -12,8 +12,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from .paf import ALL_PAF_MAPPING
 from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
+from .paf import ALL_PAF_MAPPING
 
 # yapf: enable
 if isinstance(KEYPOINTS_FACTORY, dict):
@@ -120,9 +120,9 @@ def convert_bottom_up_kps_paf(
     dst: str,
     approximate: bool = False,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
-) :
-    """Convert keypoints and pafs following the mapping correspondence between src and
-    dst keypoints definition.
+):
+    """Convert keypoints and pafs following the mapping correspondence between
+    src and dst keypoints definition.
 
     Args:
         kps_paf (List):
@@ -139,7 +139,6 @@ def convert_bottom_up_kps_paf(
             Defaults to KEYPOINTS_FACTORY.
 
     Returns:
-        
     """
     n_frame = len(kps_paf)
     dst_n_kps = get_keypoint_num(

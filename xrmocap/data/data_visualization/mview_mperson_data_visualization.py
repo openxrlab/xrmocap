@@ -212,7 +212,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 mview_plot_arr, video_path, logger=self.logger)
 
     def visualize_perception_2d_bottm_up(self, scene_idx: int) -> None:
-        """Visualize bottom-up associated 2D perception keypoints2d data. 
+        """Visualize bottom-up associated 2D perception keypoints2d data.
 
         Args:
             scene_idx (int):

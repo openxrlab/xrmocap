@@ -83,7 +83,14 @@ def evaluate(pred_keypoints3d: Keypoints,
     pa_mpjpe_mean, pa_mpjpe_std = np.mean(pa_mpjpe), np.std(pa_mpjpe)
     pck_50 = np.mean(pck_50) * 100.  # percentage
     pck_100 = np.mean(pck_100) * 100.  # percentage
-    return dict(mpjpe_mean=mpjpe_mean,mpjpe_std=mpjpe_std,pa_mpjpe_mean=pa_mpjpe_mean,pa_mpjpe_std=pa_mpjpe_std,pck_50=pck_50,pck_100=pck_100)
+    return dict(
+        mpjpe_mean=mpjpe_mean,
+        mpjpe_std=mpjpe_std,
+        pa_mpjpe_mean=pa_mpjpe_mean,
+        pa_mpjpe_std=pa_mpjpe_std,
+        pck_50=pck_50,
+        pck_100=pck_100)
+
 
 def calc_limbs_accuracy(
     pred_keypoints3d,

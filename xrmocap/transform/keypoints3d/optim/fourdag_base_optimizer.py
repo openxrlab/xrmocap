@@ -1,10 +1,11 @@
 import numpy as np
-
-from xrmocap.utils.fourdag_utils import LIMB_INFO
-from xrmocap.ops.triangulation.builder import (
-    BaseTriangulator, build_triangulator,
-)
 from typing import Union
+
+from xrmocap.ops.triangulation.builder import (
+    BaseTriangulator,
+    build_triangulator,
+)
+from xrmocap.utils.fourdag_utils import LIMB_INFO
 
 
 class FourDAGBaseOptimizer():
@@ -18,8 +19,8 @@ class FourDAGBaseOptimizer():
         """Base class for fourdag optimizater.
 
         Args:
-            triangulator: 
-                triangulator to construct 3D keypoints  
+            triangulator:
+                triangulator to construct 3D keypoints
             kps_convention (str):
                 The name of keypoints convention.
             min_triangulate_cnt (int):
@@ -42,12 +43,13 @@ class FourDAGBaseOptimizer():
         self.projs = None
         self.trace_limbs = dict()
         self.trace_limb_infos = dict()
-    
+
     def triangulate_person(self, limb2d):
-        points2d = limb2d.T.reshape((-1, LIMB_INFO[self.kps_convention]['n_kps'], 3))
+        points2d = limb2d.T.reshape(
+            (-1, LIMB_INFO[self.kps_convention]['n_kps'], 3))
         points3d = self.triangulator.triangulate(points2d)
         mask = self.triangulator.loss < self.triangulate_thresh
-        limb = np.concatenate((points3d.T, mask.reshape(1,-1)), axis=0)
+        limb = np.concatenate((points3d.T, mask.reshape(1, -1)), axis=0)
         return limb
 
     def set_cameras(self, camera_parameters):

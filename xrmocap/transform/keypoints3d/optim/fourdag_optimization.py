@@ -1,16 +1,17 @@
 import copy
 import numpy as np
 from typing import Union
+
+from xrmocap.ops.triangulation.builder import BaseTriangulator
 from xrmocap.transform.keypoints3d.optim.fourdag_base_optimizer import (
     FourDAGBaseOptimizer, )
 from xrmocap.utils.fourdag_utils import (
+    LIMB_INFO,
     rodrigues,
     rodrigues_jacobi,
-    LIMB_INFO,
     welsch,
 )
-from xrmocap.ops.triangulation.builder import (
-    BaseTriangulator, )
+
 
 class LimbInfo():
 
@@ -51,6 +52,7 @@ class LimbInfo():
     def get_shape(self):
         return self.data[-LIMB_INFO[self.kps_convention]['shape_size']:]
 
+
 class Term():
 
     def __init__(self):
@@ -78,7 +80,9 @@ class Term():
         self.w_regular_shape = 0.
         self.w_square_shape = 0.
 
+
 class LimbSolver():
+
     def __init__(self, kps_convention) -> None:
         self.kps_convention = kps_convention
         self.m_joints = np.array(
@@ -97,23 +101,25 @@ class LimbSolver():
             - self.shape_blend[3 * LIMB_INFO[self.kps_convention]['joint_parent'][joint_id]:3 * LIMB_INFO[self.kps_convention]['joint_parent'][joint_id]+3]
 
     def cal_joint_final_1(self, chain_warps):
-        joint_final = np.zeros((3, int(chain_warps.shape[1] / 4)), dtype=np.float32)
+        joint_final = np.zeros((3, int(chain_warps.shape[1] / 4)),
+                               dtype=np.float32)
         for joint_id in range(joint_final.shape[1]):
-            joint_final[:,
-                   joint_id] = (chain_warps[0:0 + 3,
-                                       4 * joint_id + 3:4 * joint_id + 3 + 1]).reshape(
-                                           (-1))
+            joint_final[:, joint_id] = (chain_warps[0:0 + 3, 4 * joint_id +
+                                                    3:4 * joint_id + 3 +
+                                                    1]).reshape((-1))
         return joint_final
 
     def cal_joint_final_2(self, param, j_cut=-1):
         j_cut = j_cut if j_cut > 0 else self.m_joints.shape[1]
         joint_blend = self.cal_joint_blend(param)
         return self.cal_joint_final_1(
-            self.cal_chain_warps(self.cal_node_warps(param, joint_blend[:, :j_cut])))
+            self.cal_chain_warps(
+                self.cal_node_warps(param, joint_blend[:, :j_cut])))
 
     def cal_joint_blend(self, param):
         jOffset = np.matmul(self.shape_blend, param.get_shape())
-        joint_blend = self.m_joints + jOffset.reshape((self.m_joints.shape[1], 3)).T
+        joint_blend = self.m_joints + jOffset.reshape(
+            (self.m_joints.shape[1], 3)).T
         return joint_blend
 
     def cal_node_warps(self, param, joint_blend):
@@ -121,15 +127,16 @@ class LimbSolver():
         for joint_id in range(joint_blend.shape[1]):
             matrix = np.identity(4, dtype=np.float32)
             if joint_id == 0:
-                matrix[:3,
-                       -1:] = (joint_blend[:, joint_id] + param.get_trans()).reshape(
-                           (-1, 1))
+                matrix[:3, -1:] = (joint_blend[:, joint_id] +
+                                   param.get_trans()).reshape((-1, 1))
             else:
-                matrix[:3, -1:] = (joint_blend[:, joint_id] - joint_blend[:, LIMB_INFO[
-                    self.kps_convention]['joint_parent'][joint_id]]).reshape(
-                        (-1, 1))
+                matrix[:3, -1:] = (
+                    joint_blend[:, joint_id] -
+                    joint_blend[:, LIMB_INFO[self.kps_convention]
+                                ['joint_parent'][joint_id]]).reshape((-1, 1))
 
-            matrix[:3, :3] = rodrigues(param.get_pose()[3 * joint_id:3 * joint_id + 3])
+            matrix[:3, :3] = rodrigues(
+                param.get_pose()[3 * joint_id:3 * joint_id + 3])
             node_warps[:4, 4 * joint_id:4 * joint_id + 4] = matrix
         return node_warps
 
@@ -138,19 +145,20 @@ class LimbSolver():
         for joint_id in range(int(node_warps.shape[1] / 4)):
             if joint_id == 0:
                 chain_warps[:, joint_id * 4:joint_id * 4 +
-                           4] = node_warps[:, joint_id * 4:joint_id * 4 + 4]
+                            4] = node_warps[:, joint_id * 4:joint_id * 4 + 4]
             else:
                 chain_warps[:, joint_id * 4:joint_id * 4 + 4] = np.matmul(
                     chain_warps[:,
-                               LIMB_INFO[self.kps_convention]['joint_parent']
-                               [joint_id] * 4:LIMB_INFO[self.kps_convention]
-                               ['joint_parent'][joint_id] * 4 + 4],
+                                LIMB_INFO[self.kps_convention]['joint_parent']
+                                [joint_id] * 4:LIMB_INFO[self.kps_convention]
+                                ['joint_parent'][joint_id] * 4 + 4],
                     node_warps[:, joint_id * 4:joint_id * 4 + 4])
         return chain_warps
 
     def align_root_affine(self, term, param):
         # align root affine
         param.data[0:0 + 3] = term.j3d_target[:, 0][:3] - self.m_joints[:, 0]
+
         def cal_axes(x_axis, y_axis):
             axes = np.zeros((3, 3), dtype=np.float32)
             axes[:, 0] = x_axis / np.linalg.norm(x_axis)
@@ -175,82 +183,96 @@ class LimbSolver():
                    3][:3] = angle * np.array([x, y, z], dtype=np.float32)
 
     def solve_pose(self,
-                  term,
-                  param,
-                  maxIter_time,
-                  hierarchy=False,
-                  update_thresh=1e-4):
+                   term,
+                   param,
+                   maxIter_time,
+                   hierarchy=False,
+                   update_thresh=1e-4):
         joint_blend = self.cal_joint_blend(param)
         hier_size = max(LIMB_INFO[self.kps_convention]['hierarchy_map'])
         hier = 0 if hierarchy else hier_size
         j_cut = 0
         while hier <= hier_size:
-            while j_cut < LIMB_INFO[self.kps_convention]['n_kps'] and LIMB_INFO[
-                    self.kps_convention]['hierarchy_map'][j_cut] <= hier:
+            while j_cut < LIMB_INFO[
+                    self.kps_convention]['n_kps'] and LIMB_INFO[
+                        self.kps_convention]['hierarchy_map'][j_cut] <= hier:
                 j_cut += 1
             for iter_time in range(maxIter_time):
                 node_warps = self.cal_node_warps(param, joint_blend[:, :j_cut])
                 chain_warps = self.cal_chain_warps(node_warps)
                 joint_final = self.cal_joint_final_1(chain_warps)
                 joint_jacobi = np.zeros((3 * j_cut, 3 + 3 * j_cut),
-                                       dtype=np.float32)
-                ATA = np.zeros((3 + 3 * j_cut, 3 + 3 * j_cut), dtype=np.float32)
+                                        dtype=np.float32)
+                ATA = np.zeros((3 + 3 * j_cut, 3 + 3 * j_cut),
+                               dtype=np.float32)
                 ATb = np.zeros((3 + 3 * j_cut), dtype=np.float32)
                 node_warps_jacobi = np.zeros((9, 3 * j_cut), dtype=np.float32)
                 for joint_id in range(j_cut):
-                    node_warps_jacobi[:,
-                                    3 * joint_id:3 * joint_id + 3] = rodrigues_jacobi(
-                                        param.get_pose()[3 * joint_id:3 * joint_id +
-                                                         3]).T
+                    node_warps_jacobi[:, 3 * joint_id:3 * joint_id +
+                                      3] = rodrigues_jacobi(
+                                          param.get_pose()[3 * joint_id:3 *
+                                                           joint_id + 3]).T
                 for d_jidx in range(j_cut):
                     joint_jacobi[3 * d_jidx:3 * d_jidx + 3, :3] = np.identity(
                         3, dtype=np.float32)
                     for dAxis in range(3):
-                        d_chain_warps = np.zeros((4, 4 * j_cut), dtype=np.float32)
+                        d_chain_warps = np.zeros((4, 4 * j_cut),
+                                                 dtype=np.float32)
                         valid = np.zeros(j_cut, dtype=np.float32)
                         valid[d_jidx] = 1
                         d_chain_warps[:3, 4 * d_jidx:4 * d_jidx +
-                                    3] = node_warps_jacobi[:, 3 * d_jidx +
-                                                         dAxis].copy().reshape(
-                                                             (3, 3)).T
+                                      3] = node_warps_jacobi[:, 3 * d_jidx +
+                                                             dAxis].copy(
+                                                             ).reshape(
+                                                                 (3, 3)).T
                         if d_jidx != 0:
-                            d_chain_warps[:, 4 * d_jidx:4 * d_jidx + 4] = np.matmul(
-                                chain_warps[:,
-                                           4 * LIMB_INFO[self.kps_convention]
-                                           ['joint_parent'][d_jidx]:4 *
-                                           LIMB_INFO[self.kps_convention]
-                                           ['joint_parent'][d_jidx] + 4],
-                                d_chain_warps[:, 4 * d_jidx:4 * d_jidx + 4])
+                            d_chain_warps[:, 4 * d_jidx:4 * d_jidx +
+                                          4] = np.matmul(
+                                              chain_warps[:, 4 * LIMB_INFO[
+                                                  self.kps_convention]
+                                                          ['joint_parent']
+                                                          [d_jidx]:4 *
+                                                          LIMB_INFO[
+                                                              self.
+                                                              kps_convention]
+                                                          ['joint_parent']
+                                                          [d_jidx] + 4],
+                                              d_chain_warps[:, 4 *
+                                                            d_jidx:4 * d_jidx +
+                                                            4])
 
                         for joint_id in range(d_jidx + 1, j_cut):
                             prtIdx = LIMB_INFO[
                                 self.kps_convention]['joint_parent'][joint_id]
                             valid[joint_id] = valid[prtIdx]
                             if valid[joint_id]:
-                                d_chain_warps[:,
-                                            4 * joint_id:4 * joint_id + 4] = np.matmul(
-                                                d_chain_warps[:, 4 *
-                                                            prtIdx:4 * prtIdx +
-                                                            4],
-                                                node_warps[:, 4 *
-                                                          joint_id:4 * joint_id + 4])
+                                d_chain_warps[:, 4 * joint_id:4 * joint_id +
+                                              4] = np.matmul(
+                                                  d_chain_warps[:,
+                                                                4 * prtIdx:4 *
+                                                                prtIdx + 4],
+                                                  node_warps[:,
+                                                             4 * joint_id:4 *
+                                                             joint_id + 4])
                                 joint_jacobi[joint_id * 3:joint_id * 3 + 3,
-                                            3 + d_jidx * 3 + dAxis:3 +
-                                            d_jidx * 3 + dAxis +
-                                            1] = d_chain_warps[0:0 + 3,
-                                                             4 * joint_id +
-                                                             3:4 * joint_id + 3 +
-                                                             1]
+                                             3 + d_jidx * 3 + dAxis:3 +
+                                             d_jidx * 3 + dAxis +
+                                             1] = d_chain_warps[0:0 + 3,
+                                                                4 * joint_id +
+                                                                3:4 *
+                                                                joint_id + 3 +
+                                                                1]
                 if term.w_joint3d > 0:
                     for joint_id in range(j_cut):
                         if term.j3d_target[3, joint_id] > 0:
                             w = term.w_joint3d * term.j3d_target[3, joint_id]
-                            jacobi = joint_jacobi[3 * joint_id:3 * joint_id + 3]
+                            jacobi = joint_jacobi[3 * joint_id:3 * joint_id +
+                                                  3]
                             ATA += w * np.matmul(jacobi.T, jacobi)
-                            ATb += w * np.matmul(
-                                jacobi.T,
-                                (term.j3d_target[0:0 + 3, joint_id:joint_id + 1] -
-                                 joint_final[:, joint_id].reshape((-1, 1)))).reshape(-1)
+                            ATb += w * np.matmul(jacobi.T, (
+                                term.j3d_target[0:0 + 3, joint_id:joint_id + 1]
+                                - joint_final[:, joint_id].reshape(
+                                    (-1, 1)))).reshape(-1)
 
                 if term.w_joint2d > 0:
                     for view in range(int(term.projs.shape[1] / 4)):
@@ -263,7 +285,8 @@ class LimbSolver():
                             for joint_id in range(j_cut):
                                 if j2d_target[2, joint_id] > 0:
                                     abc = np.matmul(
-                                        proj, np.append(joint_final[:, joint_id], 1))
+                                        proj,
+                                        np.append(joint_final[:, joint_id], 1))
                                     proj_jacobi = np.array(
                                         [
                                             1.0 / abc[2], 0.0, -abc[0] /
@@ -274,15 +297,19 @@ class LimbSolver():
                                     proj_jacobi = np.matmul(
                                         proj_jacobi, proj[:, :3])
 
-                                    w = term.w_joint2d * j2d_target[2, joint_id]
+                                    w = term.w_joint2d * j2d_target[2,
+                                                                    joint_id]
                                     jacobi = np.matmul(
                                         proj_jacobi,
-                                        joint_jacobi[3 * joint_id:3 * joint_id + 3])
+                                        joint_jacobi[3 *
+                                                     joint_id:3 * joint_id +
+                                                     3])
 
                                     ATA += w * np.matmul(jacobi.T, jacobi)
                                     ATb += w * np.matmul(
-                                        jacobi.T, j2d_target[:2, joint_id:joint_id +
-                                                            1].reshape(-1) -
+                                        jacobi.T,
+                                        j2d_target[:2, joint_id:joint_id +
+                                                   1].reshape(-1) -
                                         abc[:2] / abc[2])
 
                 if term.w_temporal_trans > 0:
@@ -322,7 +349,8 @@ class LimbSolver():
                 LIMB_INFO[self.kps_convention]['shape_size'], dtype=np.float32)
 
             if term.w_bone3d > 0:
-                for joint_id in range(1, LIMB_INFO[self.kps_convention]['n_kps']):
+                for joint_id in range(1,
+                                      LIMB_INFO[self.kps_convention]['n_kps']):
                     if term.bone3d_target[1, joint_id - 1] > 0:
                         w = term.w_bone3d * term.bone3d_target[1, joint_id - 1]
                         prtIdx = LIMB_INFO[
@@ -346,8 +374,8 @@ class LimbSolver():
                 for joint_id in range(LIMB_INFO[self.kps_convention]['n_kps']):
                     if joint_id == 0:
                         joint_jacobi[3 * joint_id:3 * joint_id +
-                                    3] = self.shape_blend[3 * joint_id:3 * joint_id +
-                                                            3]
+                                     3] = self.shape_blend[3 * joint_id:3 *
+                                                           joint_id + 3]
                     else:
                         prtIdx = LIMB_INFO[
                             self.kps_convention]['joint_parent'][joint_id]
@@ -355,14 +383,17 @@ class LimbSolver():
                             + chain_warps[0:3,4*prtIdx+3] * (self.shape_blend[3 * joint_id:3 * joint_id+3] - self.shape_blend[3 * prtIdx:3 * prtIdx+3])
 
                 if term.w_joint3d > 0:
-                    for joint_id in range(LIMB_INFO[self.kps_convention]['n_kps']):
+                    for joint_id in range(
+                            LIMB_INFO[self.kps_convention]['n_kps']):
                         if term.j3d_target[3, joint_id] > 0:
                             w = term.w_joint3d * term.j3d_target[3, joint_id]
-                            jacobi = joint_jacobi[3 * joint_id:3 * joint_id + 3]
+                            jacobi = joint_jacobi[3 * joint_id:3 * joint_id +
+                                                  3]
                             ATA += w * np.matmul(jacobi.T, jacobi)
                             ATb += w * np.matmul(
-                                jacobi.T, (term.j3d_target[0 + 3, joint_id + 1] -
-                                           joint_final[:, joint_id]))
+                                jacobi.T,
+                                (term.j3d_target[0 + 3, joint_id + 1] -
+                                 joint_final[:, joint_id]))
 
                 if term.w_joint2d > 0:
                     for view in range(int(len(term.projs[0]) / 4)):
@@ -376,20 +407,22 @@ class LimbSolver():
                             for joint_id in range(
                                     LIMB_INFO[self.kps_convention]['n_kps']):
                                 if j2d_target[2, joint_id] > 0:
-                                    abc = proj * np.append(joint_final[:, joint_id], 1)
+                                    abc = proj * np.append(
+                                        joint_final[:, joint_id], 1)
                                     proj_jacobi = np.zeros((2, 3),
-                                                          dtype=np.float32)
+                                                           dtype=np.float32)
                                     proj_jacobi = np.array([1.0 / abc[2], 0.0, -abc[0] / (abc[2]*abc[2]), \
                                         0.0, 1.0 / abc[2], -abc[1] / (abc[2]*abc[2])], dtype=np.float32).reshape((2,3))
                                     proj_jacobi = proj_jacobi * proj[:, :3]
 
-                                    w = term.w_joint2d * j2d_target[2, joint_id]
-                                    jacobi = proj_jacobi * joint_jacobi[3 *
-                                                                      joint_id:3 *
-                                                                      joint_id + 3]
+                                    w = term.w_joint2d * j2d_target[2,
+                                                                    joint_id]
+                                    jacobi = proj_jacobi * joint_jacobi[
+                                        3 * joint_id:3 * joint_id + 3]
                                     ATA += w * np.matmul(jacobi.T, jacobi)
                                     ATb += w * np.matmul(
-                                        jacobi.T, j2d_target[0 + 2, joint_id + 1] -
+                                        jacobi.T,
+                                        j2d_target[0 + 2, joint_id + 1] -
                                         abc[:2] / abc[2])
 
             if term.w_temporal_shape > 0:
@@ -416,6 +449,7 @@ class LimbSolver():
             if np.linalg.norm(delta) < update_thresh:
                 break
 
+
 class FourDAGOptimizer(FourDAGBaseOptimizer):
 
     def __init__(self,
@@ -437,12 +471,11 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                  triangulate_thresh: float = 0.05,
                  kps_convention: str = 'fourdag_19',
                  logger=None):
-        
         """optimize with 2D projections loss, shape prior, temporal smoothing.
 
         Args:
-            triangulator: 
-                triangulator to construct 3D keypoints  
+            triangulator:
+                triangulator to construct 3D keypoints
             active_rate (float):
                 active value degression rate
             min_track_cnt (int):
@@ -480,9 +513,12 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                 Defaults to None.
         """
 
-        super().__init__(triangulator=triangulator,kps_convention=kps_convention,
-                        min_triangulate_cnt=min_triangulate_cnt,
-                        triangulate_thresh=triangulate_thresh,logger=logger)
+        super().__init__(
+            triangulator=triangulator,
+            kps_convention=kps_convention,
+            min_triangulate_cnt=min_triangulate_cnt,
+            triangulate_thresh=triangulate_thresh,
+            logger=logger)
         self.active_rate = active_rate
         self.min_track_cnt = min_track_cnt
         self.bone_capacity = bone_capacity
@@ -526,8 +562,8 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                                      info.boneLen.shape[0], dtype=np.float32)))
                             shape_term.w_bone3d = self.w_bone3d
                             shape_term.w_square_shape = self.w_square_shape
-                            self.limb_solver.solve_shape(shape_term, info,
-                                                     self.shape_max_iter)
+                            self.limb_solver.solve_shape(
+                                shape_term, info, self.shape_max_iter)
 
                             # align pose
                             pose_term = Term()
@@ -535,8 +571,8 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                             pose_term.w_joint3d = self.w_joint3d
                             pose_term.w_regular_pose = self.w_regular_pose
                             self.limb_solver.align_root_affine(pose_term, info)
-                            self.limb_solver.solve_pose(pose_term, info,
-                                                    self.pose_max_iter)
+                            self.limb_solver.solve_pose(
+                                pose_term, info, self.pose_max_iter)
                             limb[:3] = self.limb_solver.cal_joint_final_2(info)
                             info.shape_fixed = True
                     self.trace_limbs[corr_id] = limb
@@ -558,24 +594,27 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                         corr_cnt += ((
                             pose_term.
                             j2d_target[:, view *
-                                      LIMB_INFO[self.
-                                                kps_convention]['n_kps']:view *
-                                      LIMB_INFO[self.kps_convention]['n_kps'] +
-                                      LIMB_INFO[self.kps_convention]['n_kps']]
+                                       LIMB_INFO[self.kps_convention]['n_kps']:
+                                       view *
+                                       LIMB_INFO[self.kps_convention]['n_kps'] +
+                                       LIMB_INFO[self.kps_convention]['n_kps']]
                             [2].T > 0).astype(np.int))
 
-                    for joint_id in range(LIMB_INFO[self.kps_convention]['n_kps']):
+                    for joint_id in range(
+                            LIMB_INFO[self.kps_convention]['n_kps']):
                         if corr_cnt[joint_id] <= 1:
                             j_confidence[joint_id] = 0
                             for view in range(int(self.projs.shape[1] / 4)):
                                 pose_term.j2d_target[:, view * LIMB_INFO[
-                                    self.kps_convention]['n_kps'] + joint_id] = 0
+                                    self.kps_convention]['n_kps'] +
+                                                     joint_id] = 0
 
                     pose_term.w_regular_pose = self.w_regular_pose
                     pose_term.paramPrev = info
                     pose_term.w_temporal_trans = self.w_temporal_trans
                     pose_term.w_temporal_pose = self.w_temporal_pose
-                    self.limb_solver.solve_pose(pose_term, info, self.pose_max_iter)
+                    self.limb_solver.solve_pose(pose_term, info,
+                                                self.pose_max_iter)
                     limb[:3] = self.limb_solver.cal_joint_final_2(info)
                     limb[3] = j_confidence.T
                     # update active
@@ -584,8 +623,9 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                 limb = self.triangulate_person(limbs2d[corr_id])
                 # alloc new person
                 if sum(limb[3] > 0) >= self.min_triangulate_cnt:
-                    self.trace_limb_infos[corr_id] = LimbInfo(self.kps_convention)
-                    info = self.trace_limb_infos[corr_id] 
+                    self.trace_limb_infos[corr_id] = LimbInfo(
+                        self.kps_convention)
+                    info = self.trace_limb_infos[corr_id]
                     info.push_previous_bones(limb)
                     info.active = self.init_active
                     self.trace_limbs[corr_id] = limb

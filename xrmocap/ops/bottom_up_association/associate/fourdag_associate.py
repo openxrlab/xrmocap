@@ -4,7 +4,12 @@ import logging
 import numpy as np
 from typing import Union
 
-from xrmocap.utils.ourdag_utils import LIMB_INFO, line2linedist, point2linedist,welsch
+from xrmocap.utils.ourdag_utils import (
+    LIMB_INFO,
+    line2linedist,
+    point2linedist,
+    welsch,
+)
 
 
 class Clique():
@@ -84,7 +89,7 @@ class FourDAGAssociate():
                  min_check_cnt: int = 1,
                  normalize_edges: bool = True,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """ 
+        """
 
         Args:
             kps_convention (str):
@@ -216,7 +221,7 @@ class FourDAGAssociate():
         self.last_multi_kps3d = last_multi_kps3d
         self.construct_graph()
         self.solve_graph()
-        
+
         return self.m_persons_map
 
     def construct_graph(self):
@@ -228,7 +233,7 @@ class FourDAGAssociate():
         self._calculate_bone_nodes()
         self._calculate_bone_epi_edges()
         self._calculate_bone_temp_edges()
-    
+
     def solve_graph(self):
         self.initialize()
         self.enumerate_clques()
@@ -325,12 +330,11 @@ class FourDAGAssociate():
             joint1, joint2 = self.paf_dict[0][paf_id], self.paf_dict[1][paf_id]
             for view in range(self.n_views):
                 self.m_bone_nodes[paf_id][view] = []
-                for joint1_candidate in range(
-                        len(self.kps2d[view][joint1])):
+                for joint1_candidate in range(len(self.kps2d[view][joint1])):
                     for joint2_candidate in range(
                             len(self.kps2d[view][joint2])):
-                        if self.pafs[view][paf_id][
-                                joint1_candidate, joint2_candidate] > 0:
+                        if self.pafs[view][paf_id][joint1_candidate,
+                                                   joint2_candidate] > 0:
                             self.m_bone_nodes[paf_id][view].append(
                                 (joint1_candidate, joint2_candidate))
 
@@ -384,7 +388,8 @@ class FourDAGAssociate():
 
         self.m_persons_map = {}
         for person_id in self.last_multi_kps3d:
-            self.m_persons_map[person_id] = np.full((self.n_kps, self.n_views), -1)
+            self.m_persons_map[person_id] = np.full((self.n_kps, self.n_views),
+                                                    -1)
 
     def enumerate_clques(self):
         tmp_cliques = {i: [] for i in range(self.n_pafs)}
@@ -414,8 +419,9 @@ class FourDAGAssociate():
                         for i in range(len(pick)):
                             if pick[i] != -1:
                                 if i == len(pick) - 1:
-                                    clique.proposal[i] = list(self.last_multi_kps3d.keys())[available_node[i][i][
-                                        pick[i]]]
+                                    clique.proposal[i] = list(
+                                        self.last_multi_kps3d.keys())[
+                                            available_node[i][i][pick[i]]]
                                 else:
                                     clique.proposal[i] = available_node[i][i][
                                         pick[i]]
@@ -436,8 +442,8 @@ class FourDAGAssociate():
                         if pick[index - 1] >= 0:
                             for view in range(index, self.n_views):
                                 available_node[index][view] = []
-                                epiEdges = self.m_bone_epi_edges[paf_id][index -
-                                                                       1][view]
+                                epiEdges = self.m_bone_epi_edges[paf_id][
+                                    index - 1][view]
                                 bone1_id = available_node[index -
                                                           1][index -
                                                              1][pick[index -
@@ -547,6 +553,7 @@ class FourDAGAssociate():
 
                     self.m_persons_map[person_id] = person
                     return False
+
                 # ('1. A & B not assigned yet')
                 if allocFlag():
                     person = np.full((self.n_kps, self.n_views), -1)
@@ -739,8 +746,9 @@ class FourDAGAssociate():
             for view2 in range(view1 + 1, self.n_views):
                 if clique.proposal[view2] == -1:
                     continue
-                scores.append(self.m_bone_epi_edges[clique.paf_id][view1][view2][
-                    clique.proposal[view1], clique.proposal[view2]])
+                scores.append(self.m_bone_epi_edges[clique.paf_id][view1]
+                              [view2][clique.proposal[view1],
+                                      clique.proposal[view2]])
 
         if len(scores) > 0:
             epi_score = sum(scores) / len(scores)
@@ -754,7 +762,8 @@ class FourDAGAssociate():
                 if clique.proposal[view] == -1:
                     continue
                 scores.append(self.m_bone_temp_edges[clique.paf_id][view][
-                    list(self.last_multi_kps3d.keys()).index(person_id), clique.proposal[view]])
+                    list(self.last_multi_kps3d.keys()).index(person_id),
+                    clique.proposal[view]])
 
         if len(scores) > 0:
             temp_score = sum(scores) / len(scores)
@@ -767,15 +776,14 @@ class FourDAGAssociate():
                 continue
             candidata_bone = self.m_bone_nodes[clique.paf_id][view][
                 clique.proposal[view]]
-            scores.append(
-                self.pafs[view][clique.paf_id][candidata_bone[0],
-                                                            candidata_bone[1]])
+            scores.append(self.pafs[view][clique.paf_id][candidata_bone[0],
+                                                         candidata_bone[1]])
 
         paf_score = sum(scores) / len(scores)
         var = sum(np.array(clique.proposal[:self.n_views]) >= 0)
         view_score = welsch(self.c_view_cnt, var)
-        hier_score = 1 - pow(self.m_paf_hier[clique.paf_id] / self.m_paf_hier_size,
-                            4)
+        hier_score = 1 - pow(
+            self.m_paf_hier[clique.paf_id] / self.m_paf_hier_size, 4)
         return (self.w_epi * epi_score + self.w_temp * temp_score +
                 self.w_paf * paf_score + self.w_view * view_score +
                 self.w_hier * hier_score) / (
@@ -812,8 +820,7 @@ class FourDAGAssociate():
             if joint_id == self.paf_dict[1][paf_id]:
                 joint_candidate1, joint_candidate2 = joint_candidate2, joint_candidate1
 
-            if self.pafs[view][paf_id][joint_candidate1,
-                                                    joint_candidate2] > 0:
+            if self.pafs[view][paf_id][joint_candidate1, joint_candidate2] > 0:
                 check_cnt = check_cnt + 1
             else:
                 return -1
@@ -822,8 +829,8 @@ class FourDAGAssociate():
             if i == view or person[joint_id, i] == -1:
                 continue
             if self.m_epi_edges[joint_id][view][i][candidate,
-                                                  int(person[joint_id,
-                                                             i])] > 0:
+                                                   int(person[joint_id,
+                                                              i])] > 0:
                 check_cnt = check_cnt + 1
             else:
                 return -1
@@ -916,7 +923,7 @@ class FourDAGAssociate():
                 if slave[joint_id, view] != -1:
                     master[joint_id, view] = slave[joint_id, view]
                     self.m_assign_map[view][joint_id][slave[joint_id,
-                                                           view]] = master_id
+                                                            view]] = master_id
 
         self.m_persons_map[master_id] = master
         self.m_persons_map.pop(slave_id)

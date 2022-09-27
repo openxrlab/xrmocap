@@ -24,6 +24,7 @@ from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 
 class BottomUpAssociationEvaluation:
     """Bottom-up association evaluation."""
+
     def __init__(self,
                  output_dir: str,
                  selected_limbs_name: List[List[str]],
@@ -183,8 +184,11 @@ class BottomUpAssociationEvaluation:
         self.logger.info('\n' + eval_table.get_string())
         evel_dict = evaluate(
             pred_keypoints3d_, gt_keypoints3d_, logger=self.logger)
-        self.logger.info(f'MPJPE: {evel_dict["mpjpe_mean"]:.2f} ± {evel_dict["mpjpe_std"]:.2f} mm')
-        self.logger.info(f'PA-MPJPE: {evel_dict["pa_mpjpe_mean"]:.2f} ±' f'{evel_dict["pa_mpjpe_std"]:.2f} mm')
+        self.logger.info(
+            f'MPJPE: {evel_dict["mpjpe_mean"]:.2f} ± {evel_dict["mpjpe_std"]:.2f} mm'
+        )
+        self.logger.info(f'PA-MPJPE: {evel_dict["pa_mpjpe_mean"]:.2f} ±'
+                         f'{evel_dict["pa_mpjpe_std"]:.2f} mm')
         self.logger.info(f'PCK@50mm: {evel_dict["pck_50"]:.2f} %')
         self.logger.info(f'PCK@100mm: {evel_dict["pck_100"]:.2f} %')
 

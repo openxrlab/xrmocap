@@ -1,8 +1,8 @@
-type='FourDAGAssociator'
-kps_convention='fourdag_19'
-min_asgn_cnt=5
-use_tracking_edges=True
-keypoints3d_optimizer=dict(
+type = 'FourDAGAssociator'
+kps_convention = 'fourdag_19'
+min_asgn_cnt = 5
+use_tracking_edges = True
+keypoints3d_optimizer = dict(
     type='FourDAGOptimizer',
     triangulator=dict(type='JacobiTriangulator', ),
     active_rate=0.1,
@@ -21,7 +21,7 @@ keypoints3d_optimizer=dict(
     init_active=0.9,
     triangulate_thresh=0.05,
 )
-associate_graph=dict(
+associate_graph = dict(
     type='FourDAGAssociate',
     kps_convention='fourdag_19',
     max_epi_dist=0.15,
