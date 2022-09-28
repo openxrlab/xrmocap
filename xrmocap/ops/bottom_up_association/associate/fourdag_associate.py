@@ -13,8 +13,16 @@ from xrmocap.utils.fourdag_utils import (
 
 
 class Clique():
-
     def __init__(self, paf_id, proposal, score=-1) -> None:
+        '''class for limb clique, which is used for solve 4D graph
+        paf_id (int):
+            paf index
+        proposal (List):
+            a list of allocated bone index to the clique
+        score (float):
+            the score of the clique, larger score will be solve earlier
+
+        '''
         self.paf_id = paf_id
         self.proposal = proposal
         self.score = score
@@ -27,8 +35,11 @@ class Clique():
 
 
 class Voting():
-
     def __init__(self) -> None:
+        ''' vote class for clique
+            it will record the joint haven been allocated
+            and it will be used to solve graph
+        '''
         self.fst = np.zeros(2, dtype=np.int8)
         self.sec = np.zeros(2, dtype=np.int8)
         self.fst_cnt = np.zeros(2, dtype=np.int8)
