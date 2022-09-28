@@ -148,7 +148,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         for view_idx in range(n_view):
             mview_kps2d_list.append(
                 mview_keypoints2d_list[view_idx][frame_idx])
-            kps2d.append(mview_keypoints2d_list[view_idx][frame_idx]['joints'])
+            kps2d.append(mview_keypoints2d_list[view_idx][frame_idx]['kps'])
             pafs.append(mview_keypoints2d_list[view_idx][frame_idx]['pafs'])
 
         return mview_img_tensor, k_tensor, r_tensor,\
@@ -175,19 +175,19 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                     src_convention,
                     self.kps2d_convention,
                     approximate=True)
-                #resize
+                # resize
                 for frame_id in range(len(detections)):
-                    for joint_id in range(
-                            len(convert_detections[frame_id]['joints'])):
-                        if len(convert_detections[frame_id]['joints']
-                               [joint_id]) > 0:
-                            convert_detections[frame_id]['joints'][
-                                joint_id][:, 0] = convert_detections[frame_id][
-                                    'joints'][joint_id][:, 0] * (
+                    for kps_id in range(
+                            len(convert_detections[frame_id]['kps'])):
+                        if len(convert_detections[frame_id]['kps']
+                               [kps_id]) > 0:
+                            convert_detections[frame_id]['kps'][
+                                kps_id][:, 0] = convert_detections[frame_id][
+                                    'kps'][kps_id][:, 0] * (
                                         img_size[0] - 1)
-                            convert_detections[frame_id]['joints'][
-                                joint_id][:, 1] = convert_detections[frame_id][
-                                    'joints'][joint_id][:, 1] * (
+                            convert_detections[frame_id]['kps'][
+                                kps_id][:, 1] = convert_detections[frame_id][
+                                    'kps'][kps_id][:, 1] * (
                                         img_size[1] - 1)
 
                 mview_kps2d.append(convert_detections)

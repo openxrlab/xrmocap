@@ -85,9 +85,8 @@ class LimbSolver():
 
     def __init__(self, kps_convention) -> None:
         self.kps_convention = kps_convention
-        self.m_joints = np.array(
-            LIMB_INFO[self.kps_convention]['m_joints']).reshape(
-                3, LIMB_INFO[self.kps_convention]['n_kps'])
+        self.m_kps = np.array(LIMB_INFO[self.kps_convention]['m_kps']).reshape(
+            3, LIMB_INFO[self.kps_convention]['n_kps'])
         self.shape_blend = np.array(
             LIMB_INFO[self.kps_convention]['shape_blend']).reshape(
                 LIMB_INFO[self.kps_convention]['n_kps'] * 3,
@@ -97,8 +96,12 @@ class LimbSolver():
              LIMB_INFO[self.kps_convention]['shape_size']),
             dtype=np.float32)
         for joint_id in range(1, LIMB_INFO[self.kps_convention]['n_kps']):
-            self.bone_shape_blend[3 * (joint_id - 1):3 * (joint_id - 1)+3] = self.shape_blend[3 * joint_id:3 * joint_id+3] \
-            - self.shape_blend[3 * LIMB_INFO[self.kps_convention]['joint_parent'][joint_id]:3 * LIMB_INFO[self.kps_convention]['joint_parent'][joint_id]+3]
+            self.bone_shape_blend[3 * (joint_id - 1):3 * (joint_id - 1)+3]\
+                    = self.shape_blend[3 * joint_id:3 * joint_id+3] \
+                    - self.shape_blend[3 * LIMB_INFO[
+                        self.kps_convention]['joint_parent'][joint_id]:
+                            3 * LIMB_INFO[
+                            self.kps_convention]['joint_parent'][joint_id]+3]
 
     def cal_joint_final_1(self, chain_warps):
         joint_final = np.zeros((3, int(chain_warps.shape[1] / 4)),
@@ -110,7 +113,7 @@ class LimbSolver():
         return joint_final
 
     def cal_joint_final_2(self, param, j_cut=-1):
-        j_cut = j_cut if j_cut > 0 else self.m_joints.shape[1]
+        j_cut = j_cut if j_cut > 0 else self.m_kps.shape[1]
         joint_blend = self.cal_joint_blend(param)
         return self.cal_joint_final_1(
             self.cal_chain_warps(
@@ -118,8 +121,7 @@ class LimbSolver():
 
     def cal_joint_blend(self, param):
         jOffset = np.matmul(self.shape_blend, param.get_shape())
-        joint_blend = self.m_joints + jOffset.reshape(
-            (self.m_joints.shape[1], 3)).T
+        joint_blend = self.m_kps + jOffset.reshape((self.m_kps.shape[1], 3)).T
         return joint_blend
 
     def cal_node_warps(self, param, joint_blend):
@@ -157,7 +159,7 @@ class LimbSolver():
 
     def align_root_affine(self, term, param):
         # align root affine
-        param.data[0:0 + 3] = term.j3d_target[:, 0][:3] - self.m_joints[:, 0]
+        param.data[0:0 + 3] = term.j3d_target[:, 0][:3] - self.m_kps[:, 0]
 
         def cal_axes(x_axis, y_axis):
             axes = np.zeros((3, 3), dtype=np.float32)
@@ -167,8 +169,13 @@ class LimbSolver():
             axes[:, 1] = np.cross(axes[:, 2], axes[:, 0]) / np.linalg.norm(
                 np.cross(axes[:, 2], axes[:, 0]))
             return axes
-        mat =np.matmul(cal_axes(term.j3d_target[:,2][:3] - term.j3d_target[:,1][:3],term.j3d_target[:,3][:3] - term.j3d_target[:,1][:3]), \
-             (np.linalg.inv(cal_axes(self.m_joints[:,2] - self.m_joints[:,1], self.m_joints[:,3] - self.m_joints[:,1]))))
+
+        mat = np.matmul(
+            cal_axes(term.j3d_target[:, 2][:3] - term.j3d_target[:, 1][:3],
+                     term.j3d_target[:, 3][:3] - term.j3d_target[:, 1][:3]),
+            (np.linalg.inv(
+                cal_axes(self.m_kps[:, 2] - self.m_kps[:, 1],
+                         self.m_kps[:, 3] - self.m_kps[:, 1]))))
         angle = np.arccos((mat[0, 0] + mat[1, 1] + mat[2, 2] - 1) / 2)
         x = (mat[2, 1] - mat[1, 2]) / np.sqrt((mat[2, 1] - mat[1, 2])**2 +
                                               (mat[0, 2] - mat[2, 0])**2 +
@@ -379,8 +386,11 @@ class LimbSolver():
                     else:
                         prtIdx = LIMB_INFO[
                             self.kps_convention]['joint_parent'][joint_id]
-                        joint_jacobi[3 * joint_id:3 * joint_id+3]= joint_jacobi[3 * prtIdx:3 * prtIdx+3] \
-                            + chain_warps[0:3,4*prtIdx+3] * (self.shape_blend[3 * joint_id:3 * joint_id+3] - self.shape_blend[3 * prtIdx:3 * prtIdx+3])
+                        joint_jacobi[3 * joint_id:3 * joint_id+3] =\
+                            joint_jacobi[3 * prtIdx:3 * prtIdx+3] \
+                            + chain_warps[:3, 4*prtIdx+3] * (
+                                self.shape_blend[3 * joint_id:3 * joint_id+3] -
+                                self.shape_blend[3 * prtIdx:3 * prtIdx+3])
 
                 if term.w_joint3d > 0:
                     for joint_id in range(
@@ -411,8 +421,13 @@ class LimbSolver():
                                         joint_final[:, joint_id], 1)
                                     proj_jacobi = np.zeros((2, 3),
                                                            dtype=np.float32)
-                                    proj_jacobi = np.array([1.0 / abc[2], 0.0, -abc[0] / (abc[2]*abc[2]), \
-                                        0.0, 1.0 / abc[2], -abc[1] / (abc[2]*abc[2])], dtype=np.float32).reshape((2,3))
+                                    proj_jacobi = np.array(
+                                        [
+                                            1.0 / abc[2], 0.0, -abc[0] /
+                                            (abc[2] * abc[2]), 0.0, 1.0 /
+                                            abc[2], -abc[1] / (abc[2] * abc[2])
+                                        ],
+                                        dtype=np.float32).reshape((2, 3))
                                     proj_jacobi = proj_jacobi * proj[:, :3]
 
                                     w = term.w_joint2d * j2d_target[2,
@@ -595,8 +610,8 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                             pose_term.
                             j2d_target[:, view *
                                        LIMB_INFO[self.kps_convention]['n_kps']:
-                                       view *
-                                       LIMB_INFO[self.kps_convention]['n_kps'] +
+                                       view * LIMB_INFO[
+                                        self.kps_convention]['n_kps'] +
                                        LIMB_INFO[self.kps_convention]['n_kps']]
                             [2].T > 0).astype(np.int))
 

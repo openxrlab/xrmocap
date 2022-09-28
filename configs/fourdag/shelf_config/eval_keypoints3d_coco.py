@@ -4,7 +4,7 @@ __data_root__ = './xrmocap_data/Shelf'
 __meta_path__ = __data_root__ + '/xrmocap_meta_testset'
 
 logger = None
-output_dir = './output/fourdag/shelf_coco_AniposelibTriangulator_HybridKps2dSelector/'
+output_dir = './output/fourdag/shelf_coco'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [

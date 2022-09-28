@@ -24,7 +24,7 @@ class JacobiTriangulator(BaseTriangulator):
 
         self.logger = logger
 
-    def __solve(self, points, points_c):
+    def _solve(self, points, points_c):
         points = points.T
         convergent = False
         loss = 10e9

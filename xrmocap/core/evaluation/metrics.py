@@ -1,10 +1,7 @@
-import csv
 import logging
 import numpy as np
-import os.path as osp
-import time
 from prettytable import PrettyTable
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.utils.geometry import compute_similarity_transform
@@ -17,12 +14,12 @@ from xrmocap.utils.mvpose_utils import (
 
 def evaluate(pred_keypoints3d: Keypoints,
              gt_keypoints3d: Keypoints,
-             pck_50_thres=50,
-             pck_100_thres=100,
+             pck_thres: List = [50, 100],
              scale=1000.,
              logger: Union[None, str, logging.Logger] = None) -> dict:
     # There must be no np.nan in the pred_keypoints3d
-    mpjpe, pa_mpjpe, pck_50, pck_100 = [], [], [], []
+    mpjpe, pa_mpjpe = [], []
+    pck = {i: [] for i in pck_thres}
     n_frame = gt_keypoints3d.get_frame_number()
     gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
     gt_kps3d_mask = gt_keypoints3d.get_mask()
@@ -75,21 +72,22 @@ def evaluate(pred_keypoints3d: Keypoints,
                 pred_keypoints_pa, f_gt_keypoints, align=True)
             pa_mpjpe.append(pa_mpjpe_i)
 
-            pck_50.append(np.mean(pa_mpjpe_i <= (pck_50_thres / scale)))
-            pck_100.append(np.mean(pa_mpjpe_i <= (pck_100_thres / scale)))
+            for thres in pck_thres:
+                pck[thres].append(np.mean(pa_mpjpe_i <= (thres / scale)))
+
     mpjpe = np.asarray(mpjpe) * scale  # m to mm
     pa_mpjpe = np.asarray(pa_mpjpe) * scale  # m to mm
     mpjpe_mean, mpjpe_std = np.mean(mpjpe), np.std(mpjpe)
     pa_mpjpe_mean, pa_mpjpe_std = np.mean(pa_mpjpe), np.std(pa_mpjpe)
-    pck_50 = np.mean(pck_50) * 100.  # percentage
-    pck_100 = np.mean(pck_100) * 100.  # percentage
+    # percentage
+    for thres in pck_thres:
+        pck[thres] = np.mean(pck[thres]) * 100.
     return dict(
         mpjpe_mean=mpjpe_mean,
         mpjpe_std=mpjpe_std,
         pa_mpjpe_mean=pa_mpjpe_mean,
         pa_mpjpe_std=pa_mpjpe_std,
-        pck_50=pck_50,
-        pck_100=pck_100)
+        pck=pck)
 
 
 def calc_limbs_accuracy(

@@ -1,9 +1,10 @@
+import json
 import math
 import numpy as np
-import json
 
 with open('./xrmocap_data/limb_info.json', 'r') as f:
     LIMB_INFO = json.load(f)
+
 
 def welsch(c, x):
     x = x / c
@@ -27,9 +28,9 @@ def point2linedist(pa, pb, ray):
 
 def skew(vec):
     m_skew = np.zeros((3, 3), dtype=np.float32)
-    m_skew = np.array( [0, -vec[2], vec[1], \
-        vec[2], 0, -vec[0], \
-        -vec[1], vec[0], 0],dtype=np.float32).reshape((3, 3))
+    m_skew = np.array(
+        [0, -vec[2], vec[1], vec[2], 0, -vec[0], -vec[1], vec[0], 0],
+        dtype=np.float32).reshape((3, 3))
     return m_skew
 
 

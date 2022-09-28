@@ -126,7 +126,8 @@ def convert_bottom_up_kps_paf(
 
     Args:
         kps_paf (List):
-            A list of dict of 2D keypoints and pafs in shape [{'joints':[],'pafs':[]},...]
+            A list of dict of 2D keypoints and pafs in shape
+                 [{'kps':[],'pafs':[]},...]
         src (str):
             The name of source convention.
         dst (str):
@@ -150,14 +151,14 @@ def convert_bottom_up_kps_paf(
     dst_detections = []
     for i in range(n_frame):
         var = {
-            'joints': [np.array([]) for j in range(dst_n_kps)],
+            'kps': [np.array([]) for j in range(dst_n_kps)],
             'pafs': [np.array([]) for k in range(len(paf_mapping))]
         }
         dst_detections.append(var)
     for frame_id in range(n_frame):
         for i in range(len(dst_idxs)):
-            dst_detections[frame_id]['joints'][dst_idxs[i]] = np.array(
-                kps_paf[frame_id]['joints'][src_idxs[i]], dtype=np.float32)
+            dst_detections[frame_id]['kps'][dst_idxs[i]] = np.array(
+                kps_paf[frame_id]['kps'][src_idxs[i]], dtype=np.float32)
         for i in range(len(paf_mapping)):
             if isinstance(paf_mapping[i], list):
                 if paf_mapping[i][0] < 0:

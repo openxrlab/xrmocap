@@ -128,7 +128,7 @@ class BottomUpAssociationEvaluation:
                 pred_kps3d[frame_idx,
                            identity] = predict_keypoints3d.get_keypoints()[0,
                                                                            idx]
-                #prepare 2d associate result
+                # prepare 2d associate result
                 if identity in multi_kps2d:
                     pred_kps2d[frame_idx, identity] = multi_kps2d[identity]
             # save ground truth kps3d
@@ -152,7 +152,7 @@ class BottomUpAssociationEvaluation:
             logger=self.logger)
         mscene_keypoints_paths = []
 
-        #prepare result
+        # prepare result
         scene_start_idx = 0
         for scene_idx, scene_end_idx in enumerate(end_of_clip_idxs):
             scene_keypoints = pred_keypoints3d.clone()
@@ -175,7 +175,7 @@ class BottomUpAssociationEvaluation:
 
             scene_start_idx = scene_end_idx + 1
 
-        #evaluation
+        # evaluation
         pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
             pred_keypoints3d, gt_keypoints3d, self.eval_kps3d_convention,
             self.selected_limbs_name, self.additional_limbs_names)
@@ -183,16 +183,18 @@ class BottomUpAssociationEvaluation:
             pred_keypoints3d_, gt_keypoints3d_, limbs, logger=self.logger)
         self.logger.info('\n' + eval_table.get_string())
         evel_dict = evaluate(
-            pred_keypoints3d_, gt_keypoints3d_, logger=self.logger)
-        self.logger.info(
-            f'MPJPE: {evel_dict["mpjpe_mean"]:.2f} ± {evel_dict["mpjpe_std"]:.2f} mm'
-        )
+            pred_keypoints3d_,
+            gt_keypoints3d_,
+            pck_thres=[100, 200],
+            logger=self.logger)
+        self.logger.info(f'MPJPE: {evel_dict["mpjpe_mean"]:.2f} ±\
+                 {evel_dict["mpjpe_std"]:.2f} mm')
         self.logger.info(f'PA-MPJPE: {evel_dict["pa_mpjpe_mean"]:.2f} ±'
                          f'{evel_dict["pa_mpjpe_std"]:.2f} mm')
-        self.logger.info(f'PCK@50mm: {evel_dict["pck_50"]:.2f} %')
-        self.logger.info(f'PCK@100mm: {evel_dict["pck_100"]:.2f} %')
+        self.logger.info(f'PCK@100mm: {evel_dict["pck"][100]:.2f} %')
+        self.logger.info(f'PCK@200mm: {evel_dict["pck"][200]:.2f} %')
 
-        #visualization
+        # visualization
         if self.dataset_visualization is not None:
             self.dataset_visualization.pred_kps3d_paths = \
                 mscene_keypoints_paths
