@@ -159,7 +159,7 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
         mscene_keypoints_list = []
         for scene_idx in range(self.n_scene):
             file_name = os.path.join(self.meta_path, f'scene_{scene_idx}',
-                                     'kps2d_paf_new.json')
+                                     'kps2d_paf.json')
             f = open(file_name, 'r')
             json_data = json.load(f)
             src_convention = json_data['convention']
