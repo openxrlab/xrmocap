@@ -1,11 +1,13 @@
+# yapf: disable
 import numpy as np
 from typing import Union
 
 from xrmocap.ops.triangulation.builder import (
-    BaseTriangulator,
-    build_triangulator,
+    BaseTriangulator, build_triangulator,
 )
 from xrmocap.utils.fourdag_utils import LIMB_INFO
+
+# yapf: enable
 
 
 class FourDAGBaseOptimizer():

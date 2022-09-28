@@ -1,10 +1,14 @@
+# yapf: disable
 import mmcv
 import os
 import pytest
 import shutil
 
 from xrmocap.ops.bottom_up_association.builder import (
-    build_bottom_up_associator, )
+    build_bottom_up_associator,
+)
+
+# yapf: enable
 
 output_dir = 'tests/data/output/ops/test_bottom_up_association'
 

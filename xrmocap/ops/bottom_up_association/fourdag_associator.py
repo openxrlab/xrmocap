@@ -196,7 +196,6 @@ class FourDAGAssociator:
                     multi_kps3d.append(kps3d)
                     identities.append(person_id)
             multi_kps3d = np.array(multi_kps3d)
-
             kps3d_score = np.ones_like(multi_kps3d[..., 0:1])
             kps3d = (np.concatenate((multi_kps3d, kps3d_score), axis=-1))
             kps3d = kps3d[np.newaxis]

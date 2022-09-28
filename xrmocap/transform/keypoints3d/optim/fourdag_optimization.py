@@ -1,16 +1,17 @@
+# yapf: disable
 import copy
 import numpy as np
 from typing import Union
 
 from xrmocap.ops.triangulation.builder import BaseTriangulator
 from xrmocap.transform.keypoints3d.optim.fourdag_base_optimizer import (
-    FourDAGBaseOptimizer, )
-from xrmocap.utils.fourdag_utils import (
-    LIMB_INFO,
-    rodrigues,
-    rodrigues_jacobi,
-    welsch,
+    FourDAGBaseOptimizer,
 )
+from xrmocap.utils.fourdag_utils import (
+    LIMB_INFO, rodrigues, rodrigues_jacobi, welsch,
+)
+
+# yapf: enable
 
 
 class LimbInfo():
@@ -606,14 +607,14 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                         LIMB_INFO[self.kps_convention]['n_kps'],
                         dtype=np.float32)
                     for view in range(int(self.projs.shape[1] / 4)):
-                        corr_cnt += ((
-                            pose_term.
-                            j2d_target[:, view *
-                                       LIMB_INFO[self.kps_convention]['n_kps']:
-                                       view * LIMB_INFO[
-                                        self.kps_convention]['n_kps'] +
-                                       LIMB_INFO[self.kps_convention]['n_kps']]
-                            [2].T > 0).astype(np.int))
+                        corr_cnt += ((pose_term.j2d_target[:, view *
+                                      LIMB_INFO[self.kps_convention
+                                                ]['n_kps']: view *
+                                      LIMB_INFO[self.kps_convention
+                                                ]['n_kps'] +
+                                      LIMB_INFO[self.kps_convention
+                                                ]['n_kps']][2].T > 0
+                                      ).astype(np.int))
 
                     for joint_id in range(
                             LIMB_INFO[self.kps_convention]['n_kps']):

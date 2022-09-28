@@ -1,3 +1,4 @@
+# yapf: disable
 import copy
 import heapq
 import logging
@@ -5,11 +6,10 @@ import numpy as np
 from typing import Union
 
 from xrmocap.utils.fourdag_utils import (
-    LIMB_INFO,
-    line2linedist,
-    point2linedist,
-    welsch,
+    LIMB_INFO, line2linedist, point2linedist, welsch,
 )
+
+# yapf: enable
 
 
 class Clique():

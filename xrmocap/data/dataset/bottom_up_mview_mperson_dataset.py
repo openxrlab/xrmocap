@@ -1,3 +1,4 @@
+# yapf: disable
 import json
 import logging
 import os
@@ -5,13 +6,15 @@ import torch
 from typing import Tuple, Union
 
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_bottom_up_kps_paf, )
+    convert_bottom_up_kps_paf,
+)
 from .mview_mperson_dataset import MviewMpersonDataset
 
 try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
+# yapf: enable
 
 
 class BottomUpMviewMpersonDataset(MviewMpersonDataset):

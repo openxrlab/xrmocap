@@ -1,17 +1,18 @@
+# yapf: disable
 import numpy as np
 import string
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints,
-    get_keypoint_idx,
+    convert_keypoints, get_keypoint_idx,
 )
 from xrmocap.transform.limbs import get_limbs_from_keypoints
 from xrmocap.utils.mvpose_utils import (
-    add_campus_jaw_headtop,
-    add_campus_jaw_headtop_mask,
+    add_campus_jaw_headtop, add_campus_jaw_headtop_mask,
 )
+
+# yapf: enable
 
 
 def align_keypoints3d(pred_keypoints3d: Keypoints, gt_keypoints3d: Keypoints,

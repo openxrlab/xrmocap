@@ -1,3 +1,4 @@
+# yapf: disable
 import logging
 import numpy as np
 from prettytable import PrettyTable
@@ -6,10 +7,10 @@ from typing import List, Tuple, Union
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.utils.geometry import compute_similarity_transform
 from xrmocap.utils.mvpose_utils import (
-    check_limb_is_correct,
-    compute_mpjpe,
-    vectorize_distance,
+    check_limb_is_correct, compute_mpjpe, vectorize_distance,
 )
+
+# yapf: enable
 
 
 def evaluate(pred_keypoints3d: Keypoints,
