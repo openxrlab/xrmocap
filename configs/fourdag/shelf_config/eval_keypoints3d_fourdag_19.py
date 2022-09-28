@@ -17,7 +17,7 @@ associator = dict(
     type='FourDAGAssociator',
     kps_convention=pred_kps3d_convention,
     min_asgn_cnt=30,
-    use_tracking_edges=True,
+    use_tracking_edges=False,
     triangulator=dict(
         type='AniposelibTriangulator',
         camera_parameters=[],
@@ -45,7 +45,6 @@ associator = dict(
         w_hier=0.5,
         c_view_cnt=1.5,
         min_check_cnt=1,
-        min_asgn_cnt=5,
         normalize_edges=True,
         logger=logger,
     ),

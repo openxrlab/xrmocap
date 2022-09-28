@@ -142,6 +142,6 @@ def test_fourdag_triangulator():
         cam_param_list.append(cam_param)
     triangulator_config = dict(
         mmcv.Config.fromfile(
-            'configs/modules/ops/triangulation/fourdag_triangulator.py'))
+            'configs/modules/ops/triangulation/jacobi_triangulator.py'))
     triangulator = build_triangulator(triangulator_config)
     assert triangulator is not None

@@ -41,7 +41,7 @@ def align_keypoints3d(pred_keypoints3d: Keypoints, gt_keypoints3d: Keypoints,
         head_center = (
             pred_keypoints3d.get_keypoints()[:, :, pred_leftear_index, :3] +
             pred_keypoints3d.get_keypoints()[:, :, pre_rightear_index, :3]) / 2
-        pred_nose = head_center  #temporary
+        pred_nose = head_center
 
     if pred_kps3d_convention != eval_kps3d_convention:
         pred_keypoints3d = convert_keypoints(

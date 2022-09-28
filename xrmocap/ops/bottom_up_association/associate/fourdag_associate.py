@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from typing import Union
 
-from xrmocap.utils.ourdag_utils import (
+from xrmocap.utils.fourdag_utils import (
     LIMB_INFO,
     line2linedist,
     point2linedist,

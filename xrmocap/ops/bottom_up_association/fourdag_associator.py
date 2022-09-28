@@ -1,7 +1,7 @@
 # yapf: disable
+from asyncio.log import logger
 import logging
 import numpy as np
-from asyncio.log import logger
 from tkinter import NO
 from typing import List, Tuple, Union
 from xrprimer.data_structure.camera import (
@@ -35,7 +35,7 @@ class FourDAGAssociator:
                  triangulator: Union[None, dict, BaseTriangulator] = None,
                  point_selector: Union[None, dict, BaseSelector] = None,
                  keypoints3d_optimizer=None,
-                 n_views: int = 5,
+                 n_views: int=5,
                  associate_graph: Union[None, dict] = None,
                  identity_tracking: Union[None, dict, BaseTracking] = None,
                  min_asgn_cnt: int = 5,
@@ -141,37 +141,47 @@ class FourDAGAssociator:
                 triangulated from the selected
                 keypoints2d.
             indentities (List[int]):
-                A list of indentities, whose length.
+                A list of indentities, whose length represets the number of person.
+            multi_kps2d:
+                the associated keypoints
+            m_persons_map:
+                the associated maps
         """
-
+        
         self.n_kps = len(kps2d[0])
         m_persons_map = self.associate_graph(kps2d, pafs,
                                              self.last_multi_kps3d)
+        self.logger.info('m_persons_map:{}'.format(list(m_persons_map.keys())))                                     
+        # self.logger.info(m_persons_map)
         m_skels2d = self.cal_keypoints2d(m_persons_map, kps2d)
+        self.logger.info('m_skels2d:{}'.format(list(m_skels2d.keys())))
         multi_kps2d = dict()
         for person_id in m_skels2d:
             kps2d = np.zeros((self.n_views, self.n_kps, 3))
             for view in range(self.n_views):
                 for joint_id in range(self.n_kps):
-                    kps2d[view][joint_id] = m_skels2d[person_id][:, view *
-                                                                 self.n_kps +
-                                                                 joint_id]
+                    kps2d[view][joint_id] = m_skels2d[
+                        person_id][:, view * self.n_kps + joint_id]
             multi_kps2d[person_id] = kps2d
-
+        
         if self.keypoints3d_optimizer is not None:
+            # self.logger.info(m_skels2d)
             multi_kps3d = self.keypoints3d_optimizer.update(m_skels2d)
+            self.logger.info('multi_kps3d:{}'.format(list(multi_kps3d.keys())))
+            # self.logger.info(multi_kps3d)
+            # import pdb; pdb.set_trace()
             if self.use_tracking_edges:
                 self.last_multi_kps3d = multi_kps3d
             kps_arr = np.zeros((1, len(multi_kps3d), self.n_kps, 4))
             mask_arr = np.zeros((1, len(multi_kps3d), self.n_kps))
             for index, person_id in enumerate(multi_kps3d):
-                kps_arr[0, index,
-                        ...] = multi_kps3d[person_id][:, :self.n_kps].T
+                kps_arr[0, index, ...] = multi_kps3d[person_id][:, :self.n_kps].T
                 mask_arr[0, index, :] = multi_kps3d[person_id][3, :self.n_kps]
             keypoints3d = Keypoints(
                 kps=kps_arr, mask=mask_arr, convention=self.kps_convention)
             identities = multi_kps3d.keys()
-
+            # if len(multi_kps3d) == 5:
+            #     import pdb; pdb.set_trace()
         elif self.triangulator is not None:
             multi_kps3d = []
             identities = []
@@ -193,6 +203,20 @@ class FourDAGAssociator:
                     multi_kps3d.append(kps3d)
                     identities.append(person_id)
             multi_kps3d = np.array(multi_kps3d)
+            
+            # if len(multi_kps3d) > 0:
+            #     keypoints3d, identities = self.assign_identities_frame(
+            #         multi_kps3d)
+            #     self.last_multi_kps3d = dict()
+            #     if self.use_tracking_edges:
+            #         for index, person_id in enumerate(identities):
+            #             self.last_multi_kps3d[person_id] = keypoints3d.get_keypoints(
+            #             )[0, index, ...].T
+            # else:
+            #     keypoints3d = Keypoints()
+            #     identities = []
+            #     self.last_multi_kps3d = dict()
+            # self.logger.info('identities:{}'.format(identities))
 
             kps3d_score = np.ones_like(multi_kps3d[..., 0:1])
             kps3d = (np.concatenate((multi_kps3d, kps3d_score), axis=-1))
@@ -202,9 +226,9 @@ class FourDAGAssociator:
             keypoints3d.set_mask(kps3d_mask)
             if self.use_tracking_edges:
                 for index, person_id in enumerate(identities):
-                    self.last_multi_kps3d[
-                        person_id] = keypoints3d.get_keypoints()[0, index,
-                                                                 ...].T
+                    self.last_multi_kps3d[person_id] = keypoints3d.get_keypoints(
+                        )[0, index, ...].T
+            self.logger.info('identities:{}'.format(identities))
 
         if end_of_clip:
             self.last_multi_kps3d = dict()

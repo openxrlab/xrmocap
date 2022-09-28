@@ -50,7 +50,6 @@ associator = dict(
         w_hier=1,
         c_view_cnt=1,
         min_check_cnt=10,
-        min_asgn_cnt=5,
         normalize_edges=True,
         logger=logger,
     ),

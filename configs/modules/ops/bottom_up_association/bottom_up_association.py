@@ -33,6 +33,5 @@ associate_graph = dict(
     w_hier=0.5,
     c_view_cnt=1.5,
     min_check_cnt=1,
-    min_asgn_cnt=5,
     normalize_edges=True,
 )
