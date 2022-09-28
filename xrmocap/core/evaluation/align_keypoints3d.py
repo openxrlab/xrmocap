@@ -19,6 +19,13 @@ def align_keypoints3d(pred_keypoints3d: Keypoints, gt_keypoints3d: Keypoints,
                       eval_kps3d_convention: string,
                       selected_limbs_name: List[List[str]],
                       additional_limbs_names: List[List[str]]):
+    """align keypoints convention pred_keypoints3d (Keypoints):
+
+    prediction of keypoints gt_keypoints3d (Keypoints):     ground true of
+    keypoints eval_kps3d_convention (string):     keypoints convention to align
+    selected_limbs_name (List):     selected limbs additional_limbs_names
+    (List):     additional limbs
+    """
     ret_limbs = []
     gt_nose = None
     pred_nose = None

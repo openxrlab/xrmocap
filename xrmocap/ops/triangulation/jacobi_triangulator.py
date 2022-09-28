@@ -14,6 +14,22 @@ class JacobiTriangulator(BaseTriangulator):
                  update_tolerance=1e-4,
                  regular_term=1e-4,
                  logger=None):
+        """Triangulator for points triangulation, based on jacobi optimization.
+
+        Args:
+            camera_parameters (List[FisheyeCameraParameter]):
+                A list of Pinhole/FisheyeCameraParameter, or a list
+                of paths to dumped Pinhole/FisheyeCameraParameters.
+            maxIter_time (int):
+                maximal iteration to optimize
+            update_tolerance (float):
+                indicator of convergent in optimization
+            regular_term (float):
+                regulat term
+            logger (Union[None, str, logging.Logger], optional):
+                Logger for logging. If None, root logger will be selected.
+                Defaults to None.
+        """
         super().__init__(camera_parameters=camera_parameters, logger=logger)
         self.projs = None
         self.loss = None
@@ -23,6 +39,9 @@ class JacobiTriangulator(BaseTriangulator):
         self.regular_term = regular_term
 
         self.logger = logger
+
+        if len(self.camera_parameters) > 0:
+            self.projs = self._prepare_proj_mat(self.camera_parameters)
 
     def _solve(self, points, points_c):
         points = points.T
@@ -97,5 +116,15 @@ class JacobiTriangulator(BaseTriangulator):
         points3d = points3d.reshape(*output_points3d_shape)
         return points3d
 
-    def set_proj_mat(self, projs):
-        self.projs = projs
+    def _prepare_proj_mat(self, camera_parameters) -> np.ndarray:
+        projs = np.zeros((3, len(camera_parameters) * 4))
+        for view in range(len(camera_parameters)):
+            K = camera_parameters[view].intrinsic33()
+            T = np.array(camera_parameters[view].get_extrinsic_t())
+            R = np.array(camera_parameters[view].get_extrinsic_r())
+            Proj = np.zeros((3, 4), dtype=np.float)
+            for i in range(3):
+                for j in range(4):
+                    Proj[i, j] = R[i, j] if j < 3 else T[i]
+            projs[:, 4 * view:4 * view + 4] = np.matmul(K, Proj)
+        return projs

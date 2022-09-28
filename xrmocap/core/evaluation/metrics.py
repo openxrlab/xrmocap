@@ -18,6 +18,15 @@ def evaluate(pred_keypoints3d: Keypoints,
              pck_thres: List = [50, 100],
              scale=1000.,
              logger: Union[None, str, logging.Logger] = None) -> dict:
+    """evaluation of accuracy pred_keypoints3d (Keypoints):
+
+    prediction of keypoints
+    gt_keypoints3d (Keypoints):
+        ground true of keypoints
+    pck_thres (List):
+        threshold value of precision
+    scale:
+    """
     # There must be no np.nan in the pred_keypoints3d
     mpjpe, pa_mpjpe = [], []
     pck = {i: [] for i in pck_thres}
@@ -95,8 +104,16 @@ def calc_limbs_accuracy(
     pred_keypoints3d,
     gt_keypoints3d,
     limbs,
-    logger: Union[None, str,
-                  logging.Logger] = None) -> Tuple[np.ndarray, list]:
+    logger: Union[None, str, logging.Logger] = None
+) -> Tuple[np.ndarray, PrettyTable]:
+    """calculate the limbs accuracy pred_keypoints3d (Keypoints):
+
+    prediction of keypoints
+    gt_keypoints3d (Keypoints):
+        ground true of keypoints
+    limbs:
+        limb to be evaluated
+    """
     n_frame = gt_keypoints3d.get_frame_number()
     n_gt_person = gt_keypoints3d.get_person_number()
     gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]

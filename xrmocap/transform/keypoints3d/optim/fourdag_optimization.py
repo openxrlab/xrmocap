@@ -17,6 +17,7 @@ from xrmocap.utils.fourdag_utils import (
 class LimbInfo():
 
     def __init__(self, kps_convention) -> None:
+        """save limb information."""
         self.kps_convention = kps_convention
         self.boneLen = np.zeros(
             LIMB_INFO[self.kps_convention]['n_kps'] - 1, dtype=np.float32)
@@ -57,6 +58,7 @@ class LimbInfo():
 class Term():
 
     def __init__(self):
+        """save some weight and information when conducting optimization."""
         # joint 3d
         self.w_joint3d = 0.
         self.j3d_target = None
@@ -85,6 +87,7 @@ class Term():
 class LimbSolver():
 
     def __init__(self, kps_convention) -> None:
+        """slove human pose and shape."""
         self.kps_convention = kps_convention
         self.m_kps = np.array(LIMB_INFO[self.kps_convention]['m_kps']).reshape(
             3, LIMB_INFO[self.kps_convention]['n_kps'])

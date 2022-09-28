@@ -55,19 +55,8 @@ class FourDAGBaseOptimizer():
         return limb
 
     def set_cameras(self, camera_parameters):
-        projs = np.zeros((3, len(camera_parameters) * 4))
-        for view in range(len(camera_parameters)):
-            K = camera_parameters[view].intrinsic33()
-            T = np.array(camera_parameters[view].get_extrinsic_t())
-            R = np.array(camera_parameters[view].get_extrinsic_r())
-            Proj = np.zeros((3, 4), dtype=np.float)
-            for i in range(3):
-                for j in range(4):
-                    Proj[i, j] = R[i, j] if j < 3 else T[i]
-            projs[:, 4 * view:4 * view + 4] = np.matmul(K, Proj)
         self.triangulator.set_cameras(camera_parameters)
-        self.triangulator.set_proj_mat(projs)
-        self.projs = projs
+        self.projs = self.triangulator.projs
 
     def update(self, limbs2d):
         for pidx, corr_id in enumerate(limbs2d):
