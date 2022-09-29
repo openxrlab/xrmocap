@@ -101,23 +101,23 @@ class FourDAGAssociator:
             else:
                 mpersons_map.pop(person_id)
 
-        m_skels2d = {}
+        m_limbs2d = {}
         for person_id in mpersons_map:
             if person_id in self.last_multi_kps3d:
                 identity = person_id
-            elif len(m_skels2d) == 0:
+            elif len(m_limbs2d) == 0:
                 identity = 0
             else:
-                identity = max(m_skels2d) + 1
-            skel2d = np.zeros((3, self.n_views * self.n_kps))
+                identity = max(m_limbs2d) + 1
+            limb2d = np.zeros((3, self.n_views * self.n_kps))
             for view in range(self.n_views):
                 for kps_id in range(self.n_kps):
                     index = mpersons_map[person_id][kps_id, view]
                     if index != -1:
-                        skel2d[:, view * self.n_kps +
+                        limb2d[:, view * self.n_kps +
                                kps_id] = kps2d[view][kps_id][index]
-            m_skels2d[identity] = skel2d
-        return m_skels2d
+            m_limbs2d[identity] = limb2d
+        return m_limbs2d
 
     def associate_frame(self,
                         kps2d: list,
@@ -151,19 +151,21 @@ class FourDAGAssociator:
 
         self.n_kps = len(kps2d[0])
         mpersons_map = self.associate_graph(kps2d, pafs, self.last_multi_kps3d)
-        m_skels2d = self.cal_keypoints2d(mpersons_map, kps2d)
+        self.logger.info('mpersons_map:{}'.format(list(mpersons_map.keys())))
+        mlimbs2d = self.cal_keypoints2d(mpersons_map, kps2d)
+        self.logger.info('m_limbs2d:{}'.format(list(mlimbs2d.keys())))
         multi_kps2d = dict()
-        for person_id in m_skels2d:
-            kps2d = np.zeros((self.n_views, self.n_kps, 3))
+        for person_id in mlimbs2d:
+            mview_kps2d = np.zeros((self.n_views, self.n_kps, 3))
             for view in range(self.n_views):
                 for kps_id in range(self.n_kps):
-                    kps2d[view][kps_id] = m_skels2d[person_id][:, view *
-                                                               self.n_kps +
-                                                               kps_id]
-            multi_kps2d[person_id] = kps2d
+                    mview_kps2d[view][kps_id] = mlimbs2d[
+                        person_id][:, view * self.n_kps + kps_id]
+            multi_kps2d[person_id] = mview_kps2d
 
         if self.keypoints3d_optimizer is not None:
-            multi_kps3d = self.keypoints3d_optimizer.update(m_skels2d)
+            multi_kps3d = self.keypoints3d_optimizer.update(mlimbs2d)
+            self.logger.info('multi_kps3d:{}'.format(list(multi_kps3d.keys())))
             if self.use_tracking_edges:
                 self.last_multi_kps3d = multi_kps3d
             kps_arr = np.zeros((1, len(multi_kps3d), self.n_kps, 4))
@@ -178,14 +180,14 @@ class FourDAGAssociator:
         elif self.triangulator is not None:
             multi_kps3d = []
             identities = []
-            for person_id in m_skels2d:
-                kps2d = multi_kps2d[person_id]
+            for person_id in mlimbs2d:
+                mview_kps2d = multi_kps2d[person_id]
                 matched_mkps2d = np.zeros((self.n_views, self.n_kps, 2))
                 matched_mkps2d_mask = np.zeros((self.n_views, self.n_kps, 1))
                 matched_mkps2d_conf = np.zeros((self.n_views, self.n_kps, 1))
-                matched_mkps2d = kps2d[..., :2]
-                matched_mkps2d_mask = np.ones_like(kps2d[..., 0:1])
-                matched_mkps2d_conf[..., 0] = kps2d[..., 2]
+                matched_mkps2d = mview_kps2d[..., :2]
+                matched_mkps2d_mask = np.ones_like(mview_kps2d[..., 0:1])
+                matched_mkps2d_conf[..., 0] = mview_kps2d[..., 2]
                 selected_mask = self.point_selector.get_selection_mask(
                     np.concatenate((matched_mkps2d, matched_mkps2d_conf),
                                    axis=-1), matched_mkps2d_mask)

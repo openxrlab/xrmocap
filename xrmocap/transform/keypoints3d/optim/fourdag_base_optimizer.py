@@ -47,11 +47,11 @@ class FourDAGBaseOptimizer():
         self.trace_limb_infos = dict()
 
     def triangulate_person(self, limb2d):
-        points2d = limb2d.T.reshape(
+        kps2d = limb2d.T.reshape(
             (-1, LIMB_INFO[self.kps_convention]['n_kps'], 3))
-        points3d = self.triangulator.triangulate(points2d)
+        kps3d = self.triangulator.triangulate(kps2d)
         mask = self.triangulator.loss < self.triangulate_thresh
-        limb = np.concatenate((points3d.T, mask.reshape(1, -1)), axis=0)
+        limb = np.concatenate((kps3d.T, mask.reshape(1, -1)), axis=0)
         return limb
 
     def set_cameras(self, camera_parameters):

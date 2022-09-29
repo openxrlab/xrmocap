@@ -1,9 +1,14 @@
+# yapf: disable
 import numpy as np
 from typing import List, Union
-from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.data_structure.camera import (
+    FisheyeCameraParameter, PinholeCameraParameter,
+)
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
 
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
+
+# yapf: enable
 
 
 class JacobiTriangulator(BaseTriangulator):
@@ -41,7 +46,7 @@ class JacobiTriangulator(BaseTriangulator):
         self.logger = logger
 
         if len(self.camera_parameters) > 0:
-            self.projs = self._prepare_proj_mat(self.camera_parameters)
+            self._prepare_proj_mat(self.camera_parameters)
 
     def _solve(self, points, points_c):
         points = points.T
@@ -105,8 +110,8 @@ class JacobiTriangulator(BaseTriangulator):
         self.loss = np.full(n_points, 10e9)
         points3d = []
         for point_id in range(n_points):
-            pos, loss = self.__solve(points2d[:, point_id],
-                                     points2d_c[:, point_id])
+            pos, loss = self._solve(points2d[:, point_id],
+                                    points2d_c[:, point_id])
             points3d.append(pos)
             self.loss[point_id] = loss
         points3d = np.array(points3d)
@@ -127,4 +132,24 @@ class JacobiTriangulator(BaseTriangulator):
                 for j in range(4):
                     Proj[i, j] = R[i, j] if j < 3 else T[i]
             projs[:, 4 * view:4 * view + 4] = np.matmul(K, Proj)
-        return projs
+        self.projs = projs
+
+    def set_cameras(
+        self, camera_parameters: List[Union[PinholeCameraParameter,
+                                            FisheyeCameraParameter]]
+    ) -> None:
+        """Set cameras for this triangulator.
+
+        Args:
+            camera_parameters (List[Union[PinholeCameraParameter,
+                                          FisheyeCameraParameter]]):
+                A list of PinholeCameraParameter, or a list
+                of FisheyeCameraParameter.
+        """
+        if len(camera_parameters) > 0 and \
+                isinstance(camera_parameters[0], str):
+            self.logger.error('camera_parameters must be a list' +
+                              ' of camera parameter instances, not strs.')
+            raise TypeError
+        self._prepare_proj_mat(camera_parameters)
+        super().set_cameras(camera_parameters=camera_parameters)
