@@ -132,6 +132,8 @@ def test_fourdag_triangulator():
         npz_dict = dict(np.load(npz_path, allow_pickle=True))
         kps2d_list.append(npz_dict['keypoints'][0, 0, :, :])
         mask_list.append(npz_dict['mask'][0, 0, :])
+    kps2d = np.asarray(kps2d_list)
+    kps2d_mask = np.asarray(mask_list, dtype=kps2d.dtype)
     cam_param_list = []
     for view_idx in range(n_view):
         cam_param_path = os.path.join(input_dir, f'cam_{view_idx:03d}.json')
@@ -141,5 +143,31 @@ def test_fourdag_triangulator():
     triangulator_config = dict(
         mmcv.Config.fromfile(
             'configs/modules/ops/triangulation/jacobi_triangulator.py'))
+    triangulator_config['camera_parameters'] = cam_param_list
     triangulator = build_triangulator(triangulator_config)
     assert triangulator is not None
+    # test kp2d np
+    kps3d = triangulator.triangulate(kps2d)
+    assert kps3d.shape[:2] == kps2d.shape[1:3]
+    # test kp2d list
+    kps3d = triangulator.triangulate(kps2d.tolist())
+    assert kps3d.shape[:2] == kps2d.shape[1:3]
+    # test kp2d tuple
+    kps3d = triangulator.triangulate(tuple(map(tuple, kps2d)))
+    assert kps3d.shape[:2] == kps2d.shape[1:3]
+    # test mask np
+    points_mask = np.ones_like(kps2d[..., 0:1])
+    kps3d = triangulator.triangulate(points=kps2d, points_mask=points_mask)
+    assert kps3d.shape[:2] == kps2d.shape[1:3]
+    # test mask list
+    kps3d = triangulator.triangulate(
+        points=kps2d, points_mask=points_mask.tolist())
+    assert kps3d.shape[:2] == kps2d.shape[1:3]
+    # test mask tuple
+    kps3d = triangulator.triangulate(
+        points=kps2d, points_mask=tuple(map(tuple, points_mask)))
+    # test mask from confidence
+    points_mask = kps2d_mask
+    kps3d = triangulator.triangulate(points=kps2d, points_mask=points_mask)
+    assert kps3d.shape[:2] == kps2d.shape[1:3]
+    assert kps3d.shape[:2] == kps2d.shape[1:3]

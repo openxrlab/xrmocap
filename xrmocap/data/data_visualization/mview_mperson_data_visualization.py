@@ -2,7 +2,7 @@
 import logging
 import numpy as np
 import os
-from typing import List, Union
+from typing import List, Tuple, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.core.visualization import (
@@ -28,6 +28,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                  pred_kps3d_convention: Union[None, str] = None,
                  vis_gt_kps3d: bool = True,
                  vis_bottom_up: bool = False,
+                 resolution: Tuple = None,
                  gt_kps3d_convention: Union[None, str] = None,
                  vis_cameras: bool = False,
                  vis_aio_video: bool = True,
@@ -106,6 +107,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             if pred_kps3d_paths is not None \
             else []
         self.pred_kps3d_convention = pred_kps3d_convention
+        self.resolution = resolution
 
     def run(self, overwrite: bool = False) -> None:
         """Visualize meta-data selected in __init__().
@@ -203,6 +205,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 output_path=video_path,
                 img_paths=frame_list,
                 overwrite=True,
+                resolution=self.resolution,
                 return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)
         # draw views all in one
@@ -220,7 +223,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         """
         scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
         npz_path = os.path.join(self.output_dir,
-                                f'scene{scene_idx}_matched_kps2d_idx.npy')
+                                f'scene{scene_idx}_associate_keypoints2d.npy')
         cam_dir = os.path.join(scene_dir, 'camera_parameters')
         file_names = sorted(os.listdir(cam_dir))
         cam_names = []
@@ -263,6 +266,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 keypoints=keypoints2d,
                 output_path=video_path,
                 img_paths=frame_list,
+                resolution=self.resolution,
                 overwrite=True,
                 return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)

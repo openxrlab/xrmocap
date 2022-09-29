@@ -1,11 +1,11 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = './xrmocap_data/Shelf'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
+__data_root__ = 'tests/data/data/test_dataset/Shelf_unittest'
+__meta_path__ = __data_root__ + '/xrmocap_meta_perception2d'
 
 logger = None
-output_dir = './output/fourdag/shelf_coco'
-pred_kps3d_convention = 'coco'
+output_dir = 'tests/data/output/core/test_mvpose_evaluation'
+pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
@@ -16,28 +16,28 @@ additional_limbs_names = [['jaw', 'headtop']]
 associator = dict(
     type='FourDAGAssociator',
     kps_convention=pred_kps3d_convention,
-    min_asgn_cnt=5,
-    triangulator=dict(
-        type='AniposelibTriangulator',
-        camera_parameters=[],
+    min_asgn_cnt=10,
+    use_tracking_edges=True,
+    keypoints3d_optimizer=dict(
+        type='FourDAGOptimizer',
+        triangulator=dict(type='JacobiTriangulator', ),
+        active_rate=0.1,
+        min_track_cnt=5,
+        bone_capacity=2,
+        w_bone3d=1.0,
+        w_square_shape=1e-2,
+        shape_max_iter=5,
+        w_kps3d=1.0,
+        w_regular_pose=1e-3,
+        pose_max_iter=20,
+        w_kps2d=1e-5,
+        w_temporal_trans=1e-1,
+        w_temporal_pose=1e-2,
+        min_triangulate_cnt=15,
+        init_active=0.9,
+        triangulate_thresh=0.05,
         logger=logger,
     ),
-    point_selector=dict(
-        type='HybridKps2dSelector',
-        triangulator=dict(
-            type='AniposelibTriangulator', camera_parameters=[],
-            logger=logger),
-        verbose=False,
-        ignore_kps_name=['left_eye', 'right_eye', 'left_ear', 'right_ear'],
-        convention=pred_kps3d_convention),
-    # identity_tracking=dict(
-    #     type='KeypointsDistanceTracking',
-    #     tracking_distance=0.7,
-    #     tracking_kps3d_convention=pred_kps3d_convention,
-    #     tracking_kps3d_name=[
-    #         'left_shoulder', 'right_shoulder', 'left_hip_extra',
-    #         'right_hip_extra'
-    #     ]),
     associate_graph=dict(
         type='FourDAGAssociate',
         kps_convention=pred_kps3d_convention,
@@ -46,11 +46,10 @@ associator = dict(
         w_epi=2,
         w_temp=2,
         w_view=2,
-        w_paf=1,
+        w_paf=4,
         w_hier=0.5,
         c_view_cnt=1.5,
         min_check_cnt=1,
-        min_asgn_cnt=5,
         normalize_edges=True,
         logger=logger,
     ),
@@ -81,6 +80,6 @@ dataset_visualization = dict(
     vis_percep2d=False,
     kps2d_convention=pred_kps3d_convention,
     vis_gt_kps3d=False,
-    vis_bottom_up=True,
+    vis_bottom_up=False,
     gt_kps3d_convention=None,
 )

@@ -208,6 +208,9 @@ class FourDAGAssociator:
                                                                  ...].T
         if end_of_clip:
             self.last_multi_kps3d = dict()
+            if self.keypoints3d_optimizer is not None:
+                self.keypoints3d_optimizer.trace_limbs.clear()
+                self.keypoints3d_optimizer.trace_limb_infos.clear()
         return keypoints3d, identities, multi_kps2d, mpersons_map
 
     def assign_identities_frame(self, curr_kps3d) -> Keypoints:
