@@ -151,9 +151,7 @@ class FourDAGAssociator:
 
         self.n_kps = len(kps2d[0])
         mpersons_map = self.associate_graph(kps2d, pafs, self.last_multi_kps3d)
-        self.logger.info('mpersons_map:{}'.format(list(mpersons_map.keys())))
         mlimbs2d = self.cal_keypoints2d(mpersons_map, kps2d)
-        self.logger.info('m_limbs2d:{}'.format(list(mlimbs2d.keys())))
         multi_kps2d = dict()
         for person_id in mlimbs2d:
             mview_kps2d = np.zeros((self.n_views, self.n_kps, 3))
@@ -165,7 +163,6 @@ class FourDAGAssociator:
 
         if self.keypoints3d_optimizer is not None:
             multi_kps3d = self.keypoints3d_optimizer.update(mlimbs2d)
-            self.logger.info('multi_kps3d:{}'.format(list(multi_kps3d.keys())))
             if self.use_tracking_edges:
                 self.last_multi_kps3d = multi_kps3d
             kps_arr = np.zeros((1, len(multi_kps3d), self.n_kps, 4))
@@ -209,7 +206,6 @@ class FourDAGAssociator:
                     self.last_multi_kps3d[
                         person_id] = keypoints3d.get_keypoints()[0, index,
                                                                  ...].T
-
         if end_of_clip:
             self.last_multi_kps3d = dict()
         return keypoints3d, identities, multi_kps2d, mpersons_map
