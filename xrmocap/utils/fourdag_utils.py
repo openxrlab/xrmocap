@@ -2,7 +2,7 @@ import json
 import math
 import numpy as np
 
-with open('./xrmocap_data/limb_info.json', 'r') as f:
+with open('./weight/limb_info.json', 'r') as f:
     LIMB_INFO = json.load(f)
 
 
