@@ -27,7 +27,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                  pred_kps3d_paths: List[str] = None,
                  pred_kps3d_convention: Union[None, str] = None,
                  vis_gt_kps3d: bool = True,
-                 vis_bottom_up: bool = True,
+                 vis_bottom_up: bool = False,
                  gt_kps3d_convention: Union[None, str] = None,
                  vis_cameras: bool = False,
                  vis_aio_video: bool = True,
@@ -220,7 +220,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         """
         scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
         npz_path = os.path.join(self.output_dir,
-                                f'scene{scene_idx}_associate_keypoints2d.npy')
+                                f'scene{scene_idx}_matched_kps2d_idx.npy')
         cam_dir = os.path.join(scene_dir, 'camera_parameters')
         file_names = sorted(os.listdir(cam_dir))
         cam_names = []
