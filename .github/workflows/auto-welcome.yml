@@ -15,8 +15,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             hi @${{ github.event.issue.user.login }}, welcome! to commit your issue here , we will check and reply you as soon.
-            
             你好 @${{ github.event.issue.user.login }}，非常欢迎提交你的问题和需求，我们会尽快确认并回复你~~
-          
           assignees: 'aichunling0418,tonylu0728,yl-1993'
           issue-contents: '+1, laugh'
