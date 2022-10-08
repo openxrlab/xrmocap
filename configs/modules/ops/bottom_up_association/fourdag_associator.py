@@ -21,11 +21,16 @@ keypoints3d_optimizer = dict(
     init_active=0.9,
     triangulate_thresh=0.05,
 )
-associate_graph = dict(
-    type='FourDAGAssociate',
+graph_construct = dict(
+    type='GraphConstruct',
     kps_convention='fourdag_19',
     max_epi_dist=0.15,
     max_temp_dist=0.2,
+    normalize_edges=True,
+)
+graph_associate = dict(
+    type='GraphAssociate',
+    kps_convention='fourdag_19',
     w_epi=2,
     w_temp=2,
     w_view=2,
@@ -33,5 +38,4 @@ associate_graph = dict(
     w_hier=0.5,
     c_view_cnt=1.5,
     min_check_cnt=1,
-    normalize_edges=True,
 )
