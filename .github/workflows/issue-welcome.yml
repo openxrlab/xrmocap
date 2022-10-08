@@ -1,4 +1,4 @@
-name: Auto Welcome
+name: Issue Welcome
 
 on:
   issues:
@@ -13,6 +13,8 @@ jobs:
         with:
           actions: 'welcome'
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: hi @${{ github.event.issue.user.login }}, welcome!
+          body: |  
+            hi @${{ github.event.issue.user.login }}, welcome!
+            你好 @${{ github.event.issue.user.login }}, 欢迎！
           assignees: 'aichunling0418,tonylu0728,yl-1993'
-          issue-contents: '+1'
+          issue-contents: '+1, eyes, laugh'
