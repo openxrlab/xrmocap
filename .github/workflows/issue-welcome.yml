@@ -15,6 +15,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             hi @${{ github.event.issue.user.login }}, welcome!
-            你好 @${{ github.event.issue.user.login }}, 欢迎！
-          assignees: 'aichunling0418,tonylu0728,yl-1993'
-          issue-contents: '+1, eyes, laugh'
+            你好 @${{ github.event.issue.user.login }}，非常欢迎提交你的问题~~
+          issue-contents: '+1, eyes'
