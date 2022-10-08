@@ -1,4 +1,4 @@
-name: Issue Month Statistics
+name: issue-month-statistics
 
 on:
   schedule:
