@@ -16,4 +16,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.issue.number }}
           body: Hello @${{ github.event.issue.user.login }}. welcome to comment here , we will reply you as soon.
-          
