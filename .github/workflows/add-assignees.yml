@@ -1,4 +1,4 @@
-name: Add Assigness
+name: Add Assignees
 
 on:
   issues:
@@ -14,5 +14,5 @@ jobs:
           actions: 'add-assignees'
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.issue.number }}
-          assignees: 'aichunling0418,tonylu0728,yl-1993'
+          assignees: 'aichunling0418,LazyBusyYang,tonylu0728,yl-1993'
           random-to: 1

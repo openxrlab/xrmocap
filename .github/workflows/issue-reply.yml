@@ -16,5 +16,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.issue.number }}
           body: |
-            Hello @${{ github.event.issue.user.login }}, welcome to commit your issue here , we will check and reply you as soon.
-            你好 @${{ github.event.issue.user.login }}, 非常欢迎提交你的问题和需求，我们会尽快确认并回复你~~
+            Hello @${{ github.event.issue.user.login }}, welcome to commit your issue here. We will check and reply to you as soon as possible.
+            你好 @${{ github.event.issue.user.login }}，非常欢迎提交你的问题和需求，我们会尽快确认并回复你。
