@@ -1,4 +1,4 @@
-name: Issue Welcome
+name: Auto Welcome
 
 on:
   issues:

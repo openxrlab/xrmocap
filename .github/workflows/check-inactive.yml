@@ -1,4 +1,4 @@
-name: Check inactive
+name: Check Inactive
 
 on:
   schedule:
