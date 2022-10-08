@@ -17,6 +17,7 @@ Our data pipeline converts original dataset to our unified meta-data, with data 
 | Campus       | [Home page](https://campar.in.tum.de/Chair/MultiHumanPose) | [CampusSeq1.tar.bz2](https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/CampusSeq1.tar.bz2) |
 | Shelf        | [Home page](https://campar.in.tum.de/Chair/MultiHumanPose) | [Shelf.tar.bz2](https://www.campar.in.tum.de/public_datasets/2014_cvpr_belagiannis/Shelf.tar.bz2) |
 | CMU Panoptic | [Home page](http://domedb.perception.cs.cmu.edu/)          | By [official script](https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox/blob/master/scripts/getData.sh) |
+| FourDAG | [Home page](https://github.com/zhangyux15/multiview_human_dataset)          | [dataset](https://pan.baidu.com/s/1AZgNV4kp7PuIBicEiSPdGA) (password in home page) |
 
 ### Download converted meta-data
 

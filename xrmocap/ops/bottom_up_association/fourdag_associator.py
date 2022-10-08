@@ -8,7 +8,9 @@ from xrprimer.data_structure.camera import (
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.ops.bottom_up_association.associate.builder import build_associate
+from xrmocap.ops.bottom_up_association.graph_solver.builder import (
+    build_graph_solver,
+)
 from xrmocap.ops.top_down_association.identity_tracking.builder import (
     BaseTracking, build_identity_tracking,
 )
@@ -21,7 +23,6 @@ from xrmocap.ops.triangulation.point_selection.builder import (
 from xrmocap.transform.keypoints3d.optim.builder import (
     build_keypoints3d_optimizer,
 )
-from xrmocap.utils.fourdag_utils import LIMB_INFO
 
 # yapf: enable
 
@@ -34,7 +35,8 @@ class FourDAGAssociator:
                  point_selector: Union[None, dict, BaseSelector] = None,
                  keypoints3d_optimizer=None,
                  n_views: int = 5,
-                 associate_graph: Union[None, dict] = None,
+                 graph_construct: Union[None, dict] = None,
+                 graph_associate: Union[None, dict] = None,
                  identity_tracking: Union[None, dict, BaseTracking] = None,
                  min_asgn_cnt: int = 5,
                  use_tracking_edges: bool = True,
@@ -65,15 +67,18 @@ class FourDAGAssociator:
             self.point_selector = build_point_selector(point_selector)
         else:
             self.point_selector = point_selector
-        if isinstance(associate_graph, dict):
-            associate_graph['logger'] = self.logger
-            associate_graph['n_kps'] = LIMB_INFO[self.kps_convention]['n_kps']
-            associate_graph['n_pafs'] = LIMB_INFO[
-                self.kps_convention]['n_pafs']
-            associate_graph['n_views'] = self.n_views
-            self.associate_graph = build_associate(associate_graph)
+        if isinstance(graph_associate, dict):
+            graph_associate['logger'] = self.logger
+            graph_associate['n_views'] = self.n_views
+            self.graph_associate = build_graph_solver(graph_associate)
         else:
-            self.associate_graph = associate_graph
+            self.graph_associate = graph_associate
+        if isinstance(graph_construct, dict):
+            graph_construct['logger'] = self.logger
+            graph_construct['n_views'] = self.n_views
+            self.graph_construct = build_graph_solver(graph_construct)
+        else:
+            self.graph_construct = graph_construct
         if isinstance(identity_tracking, dict):
             identity_tracking['logger'] = self.logger
             self.identity_tracking = build_identity_tracking(identity_tracking)
@@ -90,7 +95,7 @@ class FourDAGAssociator:
             self.keypoints3d_optimizer.set_cameras(cameras)
         if hasattr(self.point_selector, 'triangulator'):
             self.point_selector.triangulator.set_cameras(cameras)
-        self.associate_graph.set_cameras(cameras)
+        self.graph_construct.set_cameras(cameras)
 
     def cal_keypoints2d(self, mpersons_map, kps2d):
         for i, person_id in enumerate(mpersons_map.copy()):
@@ -150,7 +155,9 @@ class FourDAGAssociator:
         """
 
         self.n_kps = len(kps2d[0])
-        mpersons_map = self.associate_graph(kps2d, pafs, self.last_multi_kps3d)
+        graph_info = self.graph_construct(kps2d, pafs, self.last_multi_kps3d)
+        mpersons_map = self.graph_associate(kps2d, pafs, graph_info,
+                                            self.last_multi_kps3d)
         mlimbs2d = self.cal_keypoints2d(mpersons_map, kps2d)
         multi_kps2d = dict()
         for person_id in mlimbs2d:

@@ -140,6 +140,7 @@ def convert_bottom_up_kps_paf(
             Defaults to KEYPOINTS_FACTORY.
 
     Returns:
+        dst_detections (list): the destination keypoints and paf
     """
     n_frame = len(kps_paf)
     dst_n_kps = get_keypoint_num(

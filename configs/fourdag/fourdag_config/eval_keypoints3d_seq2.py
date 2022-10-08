@@ -1,7 +1,7 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = './xrmocap_data/FourDAG/seq2'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
+__data_root__ = './xrmocap_data/FourDAG/'
+__meta_path__ = __data_root__ + '/xrmocap_meta_seq2'
 
 logger = None
 output_dir = './output/fourdag/fourdag_fourdag_19_FourDAGOptimization/'
@@ -11,7 +11,7 @@ selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
     'left_forearm', 'right_forearm', 'left_thigh', 'right_thigh'
 ]
-additional_limbs_names = [['jaw', 'headtop']]
+# additional_limbs_names = [['jaw', 'headtop']]
 
 associator = dict(
     type='FourDAGAssociator',
@@ -38,11 +38,17 @@ associator = dict(
         triangulate_thresh=0.05,
         logger=logger,
     ),
-    associate_graph=dict(
-        type='FourDAGAssociate',
+    graph_construct=dict(
+        type='GraphConstruct',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
         max_temp_dist=0.3,
+        normalize_edges=True,
+        logger=logger,
+    ),
+    graph_associate=dict(
+        type='GraphAssociate',
+        kps_convention=pred_kps3d_convention,
         w_epi=1,
         w_temp=2,
         w_view=1,
@@ -50,7 +56,6 @@ associator = dict(
         w_hier=1,
         c_view_cnt=1,
         min_check_cnt=10,
-        normalize_edges=True,
         logger=logger,
     ),
     logger=logger,

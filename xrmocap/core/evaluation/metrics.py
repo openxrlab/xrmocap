@@ -159,11 +159,14 @@ def calc_limbs_accuracy(
             else:
                 check_result[idx, gt_kps3d_idx, -1] = -1
                 error_cnt += 1
-    bone_group = dict([('Head', np.array([8])), ('Torso', np.array([9])),
+    bone_group = dict([('Torso', np.array([len(limbs) - 1])),
                        ('Upper arms', np.array([5, 6])),
                        ('Lower arms', np.array([4, 7])),
                        ('Upper legs', np.array([1, 2])),
                        ('Lower legs', np.array([0, 3]))])
+    if len(limbs) > 9:
+        # head is absent in some dataset
+        bone_group['Head'] = np.array([8])
 
     person_wise_avg = np.sum(
         check_result > 0, axis=(0, 2)) / np.sum(
@@ -180,7 +183,7 @@ def calc_limbs_accuracy(
 
     tb = PrettyTable()
     tb.field_names = ['Bone Group'] + [
-        f'Actor {i}' for i in range(bone_person_wise_result['Head'].shape[0])
+        f'Actor {i}' for i in range(bone_person_wise_result['Torso'].shape[0])
     ] + ['Average']
     for k, v in bone_person_wise_result.items():
         this_row = [k] + [np.char.mod('%.4f', i) for i in v

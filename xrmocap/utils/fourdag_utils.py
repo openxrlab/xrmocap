@@ -2,8 +2,45 @@ import json
 import math
 import numpy as np
 
-with open('./weight/limb_info.json', 'r') as f:
-    LIMB_INFO = json.load(f)
+
+class LimbInfo():
+
+    def __init__(self, kps_convention) -> None:
+        self.kps_convention = kps_convention
+        with open('./weight/limb_info.json', 'r') as f:
+            self.info_dict = json.load(f)[self.kps_convention]
+
+    def get_kps_number(self):
+        """get keypoints number."""
+        return self.info_dict['n_kps']
+
+    def get_paf_number(self):
+        """get paf number."""
+        return self.info_dict['n_pafs']
+
+    def get_shape_size(self):
+        """get the prior shape number."""
+        return self.info_dict['shape_size']
+
+    def get_kps_parent(self):
+        """get keypoints parent list."""
+        return self.info_dict['kps_parent']
+
+    def get_shape_blend(self):
+        """get shape blend."""
+        return self.info_dict['shape_blend']
+
+    def get_kps_prior(self):
+        """get prior keypoints."""
+        return self.info_dict['m_kps']
+
+    def get_hierarchy_map(self):
+        """get hierarchy map for keypoints."""
+        return self.info_dict['hierarchy_map']
+
+    def get_paf_dict(self):
+        """get paf dict."""
+        return self.info_dict['paf_dict']
 
 
 def welsch(c, x):

@@ -1,10 +1,10 @@
 type = 'BottomUpAssociationEvaluation'
 
-__data_root__ = './xrmocap_data/CampusSeq1'
-__meta_path__ = __data_root__ + '/xrmocap_meta_testset'
+__data_root__ = './xrmocap_data/FourDAG'
+__meta_path__ = __data_root__ + '/xrmocap_meta_seq5'
 
 logger = None
-output_dir = './output/fourdag/CampusSeq1_fourdag_19_FourDAGOptimization/'
+output_dir = './output/fourdag/fourdag_fourdag_19_FourDAGOptimization/'
 pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
 selected_limbs_name = [
@@ -16,7 +16,7 @@ additional_limbs_names = [['jaw', 'headtop']]
 associator = dict(
     type='FourDAGAssociator',
     kps_convention=pred_kps3d_convention,
-    min_asgn_cnt=10,
+    min_asgn_cnt=5,
     use_tracking_edges=True,
     keypoints3d_optimizer=dict(
         type='FourDAGOptimizer',
@@ -42,20 +42,20 @@ associator = dict(
         type='GraphConstruct',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
-        max_temp_dist=0.2,
+        max_temp_dist=0.3,
         normalize_edges=True,
         logger=logger,
     ),
     graph_associate=dict(
         type='GraphAssociate',
         kps_convention=pred_kps3d_convention,
-        w_epi=2,
+        w_epi=1,
         w_temp=2,
-        w_view=2,
-        w_paf=4,
-        w_hier=0.5,
-        c_view_cnt=1.5,
-        min_check_cnt=1,
+        w_view=1,
+        w_paf=2,
+        w_hier=1,
+        c_view_cnt=1,
+        min_check_cnt=10,
         logger=logger,
     ),
     logger=logger,
@@ -87,4 +87,5 @@ dataset_visualization = dict(
     vis_gt_kps3d=False,
     vis_bottom_up=True,
     gt_kps3d_convention=None,
+    resolution=(368, 368),
 )

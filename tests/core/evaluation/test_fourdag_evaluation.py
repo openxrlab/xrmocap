@@ -7,7 +7,7 @@ import shutil
 from xrmocap.core.evaluation.builder import build_evaluation
 from xrmocap.data_structure.keypoints import Keypoints
 
-output_dir = 'tests/data/output/core/test_mvpose_evaluation'
+output_dir = 'tests/data/output/core/test_fourdag_evaluation'
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -17,7 +17,7 @@ def fixture():
     os.makedirs(output_dir, exist_ok=False)
 
 
-def test_mvpose_evaluation():
+def test_fourdag_evaluation():
     evaluation_config = dict(
         mmcv.Config.fromfile('configs/modules/core/evaluation/' +
                              'bottom_up_eval_shelf_unittest.py'))

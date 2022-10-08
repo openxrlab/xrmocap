@@ -28,9 +28,9 @@ class BottomUpAssociationEvaluation:
     def __init__(self,
                  output_dir: str,
                  selected_limbs_name: List[List[str]],
-                 additional_limbs_names: List[List[str]],
                  dataset: Union[dict, MviewMpersonDataset],
                  associator: Union[dict, FourDAGAssociator],
+                 additional_limbs_names: List[List[str]] = [],
                  dataset_visualization: Union[None, dict,
                                               BaseDataVisualization] = None,
                  pred_kps3d_convention: str = 'coco',
@@ -187,8 +187,8 @@ class BottomUpAssociationEvaluation:
             gt_keypoints3d_,
             pck_thres=[100, 200],
             logger=self.logger)
-        self.logger.info(f'MPJPE: {evel_dict["mpjpe_mean"]:.2f} ±\
-                 {evel_dict["mpjpe_std"]:.2f} mm')
+        self.logger.info('MPJPE: {:.2f} ± {:.2f} mm'.format(
+            evel_dict['mpjpe_mean'], evel_dict['mpjpe_std']))
         self.logger.info(f'PA-MPJPE: {evel_dict["pa_mpjpe_mean"]:.2f} ±'
                          f'{evel_dict["pa_mpjpe_std"]:.2f} mm')
         self.logger.info(f'PCK@100mm: {evel_dict["pck"][100]:.2f} %')

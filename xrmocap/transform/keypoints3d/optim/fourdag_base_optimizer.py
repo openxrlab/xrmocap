@@ -5,7 +5,7 @@ from typing import Union
 from xrmocap.ops.triangulation.builder import (
     BaseTriangulator, build_triangulator,
 )
-from xrmocap.utils.fourdag_utils import LIMB_INFO
+from xrmocap.utils.fourdag_utils import LimbInfo
 
 # yapf: enable
 
@@ -45,10 +45,10 @@ class FourDAGBaseOptimizer():
         self.projs = None
         self.trace_limbs = dict()
         self.trace_limb_infos = dict()
+        self.limb_info = LimbInfo(self.kps_convention)
 
     def triangulate_person(self, limb2d):
-        kps2d = limb2d.T.reshape(
-            (-1, LIMB_INFO[self.kps_convention]['n_kps'], 3))
+        kps2d = limb2d.T.reshape((-1, self.limb_info.get_kps_number(), 3))
         kps3d = self.triangulator.triangulate(kps2d)
         mask = self.triangulator.loss < self.triangulate_thresh
         limb = np.concatenate((kps3d.T, mask.reshape(1, -1)), axis=0)

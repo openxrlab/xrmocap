@@ -38,11 +38,17 @@ associator = dict(
         triangulate_thresh=0.05,
         logger=logger,
     ),
-    associate_graph=dict(
-        type='FourDAGAssociate',
+    graph_construct=dict(
+        type='GraphConstruct',
         kps_convention=pred_kps3d_convention,
         max_epi_dist=0.15,
         max_temp_dist=0.2,
+        normalize_edges=True,
+        logger=logger,
+    ),
+    graph_associate=dict(
+        type='GraphAssociate',
+        kps_convention=pred_kps3d_convention,
         w_epi=2,
         w_temp=2,
         w_view=2,
@@ -50,7 +56,6 @@ associator = dict(
         w_hier=0.5,
         c_view_cnt=1.5,
         min_check_cnt=1,
-        normalize_edges=True,
         logger=logger,
     ),
     logger=logger,
