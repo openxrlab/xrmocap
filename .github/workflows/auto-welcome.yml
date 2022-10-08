@@ -14,5 +14,5 @@ jobs:
           actions: 'welcome'
           token: ${{ secrets.GITHUB_TOKEN }}
           body: hi @${{ github.event.issue.user.login }}, welcome!
-          assignees: 'yl-1993'
-          issue-contents: '+1, laugh'
+          assignees: 'aichunling0418,tonylu0728,yl-1993'
+          issue-contents: '+1'
