@@ -11,7 +11,7 @@ selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
     'left_forearm', 'right_forearm', 'left_thigh', 'right_thigh'
 ]
-additional_limbs_names = [['jaw', 'headtop']]
+# additional_limbs_names = [['jaw', 'headtop']]
 
 associator = dict(
     type='FourDAGAssociator',

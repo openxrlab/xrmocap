@@ -196,5 +196,4 @@ class BottomUpMviewMpersonDataset(MviewMpersonDataset):
                 mview_kps2d.append(convert_detections)
             f.close()
             mscene_keypoints_list.append(mview_kps2d)
-
         self.percep_keypoints2d = mscene_keypoints_list
