@@ -64,22 +64,6 @@ class Voting():
                 _vote[person_id][index] = 0
 
 
-class Camera():
-
-    def __init__(self, cam_param) -> None:
-        super().__init__()
-        c_K = cam_param.intrinsic33()
-        c_T = np.array(cam_param.get_extrinsic_t())
-        c_R = np.array(cam_param.get_extrinsic_r())
-        c_Ki = np.linalg.inv(c_K)
-        self.c_Rt_Ki = np.matmul(c_R.T, c_Ki)
-        self.Pos = -np.matmul(c_R.T, c_T)
-
-    def cal_ray(self, uv):
-        var = -self.c_Rt_Ki.dot(np.append(uv, 1).T)
-        return var / np.linalg.norm(var)
-
-
 class GraphAssociate():
 
     def __init__(self,
@@ -160,13 +144,16 @@ class GraphAssociate():
         self.cliques = []
 
     def __call__(self, kps2d, pafs, graph, last_multi_kps3d=dict):
-        """Match people id from different cameras.
+        """associate keypoint in multiply view.
 
         Args:
-
-        Raises:
+            kps2d (list): 2D keypoints
+            pafs (list): part affine field
+            graph (list): the 4D graph to be associated
+            last_multi_kps3d (dict): 3D keypoints of last frame
 
         Returns:
+            mpersons_map (dict): the associate limb
         """
         self.kps2d = kps2d
         self.pafs = pafs

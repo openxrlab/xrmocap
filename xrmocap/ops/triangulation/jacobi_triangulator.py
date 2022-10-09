@@ -51,7 +51,7 @@ class JacobiTriangulator(BaseTriangulator):
     def _solve(self, points, points_c):
         points = points.T
         convergent = False
-        loss = 10e9
+        loss = 1e10
         pos = np.zeros(3, dtype=np.float32)
 
         if sum(points_c > 0) < 2:

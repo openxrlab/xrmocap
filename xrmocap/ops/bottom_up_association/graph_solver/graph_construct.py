@@ -108,7 +108,7 @@ class GraphConstruct():
             self.cameras.append(Camera(cameras_param[view]))
 
     def __call__(self, kps2d, pafs, last_multi_kps3d=dict):
-        """Match people id from different cameras.
+        """construct the 4D graph.
 
         Args:
             kps2d (list): 2D keypoints
