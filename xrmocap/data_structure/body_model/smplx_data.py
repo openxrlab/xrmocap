@@ -290,7 +290,8 @@ class SMPLXData(SMPLData):
         fullpose = self.get_fullpose()
         start_idx = 1
         body_pose = fullpose[:, start_idx:start_idx +
-                             self.__class__.BODY_POSE_LEN].reshape(-1, 3)
+                             self.__class__.BODY_POSE_LEN].reshape(
+                                 self.get_batch_size(), -1)
         start_idx += self.__class__.BODY_POSE_LEN
         jaw_pose = fullpose[:, start_idx:start_idx +
                             self.__class__.JAW_POSE_LEN].reshape(-1, 3)
@@ -345,5 +346,6 @@ class SMPLXData(SMPLData):
             repeat_betas=repeat_betas, repeat_expression=repeat_expression)
         dict_to_return = {}
         for key, value in np_dict.items():
-            dict_to_return[key] = torch.tensor(value, device=device)
+            dict_to_return[key] = torch.tensor(
+                value, device=device, dtype=torch.float32)
         return dict_to_return
