@@ -1,4 +1,10 @@
-# XRMocap
+<br/>
+
+<div align="center">
+    <img src="resources/xrmocap-logo.png" width="600"/>
+</div>
+
+<br/>
 
 <div align="left">
 
