@@ -1,6 +1,6 @@
 # yapf: disable
 import numpy as np
-from typing import List, Union, overload
+from typing import List, Tuple, Union, overload
 
 from xrmocap.data_structure.keypoints import Keypoints
 
@@ -68,6 +68,7 @@ def visualize_keypoints2d(
         img_paths: Union[None, List[str]] = None,
         video_path: Union[None, str] = None,
         overwrite: bool = False,
+        resolution: Tuple = None,
         return_array: bool = False) -> Union[None, np.ndarray]:
     """Visualize 2d keypoints, powered by mmhuman3d.
 
@@ -127,6 +128,7 @@ def visualize_keypoints2d(
         frame_list=img_paths,
         origin_frames=video_path,
         data_source=kps_convention,
+        resolution=resolution,
         mask=mm_kps_mask,
         overwrite=overwrite,
         return_array=return_array)

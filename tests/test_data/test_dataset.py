@@ -82,3 +82,41 @@ def test_load_shelf_dataset_wo_perception2d():
     expect_n_batch = int(
         len(dataloader.dataset) / 2) + len(dataloader.dataset) % 2
     assert iter_count == expect_n_batch
+
+
+def test_load_shelf_dataset_bottom_up():
+    dataset_config = dict(
+        mmcv.Config.fromfile('configs/modules/data/dataset/' +
+                             'shelf_unittest_bottom_up.py'))
+    dataloader_config = dict(
+        type='DataLoader', dataset=dataset_config, batch_size=1, num_workers=1)
+    dataloader = build_dataloader(dataloader_config)
+    dataloader.dataset[0]
+    iter_count = 0
+    for batch_idx, batch_data in enumerate(dataloader):
+        # mview img shape: batch_size, n_v, h, w, c
+        assert len(batch_data[0].shape) == 5
+        # K shape: batch_size, n_v, 3, 3
+        assert len(batch_data[1].shape) == 4
+        assert batch_data[1].shape[-2:] == (3, 3)
+        # R shape: batch_size, n_v, 3, 3
+        assert len(batch_data[2].shape) == 4
+        assert batch_data[2].shape[-2:] == (3, 3)
+        # T shape: batch_size, n_v, 3
+        assert len(batch_data[3].shape) == 3
+        assert batch_data[3].shape[-1] == 3
+        # kps3d shape: batch_size, n_person, n_kps, 4
+        assert len(batch_data[4].shape) == 4
+        assert batch_data[4].shape[-1] == 4
+        # end_of_clip shape: batch_size
+        assert len(batch_data[5].shape) == 1
+        assert batch_data[5][0].item() == \
+            (batch_idx == len(dataloader.dataset)-1)
+        # kw_data
+        kps2d = batch_data[6]
+        assert len(kps2d) == 5
+        pafs = batch_data[7]
+        assert len(pafs) == 5
+        iter_count = batch_idx + 1
+    expect_n_batch = len(dataloader.dataset)
+    assert iter_count == expect_n_batch

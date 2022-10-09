@@ -2,7 +2,7 @@
 import logging
 import numpy as np
 import os
-from typing import List, Union
+from typing import List, Tuple, Union
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.core.visualization import (
@@ -27,6 +27,8 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                  pred_kps3d_paths: List[str] = None,
                  pred_kps3d_convention: Union[None, str] = None,
                  vis_gt_kps3d: bool = True,
+                 vis_bottom_up: bool = False,
+                 resolution: Tuple = None,
                  gt_kps3d_convention: Union[None, str] = None,
                  vis_cameras: bool = False,
                  vis_aio_video: bool = True,
@@ -97,6 +99,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
         self.vis_percep2d = vis_percep2d
         self.kps2d_convention = kps2d_convention
         self.vis_gt_kps3d = vis_gt_kps3d
+        self.vis_bottom_up = vis_bottom_up
         self.gt_kps3d_convention = gt_kps3d_convention
         self.vis_cameras = vis_cameras
         self.vis_aio_video = vis_aio_video
@@ -104,6 +107,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             if pred_kps3d_paths is not None \
             else []
         self.pred_kps3d_convention = pred_kps3d_convention
+        self.resolution = resolution
 
     def run(self, overwrite: bool = False) -> None:
         """Visualize meta-data selected in __init__().
@@ -137,6 +141,8 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 self.visualize_perception_2d(scene_idx)
             if self.vis_gt_kps3d:
                 self.visualize_ground_truth_3d(scene_idx)
+            if self.vis_bottom_up:
+                self.visualize_perception_2d_bottm_up(scene_idx)
 
     def visualize_perception_2d(self, scene_idx: int) -> None:
         """Visualize converted 2D perception keypoints2d data. If bbox was
@@ -199,11 +205,74 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                 output_path=video_path,
                 img_paths=frame_list,
                 overwrite=True,
+                resolution=self.resolution,
                 return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)
         # draw views all in one
         if self.vis_aio_video:
             video_path = os.path.join(scene_vis_dir, 'perception2d_AIO.mp4')
+            mview_array_to_video(
+                mview_plot_arr, video_path, logger=self.logger)
+
+    def visualize_perception_2d_bottm_up(self, scene_idx: int) -> None:
+        """Visualize bottom-up associated 2D perception keypoints2d data.
+
+        Args:
+            scene_idx (int):
+                Index of this scene.
+        """
+        scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
+        npz_path = os.path.join(self.output_dir,
+                                f'scene{scene_idx}_associate_keypoints2d.npy')
+        cam_dir = os.path.join(scene_dir, 'camera_parameters')
+        file_names = sorted(os.listdir(cam_dir))
+        cam_names = []
+        view_idxs = []
+        for file_name in file_names:
+            if file_name.startswith('fisheye_param_'):
+                cam_names.append(file_name)
+                view_idxs.append(
+                    int(
+                        file_name.replace('fisheye_param_',
+                                          '').replace('.json', '')))
+        n_view = len(cam_names)
+        mview_plot_arr = []
+        arr_data = np.load(npz_path)
+        for idx in range(n_view):
+            view_idx = view_idxs[idx]
+            if self.verbose:
+                self.logger.info('Visualizing perception 2D data for' +
+                                 f' scene {scene_idx} view {view_idx}')
+            list_path = os.path.join(scene_dir,
+                                     f'image_list_view_{view_idx:02d}.txt')
+            with open(list_path, 'r') as f_read:
+                rela_path_list = f_read.readlines()
+            frame_list = [
+                os.path.join(self.data_root, rela_path.strip())
+                for rela_path in rela_path_list
+            ]
+            kps2d = arr_data[:, :, idx, :, :]
+            keypoints2d = Keypoints(
+                kps=kps2d,
+                mask=kps2d[..., 2] > 0,
+                convention=self.kps2d_convention)
+            if self.kps2d_convention is not None:
+                keypoints2d = convert_keypoints(
+                    keypoints2d, dst=self.kps2d_convention, approximate=True)
+            scene_vis_dir = os.path.join(self.output_dir, f'scene_{scene_idx}')
+            video_path = os.path.join(
+                scene_vis_dir, f'associate_kps2d_view_{view_idx:02d}.mp4')
+            plot_arr = visualize_keypoints2d(
+                keypoints=keypoints2d,
+                output_path=video_path,
+                img_paths=frame_list,
+                resolution=self.resolution,
+                overwrite=True,
+                return_array=self.vis_aio_video)
+            mview_plot_arr.append(plot_arr)
+        # draw views all in one
+        if self.vis_aio_video:
+            video_path = os.path.join(scene_vis_dir, 'associate_kps2d_AIO.mp4')
             mview_array_to_video(
                 mview_plot_arr, video_path, logger=self.logger)
 

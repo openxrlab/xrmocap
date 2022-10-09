@@ -1,3 +1,4 @@
+# yapf: disable
 import glob
 import logging
 import numpy as np
@@ -16,6 +17,7 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
+# yapf: enable
 
 
 class MviewMpersonDataset(BaseDataset):

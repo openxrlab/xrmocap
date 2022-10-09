@@ -12,12 +12,14 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
 from typing import List
 
 from xrmocap.data_structure.keypoints import Keypoints
-from . import campus, human_data, panoptic  # noqa:F401
+from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
+from .paf import ALL_PAF_MAPPING
 
 # yapf: enable
 if isinstance(KEYPOINTS_FACTORY, dict):
     KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
     KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
+    KEYPOINTS_FACTORY['fourdag_19'] = fourdag_19.FOURDAG19_KEYPOINTS
 
 
 def convert_keypoints(
@@ -110,6 +112,93 @@ def convert_keypoints(
         convention=dst,
         logger=keypoints.logger)
     return ret_kps
+
+
+def convert_bottom_up_kps_paf(
+    kps_paf: List,
+    src: str,
+    dst: str,
+    approximate: bool = False,
+    keypoints_factory: dict = KEYPOINTS_FACTORY,
+):
+    """Convert keypoints and pafs following the mapping correspondence between
+    src and dst keypoints definition.
+
+    Args:
+        kps_paf (List):
+            A list of dict of 2D keypoints and pafs in shape
+                 [{'kps':[],'pafs':[]},...]
+        src (str):
+            The name of source convention.
+        dst (str):
+            The name of destination convention.
+        approximate (bool, optional):
+            Whether approximate mapping is allowed.
+            Defaults to False.
+        keypoints_factory (dict, optional):
+            A dict to store all the keypoint conventions.
+            Defaults to KEYPOINTS_FACTORY.
+
+    Returns:
+        dst_detections (list): the destination keypoints and paf
+    """
+    n_frame = len(kps_paf)
+    dst_n_kps = get_keypoint_num(
+        convention=dst, keypoints_factory=keypoints_factory)
+    dst_idxs, src_idxs, _ = \
+        get_mapping(src, dst, approximate, keypoints_factory)
+    paf_mapping = ALL_PAF_MAPPING[src][dst]
+
+    dst_detections = []
+    for i in range(n_frame):
+        var = {
+            'kps': [np.array([]) for j in range(dst_n_kps)],
+            'pafs': [np.array([]) for k in range(len(paf_mapping))]
+        }
+        dst_detections.append(var)
+    for frame_id in range(n_frame):
+        for i in range(len(dst_idxs)):
+            dst_detections[frame_id]['kps'][dst_idxs[i]] = np.array(
+                kps_paf[frame_id]['kps'][src_idxs[i]], dtype=np.float32)
+        for i in range(len(paf_mapping)):
+            if isinstance(paf_mapping[i], list):
+                if paf_mapping[i][0] < 0:
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][-paf_mapping[i][0]],
+                        dtype=np.float32).T
+                else:
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][paf_mapping[i][0]],
+                        dtype=np.float32)
+                dst_detections[frame_id]['pafs'][
+                    i] = dst_detections[frame_id]['pafs'][i] * (
+                        dst_detections[frame_id]['pafs'][i] > 0.1)
+                for path_id in paf_mapping[i][1:]:
+                    if path_id < 0:
+                        arr = np.array(
+                            kps_paf[frame_id]['pafs'][-path_id],
+                            dtype=np.float32).T
+                    else:
+                        arr = np.array(
+                            kps_paf[frame_id]['pafs'][path_id],
+                            dtype=np.float32)
+                    dst_detections[frame_id]['pafs'][i] = np.matmul(
+                        dst_detections[frame_id]['pafs'][i], arr)
+                    dst_detections[frame_id]['pafs'][
+                        i] = dst_detections[frame_id]['pafs'][i] * (
+                            dst_detections[frame_id]['pafs'][i] > 0.1)
+                dst_detections[frame_id]['pafs'][i] = dst_detections[frame_id][
+                    'pafs'][i] * len(paf_mapping[i])
+            else:
+                if paf_mapping[i] < 0:
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][-paf_mapping[i]],
+                        dtype=np.float32).T
+                else:
+                    dst_detections[frame_id]['pafs'][i] = np.array(
+                        kps_paf[frame_id]['pafs'][paf_mapping[i]],
+                        dtype=np.float32)
+    return dst_detections
 
 
 def get_keypoints_factory() -> dict:
