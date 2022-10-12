@@ -14,18 +14,15 @@ __projattn_pos_embed_mode__ = 'use_rayconv'
 __pred_conf_threshold__ = 0.5
 __n_heads__ = 8
 
- 
+logger = None
 dataset = __dataset__,
-kps3d_convention='campus',
-image_size=__image_size__,
-heatmap_size=[200, 152],
+kps3d_convention = 'campus',
+image_size = __image_size__,
+heatmap_size = [200, 152],
 
-img_pipeline=[
+img_pipeline = [
     dict(type='BGR2RGB'),
-    dict(
-        type='WarpAffine',
-        image_size=__image_size__,
-        flag='inter_linear'),
+    dict(type='WarpAffine', image_size=__image_size__, flag='inter_linear'),
     dict(type='ToTensor'),
     dict(
         type='Normalize',
@@ -33,7 +30,7 @@ img_pipeline=[
         std=[0.229, 0.224, 0.225])
 ],
 
-mvp_setup=dict(
+mvp_setup = dict(
     type='MviewPoseTransformer',
     n_kps=__net_n_kps__,
     n_instance=__n_instance__,
@@ -52,9 +49,7 @@ mvp_setup=dict(
     pred_class_fuse='mean',
     projattn_pos_embed_mode=__projattn_pos_embed_mode__,
     query_adaptation=True,
-    convert_kp_format_indexes=[
-        14, 13, 12, 6, 7, 8, 11, 10, 9, 3, 4, 5, 0, 1
-    ],
+    convert_kp_format_indexes=[14, 13, 12, 6, 7, 8, 11, 10, 9, 3, 4, 5, 0, 1],
     backbone_setup=dict(
         type='PoseResNet',
         n_layers=__resnet_n_layer__,

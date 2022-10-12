@@ -30,9 +30,10 @@ def main(args):
         logger = None
 
     # build estimator
-    estimator_config = dict(type='MultiViewMultiPersonEnd2EndEstimator',
-        logger = logger,
-        kps3d_model_path = args.model_path)
+    estimator_config = dict(
+        type='MultiViewMultiPersonEnd2EndEstimator',
+        logger=logger,
+        kps3d_model_path=args.model_path)
     estimator_config.update(dict(mmcv.Config.fromfile(args.estimator_config)))
     smpl_estimator = build_estimator(estimator_config)
 

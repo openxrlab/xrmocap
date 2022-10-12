@@ -2,7 +2,7 @@ import cv2
 import logging
 import numpy as np
 import torch
-from typing import Union
+from typing import Tuple, Union
 
 from xrmocap.utils.geometry import get_affine_transform, get_scale
 from .base_image_transform import BaseImageTransform
@@ -64,3 +64,45 @@ class WarpAffine(BaseImageTransform):
             trans, (int(self.image_size[0]), int(self.image_size[1])),
             flags=self.flag)
         return warped_img
+
+
+def get_affine_trans_aug(
+    self,
+    c: np.ndarray,
+    s: np.ndarray,
+    aug_s: np.ndarray,
+    image_size: np.ndarray,
+    r: int = 0,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Get affine transformation matrix, inverse affine transformation matrix
+    and augmented affine transformation with given.
+
+    Args:
+        c (np.ndarray): Center of the image.
+        s (np.ndarray): Scale for affine transformation.
+        aug_s (np.ndarray): Scale for augmented affine transformation.
+        image_size (np.ndarray): Original image size.
+        r (int, optional): Rotation. Defaults to 0.
+
+    Returns:
+        aff_trans (np.ndarray): Affine transformation matrix.
+        inv_aff_trans (np.ndarray): Inverse affine transformation matrix.
+        aug_trans (np.ndarray): Augmented affine transformation matrix.
+    """
+    aff_trans = np.eye(3, 3)
+    inv_aff_trans = np.eye(3, 3)
+    aug_trans = np.eye(3, 3)
+    scale_trans = np.eye(3, 3)
+
+    trans = get_affine_transform(c, s, r, image_size, inv=0)
+    inv_trans = get_affine_transform(c, s, r, image_size, inv=1)
+
+    aff_trans[0:2] = trans.copy()
+    inv_aff_trans[0:2] = inv_trans.copy()
+    aug_trans[0:2] = trans.copy()
+
+    scale_trans[0, 0] = aug_s[1]
+    scale_trans[1, 1] = aug_s[0]
+    aug_trans = scale_trans.dot(aug_trans)
+
+    return aff_trans, inv_aff_trans, aug_trans
