@@ -15,11 +15,17 @@ __pred_conf_threshold__ = 0.5
 __n_heads__ = 8
 
 logger = None
-dataset = __dataset__,
-kps3d_convention = 'campus',
-image_size = __image_size__,
-heatmap_size = [200, 152],
+work_dir = './temp'
+verbose = False
 
+inference_conf_thr = 0.9
+dataset = __dataset__
+kps3d_convention = 'campus'
+image_size = __image_size__
+n_max_person = __n_instance__
+n_kps = __dataset_n_kps__
+heatmap_size = [200, 152]
+cam_metric_unit = 'millimeter'
 img_pipeline = [
     dict(type='BGR2RGB'),
     dict(type='WarpAffine', image_size=__image_size__, flag='inter_linear'),
@@ -28,9 +34,44 @@ img_pipeline = [
         type='Normalize',
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
-],
+]
 
-mvp_setup = dict(
+dataset_setup = dict(
+    test_dataset_setup=dict(
+        type='MVPDataset',
+        test_mode=True,
+        meta_path='./xrmocap_data/Shelf_50/xrmocap_meta_testset_small/',
+    ),
+    base_dataset_setup=dict(
+        type='MVPDataset',
+        dataset=__dataset__,
+        data_root='./xrmocap_data/Shelf_50/Shelf/',
+        img_pipeline=[
+            dict(type='LoadImageCV2'),
+            dict(type='BGR2RGB'),
+            dict(
+                type='WarpAffine',
+                image_size=__image_size__,
+                flag='inter_linear'),
+            dict(type='ToTensor'),
+            dict(
+                type='Normalize',
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225])
+        ],
+        image_size=__image_size__,
+        heatmap_size=[200, 152],
+        metric_unit='millimeter',
+        shuffled=False,
+        gt_kps3d_convention='campus',  # same convention for shelf, campus
+        cam_world2cam=True,
+        n_max_person=__n_instance__,
+        n_views=__n_cameras__,
+        n_kps=__dataset_n_kps__,
+    ),
+)
+
+kps3d_model = dict(
     type='MviewPoseTransformer',
     n_kps=__net_n_kps__,
     n_instance=__n_instance__,
@@ -238,3 +279,8 @@ smplify = dict(
             use_shoulder_hip_only=False),
     ],
 )
+
+# kps3d_optimizers = [
+#     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
+#     dict(type='NanInterpolation', verbose=verbose, logger=logger),
+# ]

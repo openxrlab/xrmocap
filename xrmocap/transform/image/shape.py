@@ -67,7 +67,6 @@ class WarpAffine(BaseImageTransform):
 
 
 def get_affine_trans_aug(
-    self,
     c: np.ndarray,
     s: np.ndarray,
     aug_s: np.ndarray,

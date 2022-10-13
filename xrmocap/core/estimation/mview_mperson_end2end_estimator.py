@@ -4,11 +4,16 @@ import logging
 import numpy as np
 import torch
 from mmcv.runner import load_checkpoint
+from prettytable import PrettyTable
 from torchvision.transforms import Compose
+from tqdm import tqdm
 from typing import List, Tuple, Union, overload
+from xmlrpc.client import Boolean
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.log_utils import get_logger
 
+from xrmocap.core.evaluation.builder import build_evaluation
+from xrmocap.data.dataset.builder import build_dataset
 from xrmocap.data_structure.body_model import SMPLData
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.io.image import (
@@ -22,7 +27,7 @@ from xrmocap.transform.keypoints3d.optim.builder import (
     BaseOptimizer, build_keypoints3d_optimizer,
 )
 from xrmocap.utils.geometry import get_scale
-from xrmocap.utils.mvp_utils import norm2absolute
+from xrmocap.utils.mvp_utils import norm2absolute, process_dict
 from .mperson_smpl_estimator import MultiPersonSMPLEstimator
 
 # yapf: enable
@@ -38,16 +43,21 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                  dataset: str,
                  image_size: List[int],
                  heatmap_size: List[int],
+                 n_max_person: int,
+                 n_kps: int,
                  kps3d_convention: str,
                  kps3d_model: Union[dict, torch.nn.Module],
                  kps3d_model_path: Union[None, str],
-                 inference_conf_thr: List[float] = [0.0],
+                 inference_conf_thr: float = 0.0,
                  load_batch_size: int = 1,
                  kps3d_optimizers: Union[List[Union[BaseOptimizer, dict]],
                                          None] = None,
                  smplify: Union[None, dict, SMPLify] = None,
                  verbose: bool = True,
-                 logger: Union[None, str, logging.Logger] = None) -> None:
+                 logger: Union[None, str, logging.Logger] = None,
+                 dataset_setup: Union[None, dict] = None,
+                 cam_world2cam: Boolean = False,
+                 cam_metric_unit: str = 'millimeter') -> None:
         """Initialization of the class.
 
         Args:
@@ -79,12 +89,30 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             verbose=verbose,
             logger=logger)
 
+        if torch.cuda.is_available():
+            self.logger.info('CUDA is available')
+        else:
+            self.logger.warning('CUDA is not available, running on CPU')
+
         self.logger = get_logger(logger)
+
         self.dataset = dataset
-        self.image_size = image_size
-        self.heatmap_size = heatmap_size
+        self.image_size = np.array(image_size)
+        self.heatmap_size = np.array(heatmap_size)
         self.inference_conf_thr = inference_conf_thr
         self.kps3d_convention = kps3d_convention
+        self.n_max_person = n_max_person
+        self.n_kps = n_kps
+        self.cam_world2cam = cam_world2cam
+
+        if cam_metric_unit == 'meter':
+            self.factor = 1.0
+        elif cam_metric_unit == 'centimeter':
+            self.factor = 100.0
+        elif cam_metric_unit == 'millimeter':
+            self.factor = 1000.0
+
+        self.dataset_setup = dataset_setup
 
         # mvp model only accept batch size = 1 and views in the format of list
         self.load_batch_size = load_batch_size
@@ -97,7 +125,12 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             if kps3d_model_path is None:
                 self.logger.error('Please define a pretrained model')
                 raise ValueError
-            self.kps3d_model = build_architecture(kps3d_model)
+            kps3d_model_setup = dict(
+                type='MviewPoseTransformer',
+                is_train=False,
+                logger=self.logger)
+            kps3d_model_setup.update(kps3d_model)
+            self.kps3d_model = build_architecture(kps3d_model_setup)
             self.logger.info(f'Load saved models state {kps3d_model_path}')
             load_checkpoint(
                 self.kps3d_model,
@@ -177,7 +210,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         """
         input_list = [img_arr, img_paths, video_paths]
         input_count = 0
-        kps3d_batch = []
+
         for input_instance in input_list:
             if input_instance is not None:
                 input_count += 1
@@ -193,7 +226,27 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         n_frame = get_n_frame_from_mview_src(img_arr, img_paths, video_paths,
                                              self.logger)
 
-        for start_idx in range(0, n_frame, self.load_batch_size):
+        kps3d_batch = np.full((n_frame, self.n_max_person, self.n_kps, 4),
+                              np.nan)
+
+        # Dataset
+        test_dataset_cfg = dict(type='MVPDataset', logger=self.logger)
+        test_dataset_cfg.update(self.dataset_setup.test_dataset_setup)
+        test_dataset_cfg.update(self.dataset_setup.base_dataset_setup)
+        test_dataset = build_dataset(test_dataset_cfg)
+        sampler_val = torch.utils.data.SequentialSampler(test_dataset)
+        inf_loader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=1,
+            sampler=sampler_val,
+            pin_memory=True,
+            num_workers=1)
+        eval_cfg = dict(type='MVPEvaluation', dataset=inf_loader.dataset)
+        evaluator = build_evaluation(eval_cfg)
+
+        # load from scene input
+        preds_for_eval = []
+        for start_idx in tqdm(range(0, n_frame, self.load_batch_size)):
             end_idx = min(n_frame, start_idx + self.load_batch_size)
             mview_batch_arr = load_clip_from_mview_src(
                 start_idx=start_idx,
@@ -202,27 +255,44 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                 img_paths=img_paths,
                 video_paths=video_paths,
                 logger=self.logger)
-            # [n_view, 1, h, w, c]
-            n_view, n_frame, h, w, c = mview_batch_arr.shape
+            _, _, h, w, c = mview_batch_arr.shape
 
-            # prepare input data into correct format,
-            # get meta from camera parameters
+            # prepare input data, img list and meta list
             list_inputs = []
             for _, img in enumerate(mview_batch_arr.squeeze()):
                 img_tensor = self.img_pipeline(img)
+                img_tensor = img_tensor.unsqueeze(0)
                 list_inputs.append(img_tensor)
-
             meta = self.prepare_meta(cam_param, h, w)
+            # print("=======meta from cam param==========")
+            # print(meta_[0]['camera'])
+            # batch = next(iter(inf_loader))
+            # _, meta = batch
+            # print("=======meta from dataloader==========")
+            # print(meta[0]['camera'])
             # inference keypoint3d
-            frame_valid_pred_kps3d = self.estimate_perception3d(
-                list_inputs, meta,
-                self.inference_conf_thr)  # [bs, n_person, n_kps, 5]
 
-            kps3d_batch.append(frame_valid_pred_kps3d)
+            frame_valid_pred_kps3d, for_eval = self.estimate_perception3d(
+                list_inputs, meta, self.inference_conf_thr)
 
-        print(kps3d_batch)
+            pred_n_person = frame_valid_pred_kps3d.shape[0]
+            kps3d_batch[start_idx, :pred_n_person,
+                        ...] = frame_valid_pred_kps3d
 
-        # save kps3d and smpl
+            preds_for_eval.append(for_eval)
+
+        # infer with dataloader
+        # preds_for_eval = []
+        # for i, (inputs_dl, meta_dl) in enumerate(inf_loader):
+        #     frame_valid_pred_kps3d, for_eval = self.estimate_perception3d(
+        #         inputs_dl, meta_dl,
+        #         self.inference_conf_thr)
+        #     kps3d_batch[i, ...] = frame_valid_pred_kps3d
+        #     preds_for_eval.append(for_eval)
+
+        # quanti eval
+        self.pcp_eval(evaluator, preds_for_eval)
+
         # Convert array to keypoints instance
         pred_keypoints3d = Keypoints(
             dtype='numpy',
@@ -232,22 +302,12 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             logger=self.logger)
 
         # Optimizing keypoints3d
-        pred_keypoints3d = self.optimize_keypoints3d(pred_keypoints3d)
+        # pred_keypoints3d = self.optimize_keypoints3d(pred_keypoints3d)
+
         # Fitting SMPL model
         smpl_data_list = self.estimate_smpl(keypoints3d=pred_keypoints3d)
 
-        keypoints3d_list = [
-            Keypoints(kps=kps3d_batch, mask=np.ones_like(kps3d_batch[..., 0]))
-        ]
-        smpl_data_list = [
-            None,
-        ] * len(keypoints3d_list)
-        for person_idx, keypoints3d in enumerate(keypoints3d_list):
-            keypoints3d = self.optimize_keypoints3d(keypoints3d)
-            smpl_data = self.estimate_smpl(keypoints3d)
-            keypoints3d_list[person_idx] = keypoints3d
-            smpl_data_list[person_idx] = smpl_data
-        return keypoints3d_list, smpl_data_list
+        return pred_keypoints3d, smpl_data_list
 
     def estimate_perception3d(self,
                               img_arr: Union[None, np.ndarray],
@@ -261,51 +321,55 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             threshold (float, optional): _description_. Defaults to 0.0.
 
         Returns:
-            _type_: all predicted 3D keypoints per frame
+            _type_: all predicted 3D keypoints per frame [n_person, n_kps, 4]
         """
-
-        self.kps3d_model.cuda()
-        # img_arr = [i.to(device) for i in img_arr]
-        # meta = [{k: v.to(device) if isinstance(v, torch.Tensor) else v
-        #     for k, v in t.items()} for t in meta]
-
+        if torch.cuda.is_available():
+            self.kps3d_model.cuda()
+            img_arr = [i.to('cuda') for i in img_arr]
+            meta = [
+                process_dict(t, device='cuda', dummy_dim=None, dtype=None)
+                for t in meta
+            ]
         self.kps3d_model.eval()
-
-        frame_valid_pred_kps3d = []
 
         output = self.kps3d_model(views=img_arr, meta=meta)
 
-        gt_kps3d = meta[0]['kps3d'].float()
-        n_kps = gt_kps3d.shape[2]
         bs, n_queries = output['pred_logits'].shape[:2]
-
         src_poses = output['pred_poses']['outputs_coord']. \
-            view(bs, n_queries, n_kps, 3)
-        src_poses = norm2absolute(src_poses, self.kps3d_model.module.grid_size,
-                                  self.kps3d_model.module.grid_center)
-        score = output['pred_logits'][:, :, 1:2].sigmoid()
-        score = score.unsqueeze(2).expand(-1, -1, n_kps, -1)
-        temp = (score > threshold).float() - 1
+            view(bs, n_queries, self.n_kps, 3)
+        src_poses = norm2absolute(src_poses, self.kps3d_model.grid_size,
+                                  self.kps3d_model.grid_center)
 
-        pred_kps3d = torch.cat([src_poses, temp], dim=-1)
+        if 'panoptic' in self.dataset:
+            trans_ground = torch.tensor([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0],
+                                         [0.0, -1.0, 0.0]]).double()
+            src_poses = torch.mm(src_poses, trans_ground)
+
+        score = output['pred_logits'][:, :, 1:2].sigmoid()
+        score = score.unsqueeze(2).expand(-1, -1, self.n_kps, -1)
+
+        pred_kps3d = torch.cat([src_poses, score - threshold], dim=-1)
         pred_kps3d = pred_kps3d.detach().cpu().numpy()
 
-        for frame_idx in range(pred_kps3d.shape[0]):
-            frame_pred_kps3d = pred_kps3d[frame_idx]
-            # filter for the valid
-            frame_valid_pred_kps3d.append(frame_pred_kps3d[
-                frame_pred_kps3d[:, 0, 3] >= 0])  # [bs, n_person, n_kps, 5]
+        frame_pred_kps3d = pred_kps3d[0]
+        frame_valid_pred_kps3d = frame_pred_kps3d[frame_pred_kps3d[:, 0,
+                                                                   3] >= 0]
 
-        return frame_valid_pred_kps3d
+        return frame_valid_pred_kps3d / self.factor, frame_pred_kps3d
 
     def prepare_meta(self, cam_param: List[FisheyeCameraParameter],
                      height: int, width: int):
         meta = []
-        for cam_idx, camera in enumerate(cam_param):
+        for cam_idx, input_camera in enumerate(cam_param):
+
+            camera = input_camera.clone()
+            if not camera.world2cam:
+                camera.inverse_extrinsic()
+
             kw_data = {}
             k_tensor = torch.tensor(camera.get_intrinsic(k_dim=3))
             r_tensor = torch.tensor(camera.get_extrinsic_r())
-            t_tensor = torch.tensor(camera.get_extrinsic_t())
+            t_tensor = self.factor * torch.tensor(camera.get_extrinsic_t())
 
             k_tensor = k_tensor.double()
             r_tensor = r_tensor.double()
@@ -344,12 +408,30 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             r_trans = torch.mm(r_tensor, trans_ground)
             t_trans = -torch.mm(r_trans.T, t_tensor.reshape((3, 1)))
 
-            view_kw_data['camera']['camera_standard_T'] = t_tensor
+            view_kw_data['camera']['camera_standard_T'] = t_tensor  # world2cam
             view_kw_data['camera']['R'] = r_trans
-            view_kw_data['camera']['T'] = t_trans
+            view_kw_data['camera']['T'] = t_trans  # cam2world
             view_kw_data['camera']['K'] = k_tensor
             view_kw_data['camera']['dist_coeff'] = dist_coeff_tensor
 
             meta.append(view_kw_data)
 
+        meta = [
+            process_dict(t, device=None, dummy_dim=0, dtype='tensor')
+            for t in meta
+        ]
+
         return meta
+
+    def pcp_eval(self, evaluator, preds_for_eval):
+        actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
+            preds_for_eval, recall_threshold=500, alpha=0.5)
+
+        tb = PrettyTable()
+        tb.field_names = ['Metric', 'Actor 1', 'Actor 2', 'Actor 3', 'Average']
+        tb.add_row([
+            'PCP', f'{actor_pcp[0] * 100:.2f}', f'{actor_pcp[1] * 100:.2f}',
+            f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
+        ])
+        self.logger.info('\n' + tb.get_string())
+        self.logger.info(f'Recall@500mm: {recall500:.4f}')

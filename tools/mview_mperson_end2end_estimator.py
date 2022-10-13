@@ -33,7 +33,7 @@ def main(args):
     estimator_config = dict(
         type='MultiViewMultiPersonEnd2EndEstimator',
         logger=logger,
-        kps3d_model_path=args.model_path)
+        kps3d_model_path=args.model_dir)
     estimator_config.update(dict(mmcv.Config.fromfile(args.estimator_config)))
     smpl_estimator = build_estimator(estimator_config)
 
@@ -154,7 +154,7 @@ def setup_parser():
         '--model_dir',
         type=str,
         help='Path to the pretrained model directory.',
-        default='./weight/model')
+        default='./weight/model.pth')
     parser.add_argument(
         '--estimator_config',
         help='Config file for MultiViewMultiPersonTopDownEstimator.',
