@@ -56,7 +56,6 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None,
                  dataset_setup: Union[None, dict] = None,
-                 cam_world2cam: Boolean = False,
                  cam_metric_unit: str = 'millimeter') -> None:
         """Initialization of the class.
 
@@ -103,7 +102,6 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         self.kps3d_convention = kps3d_convention
         self.n_max_person = n_max_person
         self.n_kps = n_kps
-        self.cam_world2cam = cam_world2cam
 
         if cam_metric_unit == 'meter':
             self.factor = 1.0
