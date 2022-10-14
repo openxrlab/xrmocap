@@ -300,10 +300,11 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             logger=self.logger)
 
         # Optimizing keypoints3d
-        # pred_keypoints3d = self.optimize_keypoints3d(pred_keypoints3d)
+        pred_keypoints3d = self.optimize_keypoints3d(pred_keypoints3d)
 
         # Fitting SMPL model
         smpl_data_list = self.estimate_smpl(keypoints3d=pred_keypoints3d)
+
 
         return pred_keypoints3d, smpl_data_list
 

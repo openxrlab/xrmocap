@@ -280,7 +280,11 @@ smplify = dict(
     ],
 )
 
-# kps3d_optimizers = [
-#     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
-#     dict(type='NanInterpolation', verbose=verbose, logger=logger),
-# ]
+kps3d_optimizers = [
+    dict(type='RemoveDuplicate',
+        threshold = 2.0,
+        keep = 'by_index',
+        verbose=verbose, logger=logger),
+    # dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
+    # dict(type='NanInterpolation', verbose=verbose, logger=logger),
+]
