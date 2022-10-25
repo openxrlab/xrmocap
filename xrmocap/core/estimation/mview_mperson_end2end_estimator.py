@@ -340,6 +340,16 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
 
     def prepare_meta(self, cam_param: List[FisheyeCameraParameter],
                      height: int, width: int):
+        """Prepare meta data for end2end estimator.
+
+        Args:
+            cam_param (List[FisheyeCameraParameter]):
+                Camera parameters.
+            height (int):
+                Image height.
+            width (int):
+                Image width.
+        """
         meta = []
         for cam_idx, input_camera in enumerate(cam_param):
 

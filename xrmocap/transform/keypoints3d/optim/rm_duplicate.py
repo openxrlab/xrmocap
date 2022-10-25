@@ -14,6 +14,9 @@ from .base_optimizer import BaseOptimizer
 
 
 class RemoveDuplicate(BaseOptimizer):
+    """This optimization tool helps remove duplicate identities by the L2
+    distance between 3D keypoints for each person and add tracked identities to
+    optimized 3D keypoints."""
 
     def __init__(
         self,
@@ -23,8 +26,7 @@ class RemoveDuplicate(BaseOptimizer):
         identity_tracking: Union[None, dict, BaseTracking] = None,
         logger: Union[None, str, logging.Logger] = None,
     ):
-        """Remove duplicate identities by the L2 distance between 3D keypoints
-        for each person and add tracked identities to optimized 3D keypoints.
+        """Initialization for RemoveDuplicate optimizor.
 
         Args:
             verbose (bool, optional):
@@ -51,7 +53,15 @@ class RemoveDuplicate(BaseOptimizer):
 
     def optimize_keypoints3d(self, keypoints3d: Keypoints,
                              **kwargs: dict) -> Keypoints:
+        """Forward function for RemoveDuplicate optimizor.
 
+        Args:
+            keypoints3d (Keypoints):
+                Keypoints3d to be optimized.
+
+        Returns:
+            Keypoints: Optimized keypoints3d.
+        """
         # get kps3d array
         keypoints3d_optim = keypoints3d.clone()
         kps3d = keypoints3d_optim.get_keypoints()
@@ -111,9 +121,23 @@ class RemoveDuplicate(BaseOptimizer):
     def get_kps3d_dist(self,
                        kps3d: Union[torch.Tensor, np.ndarray],
                        p: int = 2) -> np.ndarray:
+        """Calculate the distance between each set of keypoints3d.
+
+        Args:
+            kps3d (Union[torch.Tensor, np.ndarray]):
+                keypoints3d of the current frame
+            p (int, optional):
+                 p value for the p-norm distance to calculate
+                 between each vector pair. Defaults to 2.
+
+        Returns:
+            np.ndarray:
+                a distance metrix of the size:
+                [n_valid_person, n_valid_person].
+        """
         n_valid_person = kps3d.shape[0]
 
         person = torch.tensor(kps3d[:, 0:3].reshape(n_valid_person, -1))
-        dist = torch.cdist(person, person)  # l2 dist by default
+        dist = torch.cdist(person, person, p)  # l2 dist by default
 
         return dist
