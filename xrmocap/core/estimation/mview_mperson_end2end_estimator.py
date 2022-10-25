@@ -55,7 +55,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                  smplify: Union[None, dict, SMPLify] = None,
                  verbose: bool = True,
                  logger: Union[None, str, logging.Logger] = None,
-                 dataset_setup: Union[None, dict] = None,
+                #  dataset_setup: Union[None, dict] = None,
                  cam_metric_unit: str = 'millimeter') -> None:
         """Initialization of the class.
 
@@ -110,7 +110,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         elif cam_metric_unit == 'millimeter':
             self.factor = 1000.0
 
-        self.dataset_setup = dataset_setup
+        # self.dataset_setup = dataset_setup
 
         # mvp model only accept batch size = 1 and views in the format of list
         self.load_batch_size = load_batch_size
@@ -228,22 +228,22 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
                               np.nan)
 
         # Dataset
-        test_dataset_cfg = dict(type='MVPDataset', logger=self.logger)
-        test_dataset_cfg.update(self.dataset_setup.test_dataset_setup)
-        test_dataset_cfg.update(self.dataset_setup.base_dataset_setup)
-        test_dataset = build_dataset(test_dataset_cfg)
-        sampler_val = torch.utils.data.SequentialSampler(test_dataset)
-        inf_loader = torch.utils.data.DataLoader(
-            test_dataset,
-            batch_size=1,
-            sampler=sampler_val,
-            pin_memory=True,
-            num_workers=1)
-        eval_cfg = dict(type='MVPEvaluation', dataset=inf_loader.dataset)
-        evaluator = build_evaluation(eval_cfg)
+        # test_dataset_cfg = dict(type='MVPDataset', logger=self.logger)
+        # test_dataset_cfg.update(self.dataset_setup.test_dataset_setup)
+        # test_dataset_cfg.update(self.dataset_setup.base_dataset_setup)
+        # test_dataset = build_dataset(test_dataset_cfg)
+        # sampler_val = torch.utils.data.SequentialSampler(test_dataset)
+        # inf_loader = torch.utils.data.DataLoader(
+        #     test_dataset,
+        #     batch_size=1,
+        #     sampler=sampler_val,
+        #     pin_memory=True,
+        #     num_workers=1)
+        # eval_cfg = dict(type='MVPEvaluation', dataset=inf_loader.dataset)
+        # evaluator = build_evaluation(eval_cfg)
 
         # load from scene input
-        preds_for_eval = []
+        # preds_for_eval = []
         for start_idx in tqdm(range(0, n_frame, self.load_batch_size)):
             end_idx = min(n_frame, start_idx + self.load_batch_size)
             mview_batch_arr = load_clip_from_mview_src(
@@ -277,7 +277,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
             kps3d_batch[start_idx, :pred_n_person,
                         ...] = frame_valid_pred_kps3d
 
-            preds_for_eval.append(for_eval)
+            # preds_for_eval.append(for_eval)
 
         # infer with dataloader
         # preds_for_eval = []
@@ -289,7 +289,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         #     preds_for_eval.append(for_eval)
 
         # quanti eval
-        self.pcp_eval(evaluator, preds_for_eval)
+        # self.pcp_eval(evaluator, preds_for_eval)
 
         # Convert array to keypoints instance
         pred_keypoints3d = Keypoints(
@@ -422,15 +422,15 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
 
         return meta
 
-    def pcp_eval(self, evaluator, preds_for_eval):
-        actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
-            preds_for_eval, recall_threshold=500, alpha=0.5)
+    # def pcp_eval(self, evaluator, preds_for_eval):
+    #     actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
+    #         preds_for_eval, recall_threshold=500, alpha=0.5)
 
-        tb = PrettyTable()
-        tb.field_names = ['Metric', 'Actor 1', 'Actor 2', 'Actor 3', 'Average']
-        tb.add_row([
-            'PCP', f'{actor_pcp[0] * 100:.2f}', f'{actor_pcp[1] * 100:.2f}',
-            f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
-        ])
-        self.logger.info('\n' + tb.get_string())
-        self.logger.info(f'Recall@500mm: {recall500:.4f}')
+    #     tb = PrettyTable()
+    #     tb.field_names = ['Metric', 'Actor 1', 'Actor 2', 'Actor 3', 'Average']
+    #     tb.add_row([
+    #         'PCP', f'{actor_pcp[0] * 100:.2f}', f'{actor_pcp[1] * 100:.2f}',
+    #         f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
+    #     ])
+    #     self.logger.info('\n' + tb.get_string())
+    #     self.logger.info(f'Recall@500mm: {recall500:.4f}')

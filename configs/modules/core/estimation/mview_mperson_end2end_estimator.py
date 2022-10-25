@@ -36,40 +36,40 @@ img_pipeline = [
         std=[0.229, 0.224, 0.225])
 ]
 
-dataset_setup = dict(
-    test_dataset_setup=dict(
-        type='MVPDataset',
-        test_mode=True,
-        meta_path='./xrmocap_data/Shelf_50/xrmocap_meta_testset_small/',
-    ),
-    base_dataset_setup=dict(
-        type='MVPDataset',
-        dataset=__dataset__,
-        data_root='./xrmocap_data/Shelf_50/Shelf/',
-        img_pipeline=[
-            dict(type='LoadImageCV2'),
-            dict(type='BGR2RGB'),
-            dict(
-                type='WarpAffine',
-                image_size=__image_size__,
-                flag='inter_linear'),
-            dict(type='ToTensor'),
-            dict(
-                type='Normalize',
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225])
-        ],
-        image_size=__image_size__,
-        heatmap_size=[200, 152],
-        metric_unit='millimeter',
-        shuffled=False,
-        gt_kps3d_convention='campus',  # same convention for shelf, campus
-        cam_world2cam=True,
-        n_max_person=__n_instance__,
-        n_views=__n_cameras__,
-        n_kps=__dataset_n_kps__,
-    ),
-)
+# dataset_setup = dict(
+#     test_dataset_setup=dict(
+#         type='MVPDataset',
+#         test_mode=True,
+#         meta_path='./xrmocap_data/Shelf_50/xrmocap_meta_testset_small/',
+#     ),
+#     base_dataset_setup=dict(
+#         type='MVPDataset',
+#         dataset=__dataset__,
+#         data_root='./xrmocap_data/Shelf_50/Shelf/',
+#         img_pipeline=[
+#             dict(type='LoadImageCV2'),
+#             dict(type='BGR2RGB'),
+#             dict(
+#                 type='WarpAffine',
+#                 image_size=__image_size__,
+#                 flag='inter_linear'),
+#             dict(type='ToTensor'),
+#             dict(
+#                 type='Normalize',
+#                 mean=[0.485, 0.456, 0.406],
+#                 std=[0.229, 0.224, 0.225])
+#         ],
+#         image_size=__image_size__,
+#         heatmap_size=[200, 152],
+#         metric_unit='millimeter',
+#         shuffled=False,
+#         gt_kps3d_convention='campus',  # same convention for shelf, campus
+#         cam_world2cam=True,
+#         n_max_person=__n_instance__,
+#         n_views=__n_cameras__,
+#         n_kps=__dataset_n_kps__,
+#     ),
+# )
 
 kps3d_model = dict(
     type='MviewPoseTransformer',
@@ -283,8 +283,18 @@ smplify = dict(
 kps3d_optimizers = [
     dict(type='RemoveDuplicate',
         threshold = 2.0,
-        keep = 'by_index',
-        verbose=verbose, logger=logger),
-    # dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
-    # dict(type='NanInterpolation', verbose=verbose, logger=logger),
+        keep = 'by_conf',
+        verbose=verbose, 
+        logger=logger,
+        identity_tracking=dict(
+            type='KeypointsDistanceTracking',
+            tracking_distance=1,
+            tracking_kps3d_convention='campus',
+            tracking_kps3d_name=[
+                'left_shoulder', 'right_shoulder', 'left_hip_extra',
+                'right_hip_extra'
+            ]),
+        ),
+    dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
+    dict(type='NanInterpolation', verbose=verbose, logger=logger),
 ]
