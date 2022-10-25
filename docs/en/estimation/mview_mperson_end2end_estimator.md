@@ -17,7 +17,7 @@ This end-to-end estimator tool takes multi-view RGB sequences and multi-view cal
 - **output_dir**:
 `output_dir` is the path to the directory saving all possible output files, including keypoints3d, SMPLData and visualization videos.
 - **model_dir**:
-`model_dir` is the path the the pretrained model for keypoint3d inference.
+`model_dir` is the path the the pretrained model for keypoints3d inference.
 
 - **estimator_config**:
 `estimator_config` is the path to a `MultiViewMultiPersonEnd2EndEstimator` config file, where `kps3d_model` configuration is necessary. `kps3d_optimizers` is a list of kps3d_optimizer, defined in `xrmocap/transform/keypoints3d/optim`. When inferring images stored on disk, set `load_batch_size` to a reasonable value will prevent your machine from out of memory, for MvP only `batch_size=1` is supported. For more details, see [config](../../../configs/modules/core/estimation/mview_mperson_end2end_estimator.py) and the docstring in [code](../../../xrmocap/core/estimation/mview_mperson_end2end_estimator.py).
@@ -51,13 +51,13 @@ Inside `run()`, there are three major steps of estimation, and details of each s
 
 ### Step0: estimate keypoints3d
 
-In this step, we process the multi-view RGB images with a configured `image_pipeline` and prepare the calibrated camera parameters as the meta data. With input images, meta data and pretrained model prepared, keypoint3d can be predicted in an end-to-end manner.
+In this step, we process the multi-view RGB images with a configured `image_pipeline` and prepare the calibrated camera parameters as the meta data. With input images, meta data and pretrained model prepared, keypoints3d can be predicted in an end-to-end manner.
 
 For more information relevant to pretrained model preparation and model inference, please refer to the [evaluation tutorial](../tools/eval_model.md).
 
 ### Step1: optimize keypoints3d
 
-In this step, we apply some post-processing optimizers to the predicted keypoint3d, such as removing duplicate keypoint3d, adding tracking identities, optimizing the trajectory and interpolation for the missing points.
+In this step, we apply some post-processing optimizers to the predicted keypoints3d, such as removing duplicate keypoints3d, adding tracking identities, optimizing the trajectory and interpolation for the missing points.
 
 ### Step2: estimate smpl
 
