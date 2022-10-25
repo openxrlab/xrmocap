@@ -37,7 +37,6 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         self,
         work_dir: str,
         img_pipeline: dict,
-        dataset: str,
         image_size: List[int],
         heatmap_size: List[int],
         n_max_person: int,
@@ -45,6 +44,7 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         kps3d_convention: str,
         kps3d_model: Union[dict, torch.nn.Module],
         kps3d_model_path: Union[None, str],
+        dataset: Union[None, str] = None,
         inference_conf_thr: float = 0.0,
         load_batch_size: int = 1,
         kps3d_optimizers: Union[List[Union[BaseOptimizer, dict]], None] = None,
@@ -297,12 +297,16 @@ class MultiViewMultiPersonEnd2EndEstimator(MultiPersonSMPLEstimator):
         """Estimate perception3d from images per frame.
 
         Args:
-            img_arr (Union[None, np.ndarray]): _description_
-            meta (Union[None, dict]): _description_
-            threshold (float, optional): _description_. Defaults to 0.0.
+            img_arr (Union[None, np.ndarray]):
+                Input images.
+            meta (Union[None, dict]):
+                Input meta data.
+            threshold (float, optional):
+                Threshold for a valid person. Defaults to 0.0.
 
         Returns:
-            _type_: all predicted 3D keypoints per frame [n_person, n_kps, 4]
+            Union[np.ndarray, torch.Tensor]:
+                All predicted 3D keypoints per frame [n_person, n_kps, 4]
         """
         if torch.cuda.is_available():
             self.kps3d_model.cuda()
