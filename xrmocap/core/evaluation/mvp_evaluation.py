@@ -33,8 +33,17 @@ class MVPEvaluation:
         """Initialization for the class.
 
         Args:
-            dataset (BaseDataset): _description_
-            kps_thr (float, optional): _description_. Defaults to 0.1.
+            test_loader (DataLoader):
+                Test dataloader.
+            dataset_name (Union[None, str], optional):
+                Name of the dataset. Defaults to None.
+            print_freq (int, optional):
+                Printing frequency. Defaults to 100.
+            final_output_dir (Union[None, str], optional):
+                Directory to output folder. Defaults to None.
+            logger (Union[None, str, logging.Logger], optional):
+                Logger for logging. If None, root logger will be selected.
+                Defaults to None.
         """
 
         self.logger = get_logger(logger)
@@ -112,25 +121,22 @@ class MVPEvaluation:
 
         return precision
 
-    def model_validate(self, model, threshold: float, is_train: bool = False):
+    def model_validate(self,
+                       model: BaseArchitecture,
+                       threshold: float,
+                       is_train: bool = False):
         """Evaluate model during training or testing.
 
         Args:
-            model: Model to be evaluated.
-            loader: Dataloader.
-            logger (Union[None, str, logging.Logger]):
-                Logger for logging. If None, root logger will be selected.
-            output_dir (str): Path to output folder.
+            model (BaseArchitecture):
+                Model to be evaluated.
             threshold (float):
                 Confidence threshold to filter non-human keypoints.
-            print_freq (int): Printing frequency during training.
-            n_views (int, optional): Number of views. Defaults to 5.
             is_train (bool, optional):
                 True if it is called during trainig. Defaults to False.
 
         Returns:
-            preds(torch.Tensor): Predicted results of all the keypoints.
-            keypoints3d(Keypoints): An instance of class keypoints.
+            float: model evaluation result, precision
         """
         batch_time = AverageMeter()
         data_time = AverageMeter()
@@ -408,6 +414,7 @@ class MVPEvaluation:
             actor_pcp, avg_pcp, match_gt / (total_gt + 1e-8)
 
     def _eval_list_to_ap(self, eval_list, total_gt, threshold):
+        """convert evaluation result to ap."""
         eval_list.sort(key=lambda k: k['score'], reverse=True)
         total_num = len(eval_list)
 
@@ -435,6 +442,7 @@ class MVPEvaluation:
         return ap, recall[-2]
 
     def _eval_list_to_mpjpe(self, eval_list, threshold=500):
+        """convert evaluation result to mpjpe."""
         eval_list.sort(key=lambda k: k['score'], reverse=True)
         gt_det = []
 
@@ -447,6 +455,7 @@ class MVPEvaluation:
         return np.mean(mpjpes) if len(mpjpes) > 0 else np.inf
 
     def _eval_list_to_recall(self, eval_list, total_gt, threshold=500):
+        """convert evaluation result to recall."""
         gt_ids = [e['gt_id'] for e in eval_list if e['mpjpe'] < threshold]
 
         return len(np.unique(gt_ids)) / total_gt

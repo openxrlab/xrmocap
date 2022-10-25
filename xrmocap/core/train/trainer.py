@@ -17,14 +17,13 @@ from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.core.evaluation.builder import build_evaluation
 from xrmocap.data.dataset.builder import build_dataset
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.utils.distribute_utils import (
     get_rank, is_main_process, time_synchronized,
 )
 from xrmocap.utils.mvp_utils import (
-    AverageMeter, convert_result_to_kps, get_total_grad_norm,
-    match_name_keywords, norm2absolute, save_checkpoint, set_cudnn,
+    AverageMeter, get_total_grad_norm, match_name_keywords, norm2absolute,
+    save_checkpoint, set_cudnn,
 )
 
 # yapf: enable
@@ -601,103 +600,3 @@ def train_3d(model,
                 f'gradnorm {grad_total_norm:.2f}'
 
             logger.info(msg)
-
-
-def validate_3d(model,
-                loader,
-                logger: Union[None, str, logging.Logger],
-                output_dir: str,
-                threshold: float,
-                print_freq: int,
-                n_views: int = 5,
-                is_train: bool = False):
-    """Evaluate model during training or testing.
-
-    Args:
-        model: Model to be evaluated.
-        loader: Dataloader.
-        logger (Union[None, str, logging.Logger]):
-            Logger for logging. If None, root logger will be selected.
-        output_dir (str): Path to output folder.
-        threshold (float):
-            Confidence threshold to filter non-human keypoints.
-        print_freq (int): Printing frequency during training.
-        n_views (int, optional): Number of views. Defaults to 5.
-        is_train (bool, optional):
-            True if it is called during trainig. Defaults to False.
-
-    Returns:
-        preds(torch.Tensor): Predicted results of all the keypoints.
-        keypoints3d(Keypoints): An instance of class keypoints.
-    """
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    logger = get_logger(logger)
-
-    model.eval()
-
-    preds = []
-    keypoints3d = None
-    with torch.no_grad():
-        end = time.time()
-        kps3d_pred = []
-        n_max_person = 0
-        for i, (inputs, meta) in enumerate(loader):
-            data_time.update(time.time() - end)
-            assert len(inputs) == n_views
-            output = model(views=inputs, meta=meta)
-
-            gt_kps3d = meta[0]['kps3d'].float()
-            n_kps = gt_kps3d.shape[2]
-            bs, n_queries = output['pred_logits'].shape[:2]
-
-            src_poses = output['pred_poses']['outputs_coord']. \
-                view(bs, n_queries, n_kps, 3)
-            src_poses = norm2absolute(src_poses, model.module.grid_size,
-                                      model.module.grid_center)
-            score = output['pred_logits'][:, :, 1:2].sigmoid()
-            score = score.unsqueeze(2).expand(-1, -1, n_kps, -1)
-            temp = (score > threshold).float() - 1
-
-            pred = torch.cat([src_poses, temp, score], dim=-1)
-            pred = pred.detach().cpu().numpy()
-            for b in range(pred.shape[0]):
-                preds.append(pred[b])
-
-            batch_time.update(time.time() - end)
-            end = time.time()
-            if (i % print_freq == 0 or i == len(loader) - 1) \
-                    and is_main_process():
-                gpu_memory_usage = torch.cuda.memory_allocated(0)
-                speed = len(inputs) * inputs[0].size(0) / batch_time.val
-                msg = f'Test: [{i}/{len(loader)}]\t' \
-                      f'Time: {batch_time.val:.3f}s ' \
-                      f'({batch_time.avg:.3f}s)\t' \
-                      f'Speed: {speed:.1f} samples/s\t' \
-                      f'Data: {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
-                      f'Memory {gpu_memory_usage:.1f}'
-                logger.info(msg)
-
-            if not is_train:
-                n_person, per_frame_kps3d = convert_result_to_kps(pred)
-                n_max_person = max(n_person, n_max_person)
-                kps3d_pred.append(per_frame_kps3d)
-
-        if not is_train:
-            n_frame = len(kps3d_pred)
-            n_kps = n_kps
-            kps3d = np.full((n_frame, n_max_person, n_kps, 4), np.nan)
-
-            for frame_idx in range(n_frame):
-                per_frame_kps3d = kps3d_pred[frame_idx]
-                n_person = len(per_frame_kps3d)
-                if n_person > 0:
-                    kps3d[frame_idx, :n_person] = per_frame_kps3d
-
-            keypoints3d = Keypoints(kps=kps3d, convention=None)
-            kps3d_file = os.path.join(output_dir, 'kps3d.npz')
-            if is_main_process():
-                logger.info(f'Saving 3D keypoints to: {kps3d_file}')
-            keypoints3d.dump(kps3d_file)
-
-    return preds, keypoints3d
