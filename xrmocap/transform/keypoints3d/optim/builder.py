@@ -4,9 +4,9 @@ from .aniposelib_optimizer import AniposelibOptimizer
 from .base_optimizer import BaseOptimizer
 from .median_smooth import MedianSmooth
 from .nan_interpolation import NanInterpolation
+from .rm_duplicate import RemoveDuplicate
 from .smpl_shape_aware_optimizer import SMPLShapeAwareOptimizer
 from .trajectory_optimizer import TrajectoryOptimizer
-from .rm_duplicate import RemoveDuplicate
 
 KEYPOINTS3D_OPTIMIZERS = Registry('keypoints3d_optimizer')
 

@@ -281,10 +281,11 @@ smplify = dict(
 )
 
 kps3d_optimizers = [
-    dict(type='RemoveDuplicate',
-        threshold = 2.0,
-        keep = 'by_conf',
-        verbose=verbose, 
+    dict(
+        type='RemoveDuplicate',
+        threshold=2.0,
+        keep='by_conf',
+        verbose=verbose,
         logger=logger,
         identity_tracking=dict(
             type='KeypointsDistanceTracking',
@@ -294,7 +295,7 @@ kps3d_optimizers = [
                 'left_shoulder', 'right_shoulder', 'left_hip_extra',
                 'right_hip_extra'
             ]),
-        ),
+    ),
     dict(type='TrajectoryOptimizer', verbose=verbose, logger=logger),
     dict(type='NanInterpolation', verbose=verbose, logger=logger),
 ]

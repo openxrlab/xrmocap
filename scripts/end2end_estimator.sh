@@ -7,4 +7,4 @@ python tools/mview_mperson_end2end_estimator.py \
     --image_and_camera_param ./xrmocap_data/Shelf_50/image_and_camera_param.txt \
     --start_frame 300 \
     --end_frame 351  \
-    --enable_log_file | tee -a ./terminal_log.txt
+    --enable_log_file

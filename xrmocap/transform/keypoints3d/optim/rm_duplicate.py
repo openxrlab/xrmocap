@@ -1,33 +1,37 @@
+# yapf: disable
 import logging
-import torch
 import numpy as np
+import torch
 from typing import Union
 
 from xrmocap.data_structure.keypoints import Keypoints
+from xrmocap.ops.top_down_association.identity_tracking.builder import (
+    BaseTracking, build_identity_tracking,
+)
 from .base_optimizer import BaseOptimizer
 
-from xrmocap.ops.top_down_association.identity_tracking.builder import BaseTracking, build_identity_tracking
-
+# yapf: enable
 
 
 class RemoveDuplicate(BaseOptimizer):
 
-    def __init__(self,
-                 verbose: bool = True,
-                 threshold: float = 2.0,
-                 keep: str = 'by_index',
-                 identity_tracking: Union[None, dict, BaseTracking]= None,
-                 logger: Union[None, str, logging.Logger] = None,):
-        """Remove duplicate identities by the L2 distance between
-        3D keypoints for each person and add tracked identities to optimized
-        3D keypoints.
+    def __init__(
+        self,
+        verbose: bool = True,
+        threshold: float = 2.0,
+        keep: str = 'by_index',
+        identity_tracking: Union[None, dict, BaseTracking] = None,
+        logger: Union[None, str, logging.Logger] = None,
+    ):
+        """Remove duplicate identities by the L2 distance between 3D keypoints
+        for each person and add tracked identities to optimized 3D keypoints.
 
         Args:
-            verbose (bool, optional): 
+            verbose (bool, optional):
                 Whether to log info. Defaults to True.
-            threshold (float, optional): 
+            threshold (float, optional):
                 Threshold for duplicate 3D keypoints. Defaults to 2.0.
-            keep (str, optional): 
+            keep (str, optional):
                 Mode to keep 3D keypoints, 'by_index' keeps the lowest index,
                 'by_conf' keeps the highest confidence. Defaults to 'by_index'.
             logger (Union[None, str, logging.Logger], optional):
@@ -45,21 +49,19 @@ class RemoveDuplicate(BaseOptimizer):
         else:
             self.identity_tracking = identity_tracking
 
-
     def optimize_keypoints3d(self, keypoints3d: Keypoints,
-                            **kwargs: dict) -> Keypoints:
+                             **kwargs: dict) -> Keypoints:
 
         # get kps3d array
         keypoints3d_optim = keypoints3d.clone()
         kps3d = keypoints3d_optim.get_keypoints()
         n_frame, n_max_person, n_kps, _ = kps3d.shape
 
-        kps3d_optim = np.full((n_frame, n_max_person, n_kps, 4),
-                        np.nan)
+        kps3d_optim = np.full((n_frame, n_max_person, n_kps, 4), np.nan)
 
         for frame_idx in range(n_frame):
             kps3d_frame = kps3d[frame_idx, ...]
-            kps3d_frame = kps3d_frame[~np.isnan(kps3d_frame[:,0,0])]
+            kps3d_frame = kps3d_frame[~np.isnan(kps3d_frame[:, 0, 0])]
 
             # calculate distance and remove duplicate
             dist = self.get_kps3d_dist(kps3d_frame)
@@ -67,23 +69,26 @@ class RemoveDuplicate(BaseOptimizer):
             remove_idxs = []
             keep_idxs = []
             for person_idx, per_person_dist in enumerate(dist):
-                if person_idx not in remove_idxs and person_idx not in keep_idxs:
-                    to_remove = np.where(per_person_dist[:] < self.threshold)[0] # index
+                if person_idx not in remove_idxs \
+                        and person_idx not in keep_idxs:
+                    to_remove = np.where(
+                        per_person_dist[:] < self.threshold)[0]  # index
 
                     if self.keep == 'by_conf':
                         # keep the highest confidence
-                        keep_idx = to_remove[np.argmax(kps3d_frame[to_remove,0,-1])]
+                        keep_idx = to_remove[np.argmax(kps3d_frame[to_remove,
+                                                                   0, -1])]
 
                     elif self.keep == 'by_index':
                         # keep the lowest index
                         keep_idx = person_idx
 
                     to_keep = np.array([keep_idx])
-                    to_remove = np.setdiff1d(to_remove,to_keep)
-                    
+                    to_remove = np.setdiff1d(to_remove, to_keep)
+
                     remove_idxs.extend(list(to_remove))
                     keep_idxs.extend(list(to_keep))
-            
+
             # identity tracking
             if self.identity_tracking is not None:
                 curr_kps3d = kps3d_frame[keep_idxs, ...]
@@ -97,17 +102,18 @@ class RemoveDuplicate(BaseOptimizer):
                 n_optim_person = len(keep_idxs)
                 kps3d_optim[frame_idx, :n_optim_person,
                             ...] = kps3d_frame[keep_idxs, ...]
-            
+
         keypoints3d_optim.set_keypoints(kps3d_optim)
         keypoints3d_optim.set_mask(kps3d_optim[..., -1] > 0)
 
         return keypoints3d_optim
 
-    def get_kps3d_dist(self,kps3d: Union[torch.Tensor, np.ndarray], 
-        p:int = 2) -> np.ndarray:
+    def get_kps3d_dist(self,
+                       kps3d: Union[torch.Tensor, np.ndarray],
+                       p: int = 2) -> np.ndarray:
         n_valid_person = kps3d.shape[0]
 
-        person = torch.tensor(kps3d[:,0:3].reshape(n_valid_person, -1))
-        dist = torch.cdist(person, person) # l2 dist by default
+        person = torch.tensor(kps3d[:, 0:3].reshape(n_valid_person, -1))
+        dist = torch.cdist(person, person)  # l2 dist by default
 
         return dist
