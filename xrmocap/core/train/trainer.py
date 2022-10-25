@@ -262,6 +262,15 @@ class MVPTrainer():
         mvp_cfg.update(self.mvp_setup)
         model = build_architecture(mvp_cfg)
 
+        eval_cfg = dict(
+            type='MVPEvaluation',
+            test_loader=test_loader,
+            dataset_name=self.test_dataset,
+            print_freq=self.print_freq,
+            final_output_dir=self.final_output_dir,
+            logger=self.logger)
+        evaluation = build_evaluation(eval_cfg)
+
         model.to(self.device)
         model.criterion.to(self.device)
 
@@ -353,15 +362,6 @@ class MVPTrainer():
 
             lr_scheduler.step()
 
-            eval_cfg = dict(
-                type='MVPEvaluation',
-                test_loader=test_loader,
-                dataset_name=self.test_dataset,
-                print_freq=self.print_freq,
-                final_output_dir=self.final_output_dir,
-                logger=self.logger)
-            evaluation = build_evaluation(eval_cfg)
-
             for thr in self.inference_conf_thr:
                 precision = evaluation.run(model, threshold=thr, is_train=True)
 
@@ -438,6 +438,15 @@ class MVPTrainer():
         mvp_cfg.update(self.mvp_setup)
         model = build_architecture(mvp_cfg)
 
+        eval_cfg = dict(
+            type='MVPEvaluation',
+            test_loader=test_loader,
+            dataset_name=self.test_dataset,
+            print_freq=self.print_freq,
+            final_output_dir=self.final_output_dir,
+            logger=self.logger)
+        evaluation = build_evaluation(eval_cfg)
+
         model.to(self.device)
         model.criterion.to(self.device)
 
@@ -466,15 +475,6 @@ class MVPTrainer():
             model.module.load_state_dict(torch.load(test_model_file))
         else:
             raise ValueError('Check the model file for testing!')
-
-        eval_cfg = dict(
-            type='MVPEvaluation',
-            test_loader=test_loader,
-            dataset_name=self.test_dataset,
-            print_freq=self.print_freq,
-            final_output_dir=self.final_output_dir,
-            logger=self.logger)
-        evaluation = build_evaluation(eval_cfg)
 
         for thr in self.inference_conf_thr:
             evaluation.run(model=model, threshold=thr, is_train=False)
