@@ -1,20 +1,210 @@
+# yapf: disable
+import logging
 import numpy as np
+import os
+import time
 import torch
-from typing import List, Tuple
+from prettytable import PrettyTable
+from torch.utils.data import DataLoader
+from typing import List, Tuple, Union
+from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data.dataset.base_dataset import BaseDataset
+from xrmocap.data_structure.keypoints import Keypoints
+from xrmocap.model.architecture.base_architecture import BaseArchitecture
+from xrmocap.utils.distribute_utils import collect_results, is_main_process
+from xrmocap.utils.mvp_utils import (
+    AverageMeter, convert_result_to_kps, norm2absolute,
+)
+
+# yapf: enable
 
 
 class MVPEvaluation:
     """Evaluation for MvP method."""
 
-    def __init__(self, dataset: BaseDataset, kps_thr: float = 0.1):
-        self.dataset = dataset
-        self.gt_num = dataset.len
-        self.n_views = dataset.n_views
-        self.kps_thr = kps_thr
+    def __init__(
+        self,
+        test_loader: DataLoader,
+        dataset_name: Union[None, str] = None,
+        print_freq: int = 100,
+        final_output_dir: Union[None, str] = None,
+        logger: Union[None, str, logging.Logger] = None,
+    ):
+        """Initialization for the class.
 
-    def evaluate_map(self, pred_kps3d: torch.Tensor) \
+        Args:
+            dataset (BaseDataset): _description_
+            kps_thr (float, optional): _description_. Defaults to 0.1.
+        """
+
+        self.logger = get_logger(logger)
+
+        self.test_loader = test_loader
+        self.dataset_name = dataset_name
+
+        self.print_freq = print_freq
+        self.output_dir = final_output_dir
+
+        self.dataset = test_loader.dataset
+        self.gt_num = test_loader.dataset.len
+        self.n_views = test_loader.dataset.n_views
+
+    def run(
+        self,
+        model: BaseArchitecture,
+        threshold: float = 0.1,
+        is_train: bool = False,
+    ):
+
+        # validate model
+        preds_single, _ = self.model_validate(
+            model,
+            threshold=threshold,
+            is_train=is_train,
+        )
+        preds = collect_results(preds_single, len(self.dataset))
+
+        # quantitative evaluation and print result
+        if is_main_process():
+            precision = None
+            if 'panoptic' in self.dataset_name:
+                tb = PrettyTable()
+                mpjpe_threshold = np.arange(25, 155, 25)
+
+                aps, recs, mpjpe, recall500 = \
+                    self.evaluate_map(preds)
+
+                tb.field_names = ['Threshold/mm'] + \
+                    [f'{i}' for i in mpjpe_threshold]
+                tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
+                tb.add_row(['Recall'] + [f'{re * 100:.2f}' for re in recs])
+                tb.add_row(['recall@500mm'] +
+                           [f'{recall500 * 100:.2f}' for re in recs])
+                self.logger.info('\n' + tb.get_string())
+                self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
+
+                precision = np.mean(aps[0])
+
+            elif 'campus' in self.dataset_name \
+                    or 'shelf' in self.dataset_name:
+
+                actor_pcp, avg_pcp, recall500 = self.evaluate_pcp(
+                    preds, recall_threshold=500, alpha=0.5)
+
+                tb = PrettyTable()
+                tb.field_names = [
+                    'Metric', 'Actor 1', 'Actor 2', 'Actor 3', 'Average'
+                ]
+                tb.add_row([
+                    'PCP', f'{actor_pcp[0] * 100:.2f}',
+                    f'{actor_pcp[1] * 100:.2f}', f'{actor_pcp[2] * 100:.2f}',
+                    f'{avg_pcp * 100:.2f}'
+                ])
+                self.logger.info('\n' + tb.get_string())
+                self.logger.info(f'Recall@500mm: {recall500:.4f}')
+
+                precision = np.mean(avg_pcp)
+
+            else:
+                self.logger.warning(f'Dataset {self.dataset_name} '
+                                    'is not yet implemented.')
+                raise NotImplementedError
+
+        return precision
+
+    def model_validate(self, model, threshold: float, is_train: bool = False):
+        """Evaluate model during training or testing.
+
+        Args:
+            model: Model to be evaluated.
+            loader: Dataloader.
+            logger (Union[None, str, logging.Logger]):
+                Logger for logging. If None, root logger will be selected.
+            output_dir (str): Path to output folder.
+            threshold (float):
+                Confidence threshold to filter non-human keypoints.
+            print_freq (int): Printing frequency during training.
+            n_views (int, optional): Number of views. Defaults to 5.
+            is_train (bool, optional):
+                True if it is called during trainig. Defaults to False.
+
+        Returns:
+            preds(torch.Tensor): Predicted results of all the keypoints.
+            keypoints3d(Keypoints): An instance of class keypoints.
+        """
+        batch_time = AverageMeter()
+        data_time = AverageMeter()
+
+        model.eval()
+
+        preds = []
+        keypoints3d = None
+        with torch.no_grad():
+            end = time.time()
+            kps3d_pred = []
+            n_max_person = 0
+            for i, (inputs, meta) in enumerate(self.test_loader):
+                data_time.update(time.time() - end)
+                assert len(inputs) == self.n_views
+                output = model(views=inputs, meta=meta)
+
+                gt_kps3d = meta[0]['kps3d'].float()
+                n_kps = gt_kps3d.shape[2]
+                bs, n_queries = output['pred_logits'].shape[:2]
+
+                src_poses = output['pred_poses']['outputs_coord']. \
+                    view(bs, n_queries, n_kps, 3)
+                src_poses = norm2absolute(src_poses, model.module.grid_size,
+                                          model.module.grid_center)
+                score = output['pred_logits'][:, :, 1:2].sigmoid()
+                score = score.unsqueeze(2).expand(-1, -1, n_kps, -1)
+                temp = (score > threshold).float() - 1
+
+                pred = torch.cat([src_poses, temp, score], dim=-1)
+                pred = pred.detach().cpu().numpy()
+                for b in range(pred.shape[0]):
+                    preds.append(pred[b])
+
+                batch_time.update(time.time() - end)
+                end = time.time()
+                if (i % self.print_freq == 0 or i
+                        == len(self.test_loader) - 1) and is_main_process():
+                    gpu_memory_usage = torch.cuda.memory_allocated(0)
+                    speed = len(inputs) * inputs[0].size(0) / batch_time.val
+                    msg = f'Test: [{i}/{len(self.test_loader)}]\t' \
+                        f'Time: {batch_time.val:.3f}s ' \
+                        f'({batch_time.avg:.3f}s)\t' \
+                        f'Speed: {speed:.1f} samples/s\t' \
+                        f'Data: {data_time.val:.3f}s ' \
+                        f'({data_time.avg:.3f}s)\t' \
+                        f'Memory {gpu_memory_usage:.1f}'
+                    self.logger.info(msg)
+
+                if not is_train:
+                    n_person, per_frame_kps3d = convert_result_to_kps(pred)
+                    n_max_person = max(n_person, n_max_person)
+                    kps3d_pred.append(per_frame_kps3d)
+
+            if not is_train:
+                n_frame = len(kps3d_pred)
+                n_kps = n_kps
+                kps3d = np.full((n_frame, n_max_person, n_kps, 4), np.nan)
+
+                for frame_idx in range(n_frame):
+                    per_frame_kps3d = kps3d_pred[frame_idx]
+                    n_person = len(per_frame_kps3d)
+                    if n_person > 0:
+                        kps3d[frame_idx, :n_person] = per_frame_kps3d
+
+                keypoints3d = Keypoints(kps=kps3d, convention=None)
+                kps3d_file = os.path.join(self.output_dir, 'kps3d.npz')
+                if is_main_process():
+                    self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
+                keypoints3d.dump(kps3d_file)
+
+        return preds, keypoints3d
+
+    def evaluate_map(self, pred_kps3d: torch.Tensor, threshold: float = 0.1) \
             -> Tuple[List[float], List[float], float, float]:
         """Evaluate MPJPE, mAP and recall based on MPJPE. Mainly for panoptic
         predictions.
@@ -61,7 +251,7 @@ class MVPEvaluation:
             for pred_person_kps3d in pred_frame_kps3d_valid:
                 mpjpes = []
                 for gt_person_kps3d in gt_frame_kps3d:
-                    vis = gt_person_kps3d[:, -1] > self.kps_thr
+                    vis = gt_person_kps3d[:, -1] > threshold
 
                     mpjpe = np.mean(
                         np.sqrt(
@@ -98,6 +288,7 @@ class MVPEvaluation:
     def evaluate_pcp(self,
                      pred_kps3d: torch.Tensor,
                      recall_threshold: int = 500,
+                     threshold: float = 0.1,
                      alpha: float = 0.5) -> Tuple[List[float], float, float]:
         """Evaluate MPJPE and PCP. Mainly for Shelf and Campus predictions.
 
@@ -120,7 +311,6 @@ class MVPEvaluation:
         trans_ground = torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
                                      [0.0, 0.0, 1.0]]).double()
 
-        # TODO: can get this info from Keypoints?
         limbs = [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8], [9, 10],
                  [10, 11], [12, 13]]
 
@@ -157,7 +347,7 @@ class MVPEvaluation:
 
             for person_idx, gt_person_kps3d in enumerate(gt_frame_kps3d):
 
-                vis = gt_person_kps3d[:, -1] > self.kps_thr
+                vis = gt_person_kps3d[:, -1] > threshold
 
                 check_valid = torch.sum(gt_person_kps3d, axis=1)  # [4]
                 if check_valid[-1] == 0:
@@ -196,7 +386,6 @@ class MVPEvaluation:
                         correct_parts[person_idx] += 1
                         limb_correct_parts[person_idx, j] += 1
 
-                # TODO: get these kps inedex from kps name
                 pred_hip = (pred_frame_kps3d_valid[min_n, 2, 0:3] +
                             pred_frame_kps3d_valid[min_n, 3, 0:3]) / 2.0
                 gt_hip = (gt_person_kps3d[2] + gt_person_kps3d[3]) / 2.0

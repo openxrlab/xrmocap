@@ -11,7 +11,6 @@ import torch.optim as optim
 import torch.utils.data
 import torch.utils.data.distributed
 from mmcv.runner import get_dist_info, load_checkpoint
-from prettytable import PrettyTable
 from torch.utils.data import DistributedSampler
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
@@ -21,7 +20,7 @@ from xrmocap.data.dataset.builder import build_dataset
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.utils.distribute_utils import (
-    collect_results, get_rank, is_main_process, time_synchronized,
+    get_rank, is_main_process, time_synchronized,
 )
 from xrmocap.utils.mvp_utils import (
     AverageMeter, convert_result_to_kps, get_total_grad_norm,
@@ -355,64 +354,19 @@ class MVPTrainer():
 
             lr_scheduler.step()
 
+            eval_cfg = dict(
+                type='MVPEvaluation',
+                test_loader=test_loader,
+                dataset_name=self.test_dataset,
+                print_freq=self.print_freq,
+                final_output_dir=self.final_output_dir,
+                logger=self.logger)
+            evaluation = build_evaluation(eval_cfg)
+
             for thr in self.inference_conf_thr:
-                preds_single, _ = validate_3d(
-                    model,
-                    test_loader,
-                    self.logger,
-                    self.final_output_dir,
-                    thr,
-                    self.print_freq,
-                    n_views=n_views,
-                    is_train=True)
-                preds = collect_results(preds_single, len(test_dataset))
+                precision = evaluation.run(model, threshold=thr, is_train=True)
 
                 if is_main_process():
-                    precision = None
-
-                    if 'panoptic' in self.test_dataset:
-                        tb = PrettyTable()
-                        mpjpe_threshold = np.arange(25, 155, 25)
-
-                        eval_cfg = dict(
-                            type='MVPEvaluation', dataset=test_loader.dataset)
-                        evaluator = build_evaluation(eval_cfg)
-                        aps, recs, mpjpe, recall500 = \
-                            evaluator.evaluate_map(preds)
-
-                        tb.field_names = ['Threshold/mm'] + \
-                            [f'{i}' for i in mpjpe_threshold]
-                        tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
-                        tb.add_row(['Recall'] +
-                                   [f'{re * 100:.2f}' for re in recs])
-                        tb.add_row(['recall@500mm'] +
-                                   [f'{recall500 * 100:.2f}' for re in recs])
-                        self.logger.info('\n' + tb.get_string())
-                        self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
-                        precision = np.mean(aps[0])
-
-                    elif 'campus' in self.test_dataset \
-                            or 'shelf' in self.test_dataset:
-                        eval_cfg = dict(
-                            type='MVPEvaluation', dataset=test_loader.dataset)
-                        evaluator = build_evaluation(eval_cfg)
-                        actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
-                            preds, recall_threshold=500, alpha=0.5)
-                        tb = PrettyTable()
-                        tb.field_names = [
-                            'Metric', 'Actor 1', 'Actor 2', 'Actor 3',
-                            'Average'
-                        ]
-                        tb.add_row([
-                            'PCP', f'{actor_pcp[0] * 100:.2f}',
-                            f'{actor_pcp[1] * 100:.2f}',
-                            f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
-                        ])
-                        self.logger.info('\n' + tb.get_string())
-                        self.logger.info(f'Recall@500mm: {recall500:.4f}')
-
-                        precision = np.mean(avg_pcp)
-
                     if precision > best_precision:
                         best_precision = precision
                         best_model = True
@@ -474,8 +428,6 @@ class MVPTrainer():
             pin_memory=True,
             num_workers=self.workers)
 
-        n_views = test_dataset.n_views
-
         set_cudnn(self.cudnn_setup.benchmark, self.cudnn_setup.deterministic,
                   self.cudnn_setup.enable)
 
@@ -516,57 +468,17 @@ class MVPTrainer():
         else:
             raise ValueError('Check the model file for testing!')
 
+        eval_cfg = dict(
+            type='MVPEvaluation',
+            test_loader=test_loader,
+            dataset_name=self.test_dataset,
+            print_freq=self.print_freq,
+            final_output_dir=self.final_output_dir,
+            logger=self.logger)
+        evaluation = build_evaluation(eval_cfg)
+
         for thr in self.inference_conf_thr:
-            preds_single, kps3d = validate_3d(
-                model,
-                test_loader,
-                self.logger,
-                self.final_output_dir,
-                thr,
-                self.print_freq,
-                n_views=n_views)
-            preds = collect_results(preds_single, len(test_dataset))
-
-            if is_main_process():
-                if 'panoptic' in self.test_dataset:
-                    tb = PrettyTable()
-                    mpjpe_threshold = np.arange(25, 155, 25)
-
-                    eval_cfg = dict(
-                        type='MVPEvaluation', dataset=test_loader.dataset)
-                    evaluator = build_evaluation(eval_cfg)
-                    aps, recs, mpjpe, recall500 = \
-                        evaluator.evaluate_map(preds)
-
-                    tb.field_names = ['Threshold/mm'] + \
-                                     [f'{i}' for i in mpjpe_threshold]
-                    tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
-                    tb.add_row(['Recall'] + [f'{re * 100:.2f}' for re in recs])
-                    tb.add_row(['recall@500mm'] +
-                               [f'{recall500 * 100:.2f}' for re in recs])
-                    self.logger.info('\n' + tb.get_string())
-                    self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
-
-                elif 'campus' in self.test_dataset \
-                        or 'shelf' in self.test_dataset:
-
-                    eval_cfg = dict(
-                        type='MVPEvaluation', dataset=test_loader.dataset)
-                    evaluator = build_evaluation(eval_cfg)
-                    actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
-                        preds, recall_threshold=500, alpha=0.5)
-
-                    tb = PrettyTable()
-                    tb.field_names = [
-                        'Metric', 'Actor 1', 'Actor 2', 'Actor 3', 'Average'
-                    ]
-                    tb.add_row([
-                        'PCP', f'{actor_pcp[0] * 100:.2f}',
-                        f'{actor_pcp[1] * 100:.2f}',
-                        f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
-                    ])
-                    self.logger.info('\n' + tb.get_string())
-                    self.logger.info(f'Recall@500mm: {recall500:.4f}')
+            evaluation.run(model=model, threshold=thr, is_train=False)
 
 
 def train_3d(model,
