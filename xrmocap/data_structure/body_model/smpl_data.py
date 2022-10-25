@@ -343,7 +343,8 @@ class SMPLData(dict):
         np_dict = self.to_param_dict(repeat_betas=repeat_betas)
         dict_to_return = {}
         for key, value in np_dict.items():
-            dict_to_return[key] = torch.tensor(value, device=device)
+            dict_to_return[key] = torch.tensor(
+                value, device=device, dtype=torch.float32)
         return dict_to_return
 
     def dump(self, npz_path: str, overwrite: bool = True):

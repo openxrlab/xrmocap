@@ -21,3 +21,7 @@ Please refer to [Shape-aware 3D Pose Optimization](../../configs/shape_aware_3d_
 ### MvP
 
 Please refer to [MvP benchmarks](../../configs/mvp/README.md) for details.
+
+### 4D Association Graph
+
+Please refer to [FourDAG benchmarks](../../configs/fourdag/README.md) for details.

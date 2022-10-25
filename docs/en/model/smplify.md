@@ -20,7 +20,7 @@
 - loss module:  Sub-classes of `torch.nn.Module`. It has reduction, loss_weight and a forward method.
 
 
-![SMPLify-classes.](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/github_resources/SMPLify_classes.png)
+![SMPLify-classes.](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/github_resources/SMPLify_classes.png)
 
 ### Build a registrant
 
