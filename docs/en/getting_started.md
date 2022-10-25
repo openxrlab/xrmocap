@@ -158,7 +158,7 @@ If all the configuration is OK, you could see the evaluation result in the termi
 # Estimation: Visualization of predicted keypoints3d and SMPL
 python tools/mview_mperson_end2end_estimator.py \
     --output_dir ./output/estimation \
-    --model_dir weight/xrmocap_mvp_shelf-22d1b5ed_20220831.pth \
+    --model_dir weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth \
     --estimator_config configs/modules/core/estimation/mview_mperson_end2end_estimator.py \
     --image_and_camera_param ./xrmocap_data/Shelf_50/image_and_camera_param.txt \
     --start_frame 300 \
