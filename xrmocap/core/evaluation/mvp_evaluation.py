@@ -15,6 +15,10 @@ from xrmocap.utils.distribute_utils import collect_results, is_main_process
 from xrmocap.utils.mvp_utils import (
     AverageMeter, convert_result_to_kps, norm2absolute,
 )
+from xrmocap.transform.limbs import get_limbs_from_keypoints
+
+from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx, get_keypoint_num
+from xrmocap.data_structure.limbs import Limbs
 
 # yapf: enable
 
@@ -25,7 +29,11 @@ class MVPEvaluation:
     def __init__(
         self,
         test_loader: DataLoader,
+        selected_limbs_name: List[List[str]],
+        additional_limbs_names: List[List[str]] = [],
+        n_max_person: int=10,
         dataset_name: Union[None, str] = None,
+        pred_kps3d_convention: str = 'coco',
         print_freq: int = 100,
         final_output_dir: Union[None, str] = None,
         logger: Union[None, str, logging.Logger] = None,
@@ -55,23 +63,48 @@ class MVPEvaluation:
         self.output_dir = final_output_dir
 
         self.dataset = test_loader.dataset
-        self.gt_num = test_loader.dataset.len
+        self.gt_n_frame = test_loader.dataset.len
         self.n_views = test_loader.dataset.n_views
+        self.pred_kps3d_convention = pred_kps3d_convention
+        self.n_max_person = n_max_person
 
-    def run(
-        self,
-        model: BaseArchitecture,
+        self.selected_limbs_name = selected_limbs_name
+        self.additional_limbs_names = additional_limbs_names
+
+    def run(self, model: BaseArchitecture, 
         threshold: float = 0.1,
-        is_train: bool = False,
-    ):
+        is_train: bool = False,):
 
-        # validate model
-        preds_single, _ = self.model_validate(
+        # validate model and get predictions
+        preds_single = self.model_validate(
             model,
             threshold=threshold,
             is_train=is_train,
         )
-        preds = collect_results(preds_single, len(self.dataset))
+        kps3d_pred_list = collect_results(preds_single, len(self.dataset))
+
+        # save keypoints3d
+        if not is_train:
+            n_frame = len(kps3d_pred_list)
+            n_kps = kps3d_pred_list[0].shape[1]
+            kps3d_pred = np.full((n_frame, self.n_max_person, n_kps, 4), np.nan)
+
+            for frame_idx, per_frame_kps3d in enumerate(kps3d_pred_list):
+                if len(per_frame_kps3d) > 0:
+                    n_valid_person, keypoints3d_pred_valid = convert_result_to_kps([per_frame_kps3d])
+                    kps3d_pred[frame_idx, :n_valid_person] = keypoints3d_pred_valid
+
+            keypoints3d_pred = Keypoints(
+                dtype='numpy',
+                kps=kps3d_pred,
+                mask=kps3d_pred[..., -1] > 0, 
+                convention=self.pred_kps3d_convention,
+                logger=self.logger)
+            kps3d_file = os.path.join(self.output_dir, 'pred_kps3d.npz')
+            
+            if is_main_process():
+                self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
+                keypoints3d_pred.dump(kps3d_file)
 
         # quantitative evaluation and print result
         if is_main_process():
@@ -81,7 +114,7 @@ class MVPEvaluation:
                 mpjpe_threshold = np.arange(25, 155, 25)
 
                 aps, recs, mpjpe, recall500 = \
-                    self.evaluate_map(preds)
+                    self.evaluate_map(keypoints3d_pred)
 
                 tb.field_names = ['Threshold/mm'] + \
                     [f'{i}' for i in mpjpe_threshold]
@@ -98,7 +131,7 @@ class MVPEvaluation:
                     or 'shelf' in self.dataset_name:
 
                 actor_pcp, avg_pcp, recall500 = self.evaluate_pcp(
-                    preds, recall_threshold=500, alpha=0.5)
+                    keypoints3d_pred, recall_threshold=500, alpha=0.5)
 
                 tb = PrettyTable()
                 tb.field_names = [
@@ -144,11 +177,8 @@ class MVPEvaluation:
         model.eval()
 
         preds = []
-        keypoints3d = None
         with torch.no_grad():
             end = time.time()
-            kps3d_pred = []
-            n_max_person = 0
             for i, (inputs, meta) in enumerate(self.test_loader):
                 data_time.update(time.time() - end)
                 assert len(inputs) == self.n_views
@@ -186,37 +216,15 @@ class MVPEvaluation:
                         f'Memory {gpu_memory_usage:.1f}'
                     self.logger.info(msg)
 
-                if not is_train:
-                    n_person, per_frame_kps3d = convert_result_to_kps(pred)
-                    n_max_person = max(n_person, n_max_person)
-                    kps3d_pred.append(per_frame_kps3d)
+        return preds
 
-            if not is_train:
-                n_frame = len(kps3d_pred)
-                n_kps = n_kps
-                kps3d = np.full((n_frame, n_max_person, n_kps, 4), np.nan)
-
-                for frame_idx in range(n_frame):
-                    per_frame_kps3d = kps3d_pred[frame_idx]
-                    n_person = len(per_frame_kps3d)
-                    if n_person > 0:
-                        kps3d[frame_idx, :n_person] = per_frame_kps3d
-
-                keypoints3d = Keypoints(kps=kps3d, convention=None)
-                kps3d_file = os.path.join(self.output_dir, 'kps3d.npz')
-                if is_main_process():
-                    self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
-                keypoints3d.dump(kps3d_file)
-
-        return preds, keypoints3d
-
-    def evaluate_map(self, pred_kps3d: torch.Tensor, threshold: float = 0.1) \
+    def evaluate_map(self, pred_keypoints3d: Keypoints, threshold: float = 0.1) \
             -> Tuple[List[float], List[float], float, float]:
         """Evaluate MPJPE, mAP and recall based on MPJPE. Mainly for panoptic
         predictions.
 
         Args:
-            pred_kps3d (torch.Tensor):
+            pred_keypoints3d (Keypoints):
                 Predicted 3D keypoints.
 
         Returns:
@@ -224,16 +232,28 @@ class MVPEvaluation:
                 List of AP, list of recall, MPJPE value and recall@500mm.
         """
 
+        pred_kps3d = pred_keypoints3d.get_keypoints()
+        pred_n_frame, _, n_kps, _ = pred_kps3d.shape
+        
+        gt_n_person = np.max(
+            np.array([
+                scene_keypoints.get_person_number()
+                for scene_keypoints in self.dataset.gt3d
+            ]))
+
+        total_gt = 0
+
         eval_list = []
-        assert len(pred_kps3d) == self.gt_num, \
-            f'number mismatch {len(pred_kps3d)} pred and {self.gt_num} gt'
+        if not pred_n_frame == self.gt_n_frame:
+            self.logger.error(f'Frame number mismatch: {pred_n_frame} '
+                f'pred and {self.gt_n_frame} gt')
+            raise ValueError
 
         trans_ground = torch.tensor([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0],
                                      [0.0, 1.0, 0.0]]).double()
 
-        total_gt = 0
-        for index in range(self.gt_num):
-            scene_idx, frame_idx, _ = self.dataset.process_index_mapping(index)
+        for frame_idx in range(self.gt_n_frame):
+            scene_idx, frame_idx, _ = self.dataset.process_index_mapping(frame_idx)
             gt_keypoints3d = self.dataset.gt3d[scene_idx]
             gt_scene_kps3d = gt_keypoints3d.get_keypoints(
             )  # [n_frame, n_person, n_kps, 4]
@@ -250,7 +270,7 @@ class MVPEvaluation:
             if len(gt_frame_kps3d) == 0:
                 continue
 
-            pred_frame_kps3d = pred_kps3d[index].copy()
+            pred_frame_kps3d = pred_kps3d[frame_idx].copy()
             pred_frame_kps3d_valid = pred_frame_kps3d[pred_frame_kps3d[:, 0,
                                                                        3] >= 0]
 
@@ -292,14 +312,14 @@ class MVPEvaluation:
             self._eval_list_to_recall(eval_list, total_gt)
 
     def evaluate_pcp(self,
-                     pred_kps3d: torch.Tensor,
+                     pred_keypoints3d: Keypoints,
                      recall_threshold: int = 500,
                      threshold: float = 0.1,
                      alpha: float = 0.5) -> Tuple[List[float], float, float]:
         """Evaluate MPJPE and PCP. Mainly for Shelf and Campus predictions.
 
         Args:
-            pred_kps3d (torch.Tensor):
+            pred_keypoints3d (Keypoints):
                 Predicted 3D keypoints.
             recall_threshold (int, optional):
                 Threshold for MPJPE. Defaults to 500.
@@ -311,29 +331,61 @@ class MVPEvaluation:
             Tuple[List[float], float, float]:
                 List of PCP per actor, average PCP, and recall@500mm.
         """
-        assert len(pred_kps3d) == self.gt_num, \
-            f'number mismatch {len(pred_kps3d)} pred and {self.gt_num} gt'
-
-        trans_ground = torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
-                                     [0.0, 0.0, 1.0]]).double()
-
-        limbs = [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8], [9, 10],
-                 [10, 11], [12, 13]]
-
+        pred_kps3d = pred_keypoints3d.get_keypoints()
+        pred_n_frame, _, n_kps, _ = pred_kps3d.shape
+        
         gt_n_person = np.max(
             np.array([
-                scene_keypoints.get_keypoints().shape[1]
+                scene_keypoints.get_person_number()
                 for scene_keypoints in self.dataset.gt3d
             ]))
 
         correct_parts = np.zeros(gt_n_person)
         total_parts = np.zeros(gt_n_person)
         limb_correct_parts = np.zeros((gt_n_person, 10))
-
         total_gt = 0
         match_gt = 0
-        for index in range(self.gt_num):
-            scene_idx, frame_idx, _ = self.dataset.process_index_mapping(index)
+
+        if not pred_n_frame == self.gt_n_frame:
+            self.logger.error(f'Frame number mismatch: {pred_n_frame} '
+                f'pred and {self.gt_n_frame} gt')
+            raise ValueError
+
+        trans_ground = torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
+                                     [0.0, 0.0, 1.0]]).double()
+
+        # get limbs from keypoints
+        selected_conn_list = []
+        dummy_kps3d = np.full((1, self.n_max_person, n_kps, 4), 1.0)
+        dummy_keypoints3d = Keypoints(
+                dtype='numpy',
+                kps=dummy_kps3d,
+                mask=dummy_kps3d[..., -1] > 0, 
+                convention=self.pred_kps3d_convention,
+                logger=self.logger)
+        limbs = get_limbs_from_keypoints(
+            keypoints=dummy_keypoints3d, fill_limb_names=True)
+        
+        limb_name_list = []
+        conn_list = []
+        for limb_name, conn in limbs.get_connections_by_names().items():
+            limb_name_list.append(limb_name)
+            conn_list.append(conn)
+
+        for idx, limb_name in enumerate(limb_name_list):
+            if limb_name in self.selected_limbs_name:
+                selected_conn_list.append(conn_list[idx])
+        
+        for conn_names in self.additional_limbs_names:
+            kps_idx_0 = get_keypoint_idx(
+                name=conn_names[0], convention=self.pred_kps3d_convention)
+            kps_idx_1 = get_keypoint_idx(
+                name=conn_names[1], convention=self.pred_kps3d_convention)
+            selected_conn_list.append(np.array([kps_idx_0, kps_idx_1], dtype=np.int32))
+
+
+        for frame_idx in range(self.gt_n_frame):
+            scene_idx, frame_idx, _ = self.dataset.process_index_mapping(frame_idx)
             gt_keypoints3d = self.dataset.gt3d[scene_idx]
             gt_scene_kps3d = gt_keypoints3d.get_keypoints(
             )  # [n_frame, n_person, n_kps, 4]
@@ -347,7 +399,7 @@ class MVPEvaluation:
             if len(gt_frame_kps3d) == 0:
                 continue
 
-            pred_frame_kps3d = pred_kps3d[index].copy()
+            pred_frame_kps3d = pred_kps3d[frame_idx].copy()
             pred_frame_kps3d_valid = pred_frame_kps3d[pred_frame_kps3d[:, 0, 3]
                                                       >= 0]  # if is a person
 
@@ -371,10 +423,9 @@ class MVPEvaluation:
 
                 if min_mpjpe < recall_threshold:
                     match_gt += 1
-
                 total_gt += 1
 
-                for j, k in enumerate(limbs):
+                for j, k in enumerate(selected_conn_list):
                     total_parts[person_idx] += 1
                     error_s = \
                         np.linalg.norm(np.array(
@@ -459,3 +510,4 @@ class MVPEvaluation:
         gt_ids = [e['gt_id'] for e in eval_list if e['mpjpe'] < threshold]
 
         return len(np.unique(gt_ids)) / total_gt
+    

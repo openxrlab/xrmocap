@@ -39,6 +39,7 @@ class MVPTrainer():
                  test_dataset: str,
                  cudnn_setup: dict,
                  dataset_setup: dict,
+                 evaluation_setup: dict,
                  mvp_setup: dict,
                  pretrained_backbone: Union[None, str] = None,
                  finetune_model: Union[None, str] = None,
@@ -168,6 +169,7 @@ class MVPTrainer():
         self.cudnn_setup = cudnn_setup
         self.dataset_setup = dataset_setup
         self.mvp_setup = mvp_setup
+        self.evaluation_setup = evaluation_setup
 
         seed = self.seed + get_rank()
         torch.manual_seed(seed)
@@ -265,10 +267,10 @@ class MVPTrainer():
         eval_cfg = dict(
             type='MVPEvaluation',
             test_loader=test_loader,
-            dataset_name=self.test_dataset,
             print_freq=self.print_freq,
             final_output_dir=self.final_output_dir,
             logger=self.logger)
+        eval_cfg.update(self.evaluation_setup)
         evaluation = build_evaluation(eval_cfg)
 
         model.to(self.device)
@@ -441,10 +443,10 @@ class MVPTrainer():
         eval_cfg = dict(
             type='MVPEvaluation',
             test_loader=test_loader,
-            dataset_name=self.test_dataset,
             print_freq=self.print_freq,
             final_output_dir=self.final_output_dir,
             logger=self.logger)
+        eval_cfg.update(self.evaluation_setup)
         evaluation = build_evaluation(eval_cfg)
 
         model.to(self.device)
