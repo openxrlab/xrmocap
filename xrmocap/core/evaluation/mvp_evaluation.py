@@ -91,7 +91,8 @@ class MVPEvaluation:
         kps3d_pred_list = collect_results(preds_single, len(self.dataset))
 
         # save predicted keypoints3d
-        if not is_train and is_main_process():
+        precision = None
+        if is_main_process():
             n_frame = len(kps3d_pred_list)
             n_kps = kps3d_pred_list[0].shape[1]
             kps3d_pred = np.full((n_frame, self.n_max_person, n_kps, 4),
@@ -112,12 +113,11 @@ class MVPEvaluation:
                 logger=self.logger)
             kps3d_file = os.path.join(self.output_dir, 'pred_kps3d.npz')
 
-            self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
-            keypoints3d_pred.dump(kps3d_file)
+            if not is_train:
+                self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
+                keypoints3d_pred.dump(kps3d_file)
 
         # quantitative evaluation and print result
-        precision = None
-        if is_main_process():
             if 'panoptic' in self.dataset_name:
                 tb = PrettyTable()
                 mpjpe_threshold = np.arange(25, 155, 25)
