@@ -27,7 +27,7 @@ class MVPEvaluation:
     def __init__(
         self,
         test_loader: DataLoader,
-        selected_limbs_name: List[List[str]],
+        selected_limbs_name: List[List[str]] = [],
         additional_limbs_names: List[List[str]] = [],
         n_max_person: int = 10,
         dataset_name: Union[None, str] = None,
@@ -266,9 +266,8 @@ class MVPEvaluation:
             if len(gt_frame_kps3d) == 0:
                 continue
 
-            pred_frame_kps3d = pred_kps3d[frame_idx].copy()
-            pred_frame_kps3d_valid = pred_frame_kps3d[pred_frame_kps3d[:, 0,
-                                                                       3] >= 0]
+            pred_frame_kps3d_valid = pred_kps3d[frame_idx].copy()
+
 
             for pred_person_kps3d in pred_frame_kps3d_valid:
                 mpjpes = []
@@ -284,7 +283,7 @@ class MVPEvaluation:
                     mpjpes.append(mpjpe)
                 min_gt = np.argmin(mpjpes)
                 min_mpjpe = np.min(mpjpes)
-                score = pred_person_kps3d[0, 4]
+                score = pred_person_kps3d[0, -1]
                 eval_list.append({
                     'mpjpe': float(min_mpjpe),
                     'score': float(score),
@@ -396,9 +395,7 @@ class MVPEvaluation:
             if len(gt_frame_kps3d) == 0:
                 continue
 
-            pred_frame_kps3d = pred_kps3d[frame_idx_all_scenes].copy()
-            pred_frame_kps3d_valid = pred_frame_kps3d[pred_frame_kps3d[:, 0, 3]
-                                                      >= 0]  # if is a person
+            pred_frame_kps3d_valid = pred_kps3d[frame_idx_all_scenes].copy()
 
             for person_idx, gt_person_kps3d in enumerate(gt_frame_kps3d):
 
