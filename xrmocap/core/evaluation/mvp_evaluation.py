@@ -41,8 +41,18 @@ class MVPEvaluation:
         Args:
             test_loader (DataLoader):
                 Test dataloader.
+            selected_limbs_name (List[List[str]], optional):
+                The name of selected
+                limbs in evaluation. Defaults to [].
+            additional_limbs_names (List[List[str]], optional):
+                Names at both ends of the limb. Defaults to [].
+            n_max_person (int, optional):
+                Number of maximum person the model can predict. Defaults to 10.
             dataset_name (Union[None, str], optional):
                 Name of the dataset. Defaults to None.
+            pred_kps3d_convention (str, optional):
+                Keypoints3d convention of the predicted keypoints.
+                Defaults to 'coco'.
             print_freq (int, optional):
                 Printing frequency. Defaults to 100.
             final_output_dir (Union[None, str], optional):
@@ -73,41 +83,38 @@ class MVPEvaluation:
     ):
 
         # validate model and get predictions
-        # preds_single = self.model_validate(
-        #     model,
-        #     threshold=threshold,
-        #     is_train=is_train,
-        # )
-        # kps3d_pred_list = collect_results(preds_single, len(self.dataset))
+        preds_single = self.model_validate(
+            model,
+            threshold=threshold,
+            is_train=is_train,
+        )
+        kps3d_pred_list = collect_results(preds_single, len(self.dataset))
 
-        # # save predicted keypoints3d
-        # if not is_train and is_main_process():
-        #     n_frame = len(kps3d_pred_list)
-        #     n_kps = kps3d_pred_list[0].shape[1]
-        #     kps3d_pred = np.full((n_frame, self.n_max_person, n_kps, 4),
-        #                          np.nan)
+        # save predicted keypoints3d
+        if not is_train and is_main_process():
+            n_frame = len(kps3d_pred_list)
+            n_kps = kps3d_pred_list[0].shape[1]
+            kps3d_pred = np.full((n_frame, self.n_max_person, n_kps, 4),
+                                 np.nan)
 
-        #     for frame_idx, per_frame_kps3d in enumerate(kps3d_pred_list):
-        #         if len(per_frame_kps3d) > 0:
-        #             n_valid_person, keypoints3d_pred_valid = \
-        #                 convert_result_to_kps([per_frame_kps3d])
-        #             kps3d_pred[
-        #                 frame_idx, :n_valid_person] = keypoints3d_pred_valid
+            for frame_idx, per_frame_kps3d in enumerate(kps3d_pred_list):
+                if len(per_frame_kps3d) > 0:
+                    n_valid_person, keypoints3d_pred_valid = \
+                        convert_result_to_kps([per_frame_kps3d])
+                    kps3d_pred[
+                        frame_idx, :n_valid_person] = keypoints3d_pred_valid
 
-        #     keypoints3d_pred = Keypoints(
-        #         dtype='numpy',
-        #         kps=kps3d_pred,
-        #         mask=kps3d_pred[..., -1] > 0,
-        #         convention=self.pred_kps3d_convention,
-        #         logger=self.logger)
-        #     kps3d_file = os.path.join(self.output_dir, 'pred_kps3d.npz')
+            keypoints3d_pred = Keypoints(
+                dtype='numpy',
+                kps=kps3d_pred,
+                mask=kps3d_pred[..., -1] > 0,
+                convention=self.pred_kps3d_convention,
+                logger=self.logger)
+            kps3d_file = os.path.join(self.output_dir, 'pred_kps3d.npz')
 
-            
-        #     self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
-        #     keypoints3d_pred.dump(kps3d_file)
-        keypoints3d_pred = Keypoints()
-        keypoints3d_pred.load('/mnt/lustre/yinwanqi/02-github/xrmocap/output/panoptic/multi_view_pose_transformer_50/mvp_panoptic_3cam/kps3d.npz')
-        print("===load old npz")
+            self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
+            keypoints3d_pred.dump(kps3d_file)
+
         # quantitative evaluation and print result
         precision = None
         if is_main_process():
@@ -160,7 +167,7 @@ class MVPEvaluation:
                        model: BaseArchitecture,
                        threshold: float,
                        is_train: bool = False):
-        """Evaluate model during training or testing.
+        """Validate model during training or testing.
 
         Args:
             model (BaseArchitecture):
@@ -231,6 +238,8 @@ class MVPEvaluation:
         Args:
             pred_keypoints3d (Keypoints):
                 Predicted 3D keypoints.
+            threshold (float):
+                Threshold for valid keypoints. Defaults to 0.1.
 
         Returns:
             Tuple[List[float], List[float], float, float]:
@@ -249,9 +258,9 @@ class MVPEvaluation:
         trans_ground = torch.tensor([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0],
                                      [0.0, 1.0, 0.0]]).double()
 
-        for frame_idx in range(self.gt_n_frame):
+        for frame_idx_all_scenes in range(self.gt_n_frame):
             scene_idx, frame_idx, _ = self.dataset.process_index_mapping(
-                frame_idx)
+                frame_idx_all_scenes)
             gt_keypoints3d = self.dataset.gt3d[scene_idx]
             gt_scene_kps3d = gt_keypoints3d.get_keypoints(
             )  # [n_frame, n_person, n_kps, 4]
@@ -268,8 +277,7 @@ class MVPEvaluation:
             if len(gt_frame_kps3d) == 0:
                 continue
 
-            pred_frame_kps3d_valid = pred_kps3d[frame_idx].copy()
-
+            pred_frame_kps3d_valid = pred_kps3d[frame_idx_all_scenes].copy()
 
             for pred_person_kps3d in pred_frame_kps3d_valid:
                 mpjpes = []
@@ -320,6 +328,8 @@ class MVPEvaluation:
                 Predicted 3D keypoints.
             recall_threshold (int, optional):
                 Threshold for MPJPE. Defaults to 500.
+            threshold (float):
+                Threshold for valid keypoints. Defaults to 0.1.
             alpha (float, optional):
                 Threshold for correct limb part. Defaults to 0.5.
                 Predicted limb part is regarded as correct if
