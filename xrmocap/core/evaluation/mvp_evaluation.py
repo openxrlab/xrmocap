@@ -73,42 +73,44 @@ class MVPEvaluation:
     ):
 
         # validate model and get predictions
-        preds_single = self.model_validate(
-            model,
-            threshold=threshold,
-            is_train=is_train,
-        )
-        kps3d_pred_list = collect_results(preds_single, len(self.dataset))
+        # preds_single = self.model_validate(
+        #     model,
+        #     threshold=threshold,
+        #     is_train=is_train,
+        # )
+        # kps3d_pred_list = collect_results(preds_single, len(self.dataset))
 
-        # save predicted keypoints3d
-        if not is_train:
-            n_frame = len(kps3d_pred_list)
-            n_kps = kps3d_pred_list[0].shape[1]
-            kps3d_pred = np.full((n_frame, self.n_max_person, n_kps, 4),
-                                 np.nan)
+        # # save predicted keypoints3d
+        # if not is_train and is_main_process():
+        #     n_frame = len(kps3d_pred_list)
+        #     n_kps = kps3d_pred_list[0].shape[1]
+        #     kps3d_pred = np.full((n_frame, self.n_max_person, n_kps, 4),
+        #                          np.nan)
 
-            for frame_idx, per_frame_kps3d in enumerate(kps3d_pred_list):
-                if len(per_frame_kps3d) > 0:
-                    n_valid_person, keypoints3d_pred_valid = \
-                        convert_result_to_kps([per_frame_kps3d])
-                    kps3d_pred[
-                        frame_idx, :n_valid_person] = keypoints3d_pred_valid
+        #     for frame_idx, per_frame_kps3d in enumerate(kps3d_pred_list):
+        #         if len(per_frame_kps3d) > 0:
+        #             n_valid_person, keypoints3d_pred_valid = \
+        #                 convert_result_to_kps([per_frame_kps3d])
+        #             kps3d_pred[
+        #                 frame_idx, :n_valid_person] = keypoints3d_pred_valid
 
-            keypoints3d_pred = Keypoints(
-                dtype='numpy',
-                kps=kps3d_pred,
-                mask=kps3d_pred[..., -1] > 0,
-                convention=self.pred_kps3d_convention,
-                logger=self.logger)
-            kps3d_file = os.path.join(self.output_dir, 'pred_kps3d.npz')
+        #     keypoints3d_pred = Keypoints(
+        #         dtype='numpy',
+        #         kps=kps3d_pred,
+        #         mask=kps3d_pred[..., -1] > 0,
+        #         convention=self.pred_kps3d_convention,
+        #         logger=self.logger)
+        #     kps3d_file = os.path.join(self.output_dir, 'pred_kps3d.npz')
 
-            if is_main_process():
-                self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
-                keypoints3d_pred.dump(kps3d_file)
-
+            
+        #     self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
+        #     keypoints3d_pred.dump(kps3d_file)
+        keypoints3d_pred = Keypoints()
+        keypoints3d_pred.load('/mnt/lustre/yinwanqi/02-github/xrmocap/output/panoptic/multi_view_pose_transformer_50/mvp_panoptic_3cam/kps3d.npz')
+        print("===load old npz")
         # quantitative evaluation and print result
+        precision = None
         if is_main_process():
-            precision = None
             if 'panoptic' in self.dataset_name:
                 tb = PrettyTable()
                 mpjpe_threshold = np.arange(25, 155, 25)
