@@ -105,6 +105,9 @@ class MVPEvaluation:
             if is_main_process():
                 self.logger.info(f'Saving 3D keypoints to: {kps3d_file}')
                 keypoints3d_pred.dump(kps3d_file)
+        keypoints3d_pred = Keypoints()
+        keypoints3d_pred.load('/mnt/lustre/yinwanqi/02-github/xrmocap/output/campus/multi_view_pose_transformer_50/mvp_campus/kps3d.npz')
+        print("=====loaded old kps npz")
 
         # quantitative evaluation and print result
         if is_main_process():
@@ -339,6 +342,7 @@ class MVPEvaluation:
                 scene_keypoints.get_person_number()
                 for scene_keypoints in self.dataset.gt3d
             ]))
+        print("====gt_n_person", gt_n_person)
 
         correct_parts = np.zeros(gt_n_person)
         total_parts = np.zeros(gt_n_person)
