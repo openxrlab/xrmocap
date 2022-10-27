@@ -154,6 +154,7 @@ trainer_setup = dict(
         type='MVPEvaluation',
         dataset_name=__test_dataset__,
         pred_kps3d_convention='campus',
+        gt_kps3d_convention='campus',
         n_max_person=__n_instance__,
         selected_limbs_name=[
             'left_lower_leg', 'right_lower_leg', 'left_upperarm',
