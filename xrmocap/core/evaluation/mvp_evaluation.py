@@ -127,7 +127,6 @@ class MVPEvaluation:
             kps3d_gt = np.full((self.gt_n_frame, gt_n_person, gt_n_kps, 4),
                                np.nan)
             mask_gt = np.full((self.gt_n_frame, gt_n_person, gt_n_kps), np.nan)
-            print(kps3d_gt.shape)
 
             start_frame = 0
             for keypoints3d_gt_scene in self.dataset.gt3d:
