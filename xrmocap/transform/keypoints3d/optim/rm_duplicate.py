@@ -45,6 +45,12 @@ class RemoveDuplicate(BaseOptimizer):
         self.threshold = threshold
         self.keep = keep
 
+        if self.keep not in {'by_index', 'by_conf'}:
+            self.logger.error(f'"{self.keep}" is not a valid mode. '
+                              'Please select the mode between '
+                              '"by_index" and "by_conf".')
+            raise ValueError
+
         if isinstance(identity_tracking, dict):
             identity_tracking['logger'] = logger
             self.identity_tracking = build_identity_tracking(identity_tracking)
@@ -125,7 +131,7 @@ class RemoveDuplicate(BaseOptimizer):
 
         Args:
             kps3d (Union[torch.Tensor, np.ndarray]):
-                keypoints3d of the current frame
+                keypoints3d of the current frame, [n_person, n_kps, 4].
             p (int, optional):
                  p value for the p-norm distance to calculate
                  between each vector pair. Defaults to 2.

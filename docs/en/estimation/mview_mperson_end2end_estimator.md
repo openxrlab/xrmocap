@@ -17,7 +17,7 @@ This end-to-end estimator tool takes multi-view RGB sequences and multi-view cal
 - **output_dir**:
 `output_dir` is the path to the directory saving all possible output files, including keypoints3d, SMPLData and visualization videos.
 - **model_dir**:
-`model_dir` is the path the the pretrained model for keypoints3d inference.
+`model_dir` is the path of the pretrained model for keypoints3d inference.
 
 - **estimator_config**:
 `estimator_config` is the path to a `MultiViewMultiPersonEnd2EndEstimator` config file, where `kps3d_model` configuration is necessary. `kps3d_optimizers` is a list of kps3d_optimizer, defined in `xrmocap/transform/keypoints3d/optim`. When inferring images stored on disk, set `load_batch_size` to a reasonable value will prevent your machine from out of memory, for MvP only `batch_size=1` is supported. For more details, see [config](../../../configs/modules/core/estimation/mview_mperson_end2end_estimator.py) and the docstring in [code](../../../xrmocap/core/estimation/mview_mperson_end2end_estimator.py).
