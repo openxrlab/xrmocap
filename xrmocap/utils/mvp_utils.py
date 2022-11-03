@@ -1,10 +1,12 @@
 import copy
+import numpy
 import os
 import time
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from pathlib import Path
+from typing import Union
 
 from xrmocap.utils.distribute_utils import is_main_process
 
@@ -169,3 +171,21 @@ def set_cudnn(benchmark: bool, deterministic: bool, enable: bool):
     cudnn.benchmark = benchmark
     torch.backends.cudnn.deterministic = deterministic
     torch.backends.cudnn.enabled = enable
+
+
+def process_dict(src_dict,
+                 device: Union[None, str] = 'cuda',
+                 dummy_dim: Union[None, int] = None,
+                 dtype: Union[None, str] = 'tensor'):
+    for k, v in src_dict.items():
+        if isinstance(v, numpy.ndarray) or isinstance(v, torch.Tensor):
+            if dtype == 'tensor':
+                v = torch.tensor(v)
+            if dummy_dim is not None:
+                v = v.unsqueeze(dummy_dim)
+            if device is not None:
+                v = v.to(device)
+            src_dict[k] = v
+        elif isinstance(v, dict):
+            src_dict[k] = process_dict(v, device, dummy_dim, dtype)
+    return src_dict

@@ -3,6 +3,9 @@ from mmcv.utils import Registry
 
 from .base_estimator import BaseEstimator
 from .mperson_smpl_estimator import MultiPersonSMPLEstimator
+from .mview_mperson_end2end_estimator import (
+    MultiViewMultiPersonEnd2EndEstimator,
+)
 from .mview_mperson_topdown_estimator import (
     MultiViewMultiPersonTopDownEstimator,
 )
@@ -19,6 +22,9 @@ ESTIMATORS.register_module(
 ESTIMATORS.register_module(
     name='MultiViewMultiPersonTopDownEstimator',
     module=MultiViewMultiPersonTopDownEstimator)
+ESTIMATORS.register_module(
+    name='MultiViewMultiPersonEnd2EndEstimator',
+    module=MultiViewMultiPersonEnd2EndEstimator)
 
 
 def build_estimator(cfg) -> BaseEstimator:

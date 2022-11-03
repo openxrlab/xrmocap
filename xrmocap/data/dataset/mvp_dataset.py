@@ -6,10 +6,9 @@ import torch
 from typing import Tuple, Union
 
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
+from xrmocap.transform.image.shape import get_affine_trans_aug
 from xrmocap.transform.point import affine_transform_pts
-from xrmocap.utils.geometry import (
-    get_affine_transform, get_scale, project_3dpts,
-)
+from xrmocap.utils.geometry import get_scale, project_3dpts
 from .mview_mperson_dataset import MviewMpersonDataset
 
 # yapf: enable
@@ -131,8 +130,8 @@ class MVPDataset(MviewMpersonDataset):
         hm_scale = self.heatmap_size / self.image_size
 
         # Affine transformations
-        trans, inv_trans, aug_trans = self.get_affine_transforms(
-            c, s, hm_scale, r)
+        trans, inv_trans, aug_trans = get_affine_trans_aug(
+            c, s, hm_scale, self.image_size, r)
         kw_data['affine_trans'] = trans
         kw_data['inv_affine_trans'] = inv_trans
         kw_data['aug_trans'] = aug_trans
@@ -236,44 +235,6 @@ class MVPDataset(MviewMpersonDataset):
             skip_no_person = True
         return mview_img_tensor, k_tensor, r_tensor, t_tensor, \
             kps3d, kw_data, n_person, skip_no_person
-
-    def get_affine_transforms(self,
-                              c: np.ndarray,
-                              s: np.ndarray,
-                              aug_s: np.ndarray,
-                              r: int = 0
-                              ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Get affine transformation matrix, inverse affine transformation
-        matrix and augmented affine transformation with given.
-
-        Args:
-            c (np.ndarray): Center of the image.
-            s (np.ndarray): Scale for affine transformation.
-            aug_s (np.ndarray): Scale for augmented affine transformation.
-            r (int, optional): Rotation. Defaults to 0.
-
-        Returns:
-            aff_trans (np.ndarray): Affine transformation matrix.
-            inv_aff_trans (np.ndarray): Inverse affine transformation matrix.
-            aug_trans (np.ndarray): Augmented affine transformation matrix.
-        """
-        aff_trans = np.eye(3, 3)
-        inv_aff_trans = np.eye(3, 3)
-        aug_trans = np.eye(3, 3)
-        scale_trans = np.eye(3, 3)
-
-        trans = get_affine_transform(c, s, r, self.image_size, inv=0)
-        inv_trans = get_affine_transform(c, s, r, self.image_size, inv=1)
-
-        aff_trans[0:2] = trans.copy()
-        inv_aff_trans[0:2] = inv_trans.copy()
-        aug_trans[0:2] = trans.copy()
-
-        scale_trans[0, 0] = aug_s[1]
-        scale_trans[1, 1] = aug_s[0]
-        aug_trans = scale_trans.dot(aug_trans)
-
-        return aff_trans, inv_aff_trans, aug_trans
 
     def get_dist_coeff(self, index: int) -> torch.tensor:
         """Get distortion coefficients.

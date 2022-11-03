@@ -147,11 +147,27 @@ wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weigh
 
 3. Run demo with Shelf_50
 
+
 ```bash
+# Evaluation
 sh ./scripts/eval_mvp.sh 1 configs/mvp/shelf_config/mvp_shelf_50.py weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth
 ```
+If all the configuration is OK, you could see the evaluation result in the terminal.
 
-For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [evaluation tutorial](./tools/eval_model.md).
+```python
+# Estimation: Visualization of predicted keypoints3d and SMPL
+python tools/mview_mperson_end2end_estimator.py \
+    --output_dir ./output/estimation \
+    --model_dir weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth \
+    --estimator_config configs/modules/core/estimation/mview_mperson_end2end_estimator.py \
+    --image_and_camera_param ./xrmocap_data/Shelf_50/image_and_camera_param.txt \
+    --start_frame 300 \
+    --end_frame 350  \
+    --enable_log_file
+```
+If all the configuration is OK, you could see the estimation results in `output_dir`.
+
+For detailed tutorials about dataset preparation, model weights and checkpoints download for learning-based methods, please refer to the [evaluation tutorial](./tools/eval_model.md) and [estimator tutorial](./estimation/mview_mperson_end2end_estimator.md).
 
 
 ## Evaluation
