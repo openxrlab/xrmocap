@@ -161,7 +161,7 @@ class MVPEvaluation:
                 self.logger.info(f'Saving 3D keypoints to: {gt_file}')
                 keypoints3d_gt.dump(gt_file)
 
-        # quantitative evaluation and print result
+            # quantitative evaluation and print result
             if 'panoptic' in self.dataset_name:
                 tb = PrettyTable()
                 mpjpe_threshold = np.arange(25, 155, 25)
