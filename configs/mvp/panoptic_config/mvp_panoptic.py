@@ -165,4 +165,11 @@ trainer_setup = dict(
             loss_pose_normalize=False,
             pred_conf_threshold=__pred_conf_threshold__,
         ),
-    ))
+    ),
+    evaluation_setup=dict(
+        type='MVPEvaluation',
+        dataset_name=__test_dataset__,
+        pred_kps3d_convention='panoptic',
+        n_max_person=__n_instance__,
+    ),
+)

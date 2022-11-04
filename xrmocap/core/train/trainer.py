@@ -11,21 +11,19 @@ import torch.optim as optim
 import torch.utils.data
 import torch.utils.data.distributed
 from mmcv.runner import get_dist_info, load_checkpoint
-from prettytable import PrettyTable
 from torch.utils.data import DistributedSampler
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.core.evaluation.builder import build_evaluation
 from xrmocap.data.dataset.builder import build_dataset
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.utils.distribute_utils import (
-    collect_results, get_rank, is_main_process, time_synchronized,
+    get_rank, is_main_process, time_synchronized,
 )
 from xrmocap.utils.mvp_utils import (
-    AverageMeter, convert_result_to_kps, get_total_grad_norm,
-    match_name_keywords, norm2absolute, save_checkpoint, set_cudnn,
+    AverageMeter, get_total_grad_norm, match_name_keywords, norm2absolute,
+    save_checkpoint, set_cudnn,
 )
 
 # yapf: enable
@@ -41,6 +39,7 @@ class MVPTrainer():
                  test_dataset: str,
                  cudnn_setup: dict,
                  dataset_setup: dict,
+                 evaluation_setup: dict,
                  mvp_setup: dict,
                  pretrained_backbone: Union[None, str] = None,
                  finetune_model: Union[None, str] = None,
@@ -170,6 +169,7 @@ class MVPTrainer():
         self.cudnn_setup = cudnn_setup
         self.dataset_setup = dataset_setup
         self.mvp_setup = mvp_setup
+        self.evaluation_setup = evaluation_setup
 
         seed = self.seed + get_rank()
         torch.manual_seed(seed)
@@ -264,6 +264,15 @@ class MVPTrainer():
         mvp_cfg.update(self.mvp_setup)
         model = build_architecture(mvp_cfg)
 
+        eval_cfg = dict(
+            type='MVPEvaluation',
+            test_loader=test_loader,
+            print_freq=self.print_freq,
+            final_output_dir=self.final_output_dir,
+            logger=self.logger)
+        eval_cfg.update(self.evaluation_setup)
+        evaluation = build_evaluation(eval_cfg)
+
         model.to(self.device)
         model.criterion.to(self.device)
 
@@ -356,63 +365,9 @@ class MVPTrainer():
             lr_scheduler.step()
 
             for thr in self.inference_conf_thr:
-                preds_single, _ = validate_3d(
-                    model,
-                    test_loader,
-                    self.logger,
-                    self.final_output_dir,
-                    thr,
-                    self.print_freq,
-                    n_views=n_views,
-                    is_train=True)
-                preds = collect_results(preds_single, len(test_dataset))
+                precision = evaluation.run(model, threshold=thr, is_train=True)
 
                 if is_main_process():
-                    precision = None
-
-                    if 'panoptic' in self.test_dataset:
-                        tb = PrettyTable()
-                        mpjpe_threshold = np.arange(25, 155, 25)
-
-                        eval_cfg = dict(
-                            type='MVPEvaluation', dataset=test_loader.dataset)
-                        evaluator = build_evaluation(eval_cfg)
-                        aps, recs, mpjpe, recall500 = \
-                            evaluator.evaluate_map(preds)
-
-                        tb.field_names = ['Threshold/mm'] + \
-                            [f'{i}' for i in mpjpe_threshold]
-                        tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
-                        tb.add_row(['Recall'] +
-                                   [f'{re * 100:.2f}' for re in recs])
-                        tb.add_row(['recall@500mm'] +
-                                   [f'{recall500 * 100:.2f}' for re in recs])
-                        self.logger.info('\n' + tb.get_string())
-                        self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
-                        precision = np.mean(aps[0])
-
-                    elif 'campus' in self.test_dataset \
-                            or 'shelf' in self.test_dataset:
-                        eval_cfg = dict(
-                            type='MVPEvaluation', dataset=test_loader.dataset)
-                        evaluator = build_evaluation(eval_cfg)
-                        actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
-                            preds, recall_threshold=500, alpha=0.5)
-                        tb = PrettyTable()
-                        tb.field_names = [
-                            'Metric', 'Actor 1', 'Actor 2', 'Actor 3',
-                            'Average'
-                        ]
-                        tb.add_row([
-                            'PCP', f'{actor_pcp[0] * 100:.2f}',
-                            f'{actor_pcp[1] * 100:.2f}',
-                            f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
-                        ])
-                        self.logger.info('\n' + tb.get_string())
-                        self.logger.info(f'Recall@500mm: {recall500:.4f}')
-
-                        precision = np.mean(avg_pcp)
-
                     if precision > best_precision:
                         best_precision = precision
                         best_model = True
@@ -474,8 +429,6 @@ class MVPTrainer():
             pin_memory=True,
             num_workers=self.workers)
 
-        n_views = test_dataset.n_views
-
         set_cudnn(self.cudnn_setup.benchmark, self.cudnn_setup.deterministic,
                   self.cudnn_setup.enable)
 
@@ -486,6 +439,15 @@ class MVPTrainer():
             type='MviewPoseTransformer', is_train=False, logger=self.logger)
         mvp_cfg.update(self.mvp_setup)
         model = build_architecture(mvp_cfg)
+
+        eval_cfg = dict(
+            type='MVPEvaluation',
+            test_loader=test_loader,
+            print_freq=self.print_freq,
+            final_output_dir=self.final_output_dir,
+            logger=self.logger)
+        eval_cfg.update(self.evaluation_setup)
+        evaluation = build_evaluation(eval_cfg)
 
         model.to(self.device)
         model.criterion.to(self.device)
@@ -517,56 +479,7 @@ class MVPTrainer():
             raise ValueError('Check the model file for testing!')
 
         for thr in self.inference_conf_thr:
-            preds_single, kps3d = validate_3d(
-                model,
-                test_loader,
-                self.logger,
-                self.final_output_dir,
-                thr,
-                self.print_freq,
-                n_views=n_views)
-            preds = collect_results(preds_single, len(test_dataset))
-
-            if is_main_process():
-                if 'panoptic' in self.test_dataset:
-                    tb = PrettyTable()
-                    mpjpe_threshold = np.arange(25, 155, 25)
-
-                    eval_cfg = dict(
-                        type='MVPEvaluation', dataset=test_loader.dataset)
-                    evaluator = build_evaluation(eval_cfg)
-                    aps, recs, mpjpe, recall500 = \
-                        evaluator.evaluate_map(preds)
-
-                    tb.field_names = ['Threshold/mm'] + \
-                                     [f'{i}' for i in mpjpe_threshold]
-                    tb.add_row(['AP'] + [f'{ap * 100:.2f}' for ap in aps])
-                    tb.add_row(['Recall'] + [f'{re * 100:.2f}' for re in recs])
-                    tb.add_row(['recall@500mm'] +
-                               [f'{recall500 * 100:.2f}' for re in recs])
-                    self.logger.info('\n' + tb.get_string())
-                    self.logger.info(f'MPJPE: {mpjpe:.2f}mm')
-
-                elif 'campus' in self.test_dataset \
-                        or 'shelf' in self.test_dataset:
-
-                    eval_cfg = dict(
-                        type='MVPEvaluation', dataset=test_loader.dataset)
-                    evaluator = build_evaluation(eval_cfg)
-                    actor_pcp, avg_pcp, recall500 = evaluator.evaluate_pcp(
-                        preds, recall_threshold=500, alpha=0.5)
-
-                    tb = PrettyTable()
-                    tb.field_names = [
-                        'Metric', 'Actor 1', 'Actor 2', 'Actor 3', 'Average'
-                    ]
-                    tb.add_row([
-                        'PCP', f'{actor_pcp[0] * 100:.2f}',
-                        f'{actor_pcp[1] * 100:.2f}',
-                        f'{actor_pcp[2] * 100:.2f}', f'{avg_pcp * 100:.2f}'
-                    ])
-                    self.logger.info('\n' + tb.get_string())
-                    self.logger.info(f'Recall@500mm: {recall500:.4f}')
+            evaluation.run(model=model, threshold=thr, is_train=False)
 
 
 def train_3d(model,
@@ -689,103 +602,3 @@ def train_3d(model,
                 f'gradnorm {grad_total_norm:.2f}'
 
             logger.info(msg)
-
-
-def validate_3d(model,
-                loader,
-                logger: Union[None, str, logging.Logger],
-                output_dir: str,
-                threshold: float,
-                print_freq: int,
-                n_views: int = 5,
-                is_train: bool = False):
-    """Evaluate model during training or testing.
-
-    Args:
-        model: Model to be evaluated.
-        loader: Dataloader.
-        logger (Union[None, str, logging.Logger]):
-            Logger for logging. If None, root logger will be selected.
-        output_dir (str): Path to output folder.
-        threshold (float):
-            Confidence threshold to filter non-human keypoints.
-        print_freq (int): Printing frequency during training.
-        n_views (int, optional): Number of views. Defaults to 5.
-        is_train (bool, optional):
-            True if it is called during trainig. Defaults to False.
-
-    Returns:
-        preds(torch.Tensor): Predicted results of all the keypoints.
-        keypoints3d(Keypoints): An instance of class keypoints.
-    """
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    logger = get_logger(logger)
-
-    model.eval()
-
-    preds = []
-    keypoints3d = None
-    with torch.no_grad():
-        end = time.time()
-        kps3d_pred = []
-        n_max_person = 0
-        for i, (inputs, meta) in enumerate(loader):
-            data_time.update(time.time() - end)
-            assert len(inputs) == n_views
-            output = model(views=inputs, meta=meta)
-
-            gt_kps3d = meta[0]['kps3d'].float()
-            n_kps = gt_kps3d.shape[2]
-            bs, n_queries = output['pred_logits'].shape[:2]
-
-            src_poses = output['pred_poses']['outputs_coord']. \
-                view(bs, n_queries, n_kps, 3)
-            src_poses = norm2absolute(src_poses, model.module.grid_size,
-                                      model.module.grid_center)
-            score = output['pred_logits'][:, :, 1:2].sigmoid()
-            score = score.unsqueeze(2).expand(-1, -1, n_kps, -1)
-            temp = (score > threshold).float() - 1
-
-            pred = torch.cat([src_poses, temp, score], dim=-1)
-            pred = pred.detach().cpu().numpy()
-            for b in range(pred.shape[0]):
-                preds.append(pred[b])
-
-            batch_time.update(time.time() - end)
-            end = time.time()
-            if (i % print_freq == 0 or i == len(loader) - 1) \
-                    and is_main_process():
-                gpu_memory_usage = torch.cuda.memory_allocated(0)
-                speed = len(inputs) * inputs[0].size(0) / batch_time.val
-                msg = f'Test: [{i}/{len(loader)}]\t' \
-                      f'Time: {batch_time.val:.3f}s ' \
-                      f'({batch_time.avg:.3f}s)\t' \
-                      f'Speed: {speed:.1f} samples/s\t' \
-                      f'Data: {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
-                      f'Memory {gpu_memory_usage:.1f}'
-                logger.info(msg)
-
-            if not is_train:
-                n_person, per_frame_kps3d = convert_result_to_kps(pred)
-                n_max_person = max(n_person, n_max_person)
-                kps3d_pred.append(per_frame_kps3d)
-
-        if not is_train:
-            n_frame = len(kps3d_pred)
-            n_kps = n_kps
-            kps3d = np.full((n_frame, n_max_person, n_kps, 4), np.nan)
-
-            for frame_idx in range(n_frame):
-                per_frame_kps3d = kps3d_pred[frame_idx]
-                n_person = len(per_frame_kps3d)
-                if n_person > 0:
-                    kps3d[frame_idx, :n_person] = per_frame_kps3d
-
-            keypoints3d = Keypoints(kps=kps3d, convention=None)
-            kps3d_file = os.path.join(output_dir, 'kps3d.npz')
-            if is_main_process():
-                logger.info(f'Saving 3D keypoints to: {kps3d_file}')
-            keypoints3d.dump(kps3d_file)
-
-    return preds, keypoints3d

@@ -139,6 +139,7 @@ def convert_result_to_kps(pred):
     pred = pred[0]
     pred = pred[pred[:, 0, 3] >= 0]
     per_frame_kps3d = pred[:, :, :4]
+    per_frame_kps3d[:, :, -1] = pred[:, :, -1]
     n_person = len(per_frame_kps3d)
     return n_person, per_frame_kps3d
 
