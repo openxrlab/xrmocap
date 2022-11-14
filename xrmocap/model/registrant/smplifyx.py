@@ -40,7 +40,8 @@ class SMPLifyX(SMPLify):
                             use_shoulder_hip_only: bool = False,
                             body_weight: float = 1.0,
                             hand_weight: float = 1.0,
-                            face_weight: float = 1.0) -> torch.Tensor:
+                            face_weight: float = 1.0,
+                            **kwargs) -> torch.Tensor:
         """Get per keypoint weight.
 
         Args:
@@ -57,6 +58,7 @@ class SMPLifyX(SMPLify):
         Returns:
             torch.Tensor: Per keypoint weight tensor of shape (K).
         """
+        # print(f"body:{body_weight}; hand:{hand_weight}; face:{face_weight}")
         n_keypoints = self.body_model.get_joint_number()
 
         if use_shoulder_hip_only:

@@ -5,7 +5,7 @@ from typing import List, Tuple, Union, overload
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.ffmpeg_utils import video_to_array
 
-from xrmocap.data_structure.body_model import SMPLData
+from xrmocap.data_structure.body_model import SMPLData, SMPLXData
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import (
     MMdetDetector, MMposeTopDownEstimator, build_detector,
@@ -110,6 +110,14 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
 
         if isinstance(smplify, dict):
             smplify['logger'] = logger
+            if smplify['type'].lower() == 'smplify':
+                self.smpl_data_type = 'smpl'
+            elif smplify['type'].lower() == 'smplifyx':
+                self.smpl_data_type = 'smplx'
+            else:
+                self.logger.warning('smpl data type not defined, '
+                    'set to smpl by default')
+                self.smpl_data_type = 'smpl'
             self.smplify = build_registrant(smplify)
         else:
             self.smplify = smplify
@@ -380,7 +388,8 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 Smpl data of the person.
         """
         self.logger.info('Estimating SMPL.')
-        working_convention = 'smpl'
+        # working_convention = 'smpl'
+        working_convention = self.smpl_data_type
         keypoints3d = convert_keypoints(
             keypoints=keypoints3d, dst=working_convention)
         keypoints3d = keypoints3d.to_tensor(device=self.smplify.device)
@@ -401,10 +410,23 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 keypoints3d_conf=kps3d_conf,
                 keypoints3d_convention=working_convention,
                 handler_key='keypoints3d_limb_len'))
+        
+        return_joints = True
+
         registrant_output = self.smplify(
-            input_list=[kp3d_mse_input, kp3d_llen_input])
-        smpl_data = SMPLData()
+            input_list=[kp3d_mse_input, kp3d_llen_input], return_joints=return_joints) # , return_verts=True
+        if self.smpl_data_type == 'smplx':
+            smpl_data = SMPLXData()
+        elif self.smpl_data_type == 'smpl':
+            smpl_data = SMPLData()
         smpl_data.from_param_dict(registrant_output)
+
+        if return_joints: 
+            adhoc_data = {}
+            adhoc_data['joints'] = registrant_output['joints']
+
+            return smpl_data, adhoc_data
+
         return smpl_data
 
     def select_camera(self, cam_param: List[FisheyeCameraParameter],

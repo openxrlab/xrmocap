@@ -267,6 +267,7 @@ class SMPLify(object):
                 ret['vertices'] = eval_ret['vertices']
             if return_joints:
                 ret['joints'] = eval_ret['joints']
+                print(">>>>return joints")
             if return_full_pose:
                 ret['full_pose'] = eval_ret['full_pose']
             if return_losses:
@@ -491,7 +492,7 @@ class SMPLify(object):
         model_joints_convention = self.body_model.keypoint_convention
         model_joints_weights = self.get_keypoint_weight(
             use_shoulder_hip_only=use_shoulder_hip_only,
-            body_weight=body_weight)
+            body_weight=body_weight, **kwargs)
         model_vertices = body_model_output.get('vertices', None)
 
         loss_dict = self.__compute_loss__(
