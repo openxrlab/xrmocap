@@ -49,10 +49,10 @@ For CMU panoptic meta-data, frames extracted from videos have been removed befor
 
 ### Convert a dataset manually
 
-Use our prepare_dataset tool to convert a dataset. See the [tool tutorial](./tool/prepare_dataset.md) for details.
+Use our prepare_dataset tool to convert a dataset. See the [tool tutorial](./tools/prepare_dataset.md) for details.
 
 ### Validate converted meta-data by visualization
 
-Use our visualize_dataset tool to visualize meta-data. See the [tool tutorial](./tool/visualize_dataset.md) for details.
+Use our visualize_dataset tool to visualize meta-data. See the [tool tutorial](./tools/visualize_dataset.md) for details.
 
 For CMU panoptic meta-data, the multi-view all-in-one video is too large to load, please set `vis_aio_video = False`  to avoid OOM.
