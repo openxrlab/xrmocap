@@ -709,7 +709,8 @@ class SMPLify(object):
 
     def get_keypoint_weight(self,
                             use_shoulder_hip_only: bool = False,
-                            body_weight: float = 1.0) -> torch.Tensor:
+                            body_weight: float = 1.0,
+                            **kwargs) -> torch.Tensor:
         """Get per keypoint weight.
 
         Args:
