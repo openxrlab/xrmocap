@@ -169,8 +169,7 @@ class SMPLify(object):
         ret_dict = {}
         for key in self.__class__.OPTIM_PARAM:
             if key in init_dict:
-                init_param = init_dict[key].to(
-                self.device)
+                init_param = init_dict[key].to(self.device)
             else:
                 init_param = None
             ret_param = self.__match_init_batch_size__(
@@ -492,7 +491,8 @@ class SMPLify(object):
         model_joints_convention = self.body_model.keypoint_convention
         model_joints_weights = self.get_keypoint_weight(
             use_shoulder_hip_only=use_shoulder_hip_only,
-            body_weight=body_weight, **kwargs)
+            body_weight=body_weight,
+            **kwargs)
         model_vertices = body_model_output.get('vertices', None)
 
         loss_dict = self.__compute_loss__(

@@ -1,8 +1,12 @@
+# yapf: disable
 import torch
 
-from xrmocap.transform.convention.keypoints_convention import (
-    get_keypoint_idxs_by_part, get_keypoint_idx, KEYPOINTS_FACTORY)  # noqa:E501
+from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
+    get_keypoint_idxs_by_part,
+)
 from .smplify import SMPLify
+
+# yapf: enable
 
 
 class SMPLifyX(SMPLify):
@@ -45,7 +49,6 @@ class SMPLifyX(SMPLify):
         self.foot_keypoint_idxs = get_keypoint_idxs_by_part(
             'foot', convention=convention)
 
-
     def get_keypoint_weight(self,
                             use_shoulder_hip_only: bool = False,
                             body_weight: float = 1.0,
@@ -86,18 +89,18 @@ class SMPLifyX(SMPLify):
             weight[self.face_keypoint_idxs] = \
                 weight[self.face_keypoint_idxs] * face_weight
 
-            # when both body weight and body parts weight set, 
+            # when both body weight and body parts weight set,
             # reset the body parts weight to 1.0
             if shoulder_weight != 1.0:
                 weight[self.shoulder_keypoint_idxs] = 1.0
                 weight[self.shoulder_keypoint_idxs] = \
-                weight[self.shoulder_keypoint_idxs] * shoulder_weight
-            
+                    weight[self.shoulder_keypoint_idxs] * shoulder_weight
+
             if hip_weight != 1.0:
                 weight[self.hip_keypoint_idxs] = 1.0
                 weight[self.hip_keypoint_idxs] = \
                     weight[self.hip_keypoint_idxs] * hip_weight
-                
+
             if foot_weight != 1.0:
                 weight[self.foot_keypoint_idxs] = 1.0
                 weight[self.foot_keypoint_idxs] = \
@@ -107,5 +110,3 @@ class SMPLifyX(SMPLify):
             weight[self.ignore_keypoint_idxs] = 0.0
 
         return weight
-
-
