@@ -31,3 +31,11 @@ HUMAN_DATA_LIMB_NAMES = {
         'right_knee': 'right_thigh'
     },
 }
+
+HUMAN_DATA_FOOT = ['left_ankle', 'left_foot', 'left_heel', 'left_ankle_openpose', 'left_bigtoe_openpose',
+            'left_smalltoe_openpose', 'left_toe_3dhp','left_bigtoe', 'left_smalltoe', 'right_ankle', 'right_foot', 'right_heel', 'right_ankle_openpose', 'right_bigtoe_openpose',
+            'right_smalltoe_openpose', 'right_toe_3dhp','right_bigtoe', 'right_smalltoe'
+            ]
+
+HUMAN_DATA_PARTS['foot'] = HUMAN_DATA_FOOT
+        
