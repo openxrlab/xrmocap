@@ -374,7 +374,8 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                     keypoints3d, **optim_kwargs)
         return keypoints3d
 
-    def estimate_smpl(self, keypoints3d: Keypoints) -> SMPLData:
+    def estimate_smpl(self, keypoints3d: Keypoints, init_smpl_dict: dict = {},
+        return_joints: bool=False,return_verts=False) -> SMPLData:
         """Estimate smpl parameters according to keypoints3d.
 
         Args:
@@ -382,6 +383,14 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 A keypoints3d Keypoints instance, with only one person
                 inside. This method will take the person at
                 keypoints3d.get_keypoints()[:, 0, ...] to run smplify.
+            init_smpl_dict (dict, optional):
+                A dict of init parameters. init_dict.keys() is a
+                sub-set of self.__class__.OPTIM_PARAM.
+                Defaults to an empty dict.
+            return_joints (bool, optional):
+                Whether to return joints. Defaults to False.
+            return_verts (bool, optional):
+                Whether to return vertices. Defaults to False.
 
         Returns:
             SMPLData:
@@ -410,20 +419,23 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 keypoints3d_conf=kps3d_conf,
                 keypoints3d_convention=working_convention,
                 handler_key='keypoints3d_limb_len'))
-        
-        return_joints = True
-
+    
         registrant_output = self.smplify(
-            input_list=[kp3d_mse_input, kp3d_llen_input], return_joints=return_joints) # , return_verts=True
+            input_list=[kp3d_mse_input, kp3d_llen_input], init_param_dict=init_smpl_dict, 
+            return_joints=return_joints, return_verts=return_verts)
+        
         if self.smpl_data_type == 'smplx':
             smpl_data = SMPLXData()
         elif self.smpl_data_type == 'smpl':
             smpl_data = SMPLData()
         smpl_data.from_param_dict(registrant_output)
 
-        if return_joints: 
+        if return_joints or return_verts: 
             adhoc_data = {}
-            adhoc_data['joints'] = registrant_output['joints']
+            if return_joints:
+                adhoc_data['joints'] = registrant_output['joints'] 
+            if return_verts:
+                adhoc_data['vertices'] = registrant_output['vertices'] 
 
             return smpl_data, adhoc_data
 

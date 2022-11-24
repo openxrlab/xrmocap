@@ -169,7 +169,8 @@ class SMPLify(object):
         ret_dict = {}
         for key in self.__class__.OPTIM_PARAM:
             if key in init_dict:
-                init_param = init_dict[key]
+                init_param = init_dict[key].to(
+                self.device)
             else:
                 init_param = None
             ret_param = self.__match_init_batch_size__(
@@ -267,7 +268,6 @@ class SMPLify(object):
                 ret['vertices'] = eval_ret['vertices']
             if return_joints:
                 ret['joints'] = eval_ret['joints']
-                print(">>>>return joints")
             if return_full_pose:
                 ret['full_pose'] = eval_ret['full_pose']
             if return_losses:
