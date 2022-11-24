@@ -400,7 +400,6 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 Smpl data of the person.
         """
         self.logger.info('Estimating SMPL.')
-        # working_convention = 'smpl'
         working_convention = self.smpl_data_type
         keypoints3d = convert_keypoints(
             keypoints=keypoints3d, dst=working_convention)
@@ -432,6 +431,10 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
         if self.smpl_data_type == 'smplx':
             smpl_data = SMPLXData()
         elif self.smpl_data_type == 'smpl':
+            smpl_data = SMPLData()
+        else:
+            self.logger.warning('smpl data type not defined, '
+                                'set to smpl by default')
             smpl_data = SMPLData()
         smpl_data.from_param_dict(registrant_output)
 

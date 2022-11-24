@@ -1,7 +1,7 @@
 # yapf: disable
 import torch
 
-from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
+from xrmocap.transform.convention.keypoints_convention import (
     get_keypoint_idxs_by_part,
 )
 from .smplify import SMPLify
