@@ -96,6 +96,7 @@ class SMPLify(object):
         self.optimizer = optimizer
         self.grad_clip = grad_clip
         self.hooks = []
+        self.individual_optimizer = False
 
         # initialize body model
         if isinstance(body_model, dict):
@@ -374,7 +375,7 @@ class SMPLify(object):
             # |       False      |     True    |   default_optimizer |
             # |       True       |     False   |        ignore       |
             # |       False      |     False   |        ignore       |
-                
+            self.individual_optimizer = True
             _optim_param = optim_param.copy()
             for key in _optim_param.copy().keys():
                 parameters = OptimizableParameters()
@@ -681,8 +682,11 @@ class SMPLify(object):
         for key, loss in losses.items():
             total_loss = total_loss + loss
         losses['total_loss'] = total_loss
-
-        losses = self.__post_process_loss__(losses)
+        
+        if self.individual_optimizer:
+            losses = self.__post_process_loss__(losses)
+        else:
+            losses['default_optimizer'] = total_loss
 
         # warn once if there's item still in popped kwargs
         if not self.__stage_kwargs_warned__ and \
