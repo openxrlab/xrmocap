@@ -12,10 +12,10 @@ from xrmocap.core.hook.smplify_hook.builder import (
     SMPLifyBaseHook, build_smplify_hook,
 )
 from xrmocap.model.body_model.builder import build_body_model
+from xrmocap.model.loss.mapping import LOSS_MAPPING
 from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
     get_keypoint_idx, get_keypoint_idxs_by_part,
 )
-from xrmocap.model.loss.mapping import LOSS_MAPPING
 from .handler.base_handler import BaseHandler, BaseInput
 from .handler.builder import build_handler
 from .optimizable_parameters import OptimizableParameters
@@ -43,7 +43,7 @@ class SMPLify(object):
                  hooks: List[Union[dict, SMPLifyBaseHook]] = [],
                  verbose: bool = False,
                  info_level: Literal['stage', 'step'] = 'step',
-                 grad_clip:float=1.0,
+                 grad_clip: float = 1.0,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Re-implementation of SMPLify with extended features.
 
@@ -356,7 +356,7 @@ class SMPLify(object):
         self.call_hook('before_stage', **hook_kwargs)
 
         kwargs = kwargs.copy()
-        
+
         # add individual optimizer choice
         optimizers = {}
         if 'individual_optimizer' not in self.optimizer:
@@ -364,7 +364,8 @@ class SMPLify(object):
             for key, value in optim_param.items():
                 fit_flag = kwargs.pop(f'fit_{key}', True)
                 parameters.add_param(key=key, param=value, fit_param=fit_flag)
-            optimizers['default_optimizer'] = build_optimizer(parameters, self.optimizer)
+            optimizers['default_optimizer'] = build_optimizer(
+                parameters, self.optimizer)
         else:
             # set an individual optimizer if optimizer config
             # is given and fit_{key} is True
@@ -382,21 +383,22 @@ class SMPLify(object):
                 fit_flag = kwargs.pop(f'fit_{key}', True)
                 if f'{key}_optimizer' in self.optimizer.keys() and fit_flag:
                     value = _optim_param.pop(key)
-                    parameters.add_param(key=key, param=value,
-                        fit_param=fit_flag)
-                    optimizers[key] = build_optimizer(parameters, 
-                        self.optimizer[f'{key}_optimizer'])
+                    parameters.add_param(
+                        key=key, param=value, fit_param=fit_flag)
+                    optimizers[key] = build_optimizer(
+                        parameters, self.optimizer[f'{key}_optimizer'])
                     self.logger.info(f'Add an individual optimizer for {key}')
                 elif not fit_flag:
                     _optim_param.pop(key)
                 else:
                     self.logger.info(f'No optimizer defined for {key}, '
-                        'get the default optimizer')
-                
+                                     'get the default optimizer')
+
             if len(_optim_param) > 0:
                 parameters = OptimizableParameters()
                 if 'default_optimizer' not in self.optimizer:
-                    self.logger.error('Individual optimizer mode is selected but '
+                    self.logger.error(
+                        'Individual optimizer mode is selected but '
                         'some optimizaters are not defined. '
                         'Please set the default_optimzier or set optimizer '
                         f'for {_optim_param.keys()}.')
@@ -405,14 +407,15 @@ class SMPLify(object):
                         fit_flag = kwargs.pop(f'fit_{key}', True)
                         value = _optim_param.pop(key)
                         if fit_flag:
-                            parameters.add_param(key=key, param=value, 
-                                fit_param=fit_flag)
-                    optimizers['default_optimizer'] = build_optimizer(parameters, 
-                        self.optimizer['default_optimizer'])
-    
+                            parameters.add_param(
+                                key=key, param=value, fit_param=fit_flag)
+                    optimizers['default_optimizer'] = build_optimizer(
+                        parameters, self.optimizer['default_optimizer'])
+
         pre_loss = None
         for iter_idx in range(n_iter):
             for optimizer_key, optimizer in optimizers.items():
+
                 def closure():
                     optimizer.zero_grad()
 
@@ -434,7 +437,8 @@ class SMPLify(object):
 
                     loss.backward(retain_graph=True)
 
-                    torch.nn.utils.clip_grad_norm_(parameters=optim_param.values(), 
+                    torch.nn.utils.clip_grad_norm_(
+                        parameters=optim_param.values(),
                         max_norm=self.grad_clip)
 
                     return total_loss
@@ -682,7 +686,7 @@ class SMPLify(object):
         for key, loss in losses.items():
             total_loss = total_loss + loss
         losses['total_loss'] = total_loss
-        
+
         if self.individual_optimizer:
             losses = self.__post_process_loss__(losses)
         else:
@@ -701,16 +705,15 @@ class SMPLify(object):
             self.__stage_kwargs_warned__ = True
 
         return losses
-    def __post_process_loss__(self,
-                         losses: dict,
-                         **kwargs) -> dict:
+
+    def __post_process_loss__(self, losses: dict, **kwargs) -> dict:
         """Process losses and map the losses to respective parameters.
 
         Args:
             losses (dict): Original loss, use handler_key as keys.
 
         Returns:
-            dict: Processed loss, use parameter names as keys. 
+            dict: Processed loss, use parameter names as keys.
                 Original keys included.
         """
 
@@ -719,7 +722,7 @@ class SMPLify(object):
             for optimizer_loss in process_list:
                 losses[optimizer_loss] = losses[optimizer_loss] + \
                     losses[loss_key] if optimizer_loss in losses \
-                        else losses[loss_key]
+                    else losses[loss_key]
 
         losses['default_optimizer'] = losses['total_loss']
 

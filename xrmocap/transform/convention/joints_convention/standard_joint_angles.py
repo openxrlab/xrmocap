@@ -53,7 +53,6 @@ STANDARD_JOINT_ANGLE_LIMITS = torch.deg2rad(
         [[-90, 90], [-45, 45], [-60, 180]],  # 20, 'right_wrist',
     ]))
 
-
 STANDARD_JOINT_ANGLE_LIMITS_LOCK_FOOT = torch.deg2rad(
     torch.Tensor([
         [[-31, 63], [-30, 30], [-5, 5]],  # 06, 'left_ankle',
