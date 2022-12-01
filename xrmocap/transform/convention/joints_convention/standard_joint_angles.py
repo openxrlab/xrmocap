@@ -27,14 +27,14 @@ TRANSFORMATION_AA_TO_SJA = torch.Tensor([
 TRANSFORMATION_SJA_TO_AA = \
     torch.inverse(TRANSFORMATION_AA_TO_SJA)
 
-# # TODO: spines and shoulders may need further adjustment
+# TODO: spines and shoulders may need further adjustment
 STANDARD_JOINT_ANGLE_LIMITS = torch.deg2rad(
     torch.Tensor([
         [[-45, 155], [-88, 17], [-105, 85]],  # 00, 'left_hip',
         [[-45, 155], [-17, 88], [-85, 105]],  # 01, 'right_hip',
         [[-25, 15], [-20, 20], [-30, 30]],  # 02, 'spine1',
-        [[-1, 150], [-1, 1], [-1, 1]],  # 03, 'left_knee',
-        [[-1, 150], [-1, 1], [-1, 1]],  # 04, 'right_knee',
+        [[0, 150], [-1, 1], [-1, 1]],  # 03, 'left_knee',
+        [[0, 150], [-1, 1], [-1, 1]],  # 04, 'right_knee',
         [[-25, 15], [-15, 15], [-25, 25]],  # 05, 'spine2',
         [[-31, 63], [-26, 26], [-74, 15]],  # 06, 'left_ankle',
         [[-31, 63], [-26, 26], [-15, 74]],  # 07, 'right_ankle',
@@ -47,8 +47,8 @@ STANDARD_JOINT_ANGLE_LIMITS = torch.deg2rad(
         [[-37, 22], [-30, 30], [-45, 45]],  # 14, 'head',
         [[-135, 90], [-135, 90], [-90, 90]],  # 15, 'left_shoulder',
         [[-135, 90], [-90, 135], [-90, 90]],  # 16, 'right_shoulder',
-        [[-1, 1], [-150, 1], [-1, 1]],  # 17, 'left_elbow',
-        [[-1, 1], [-1, 150], [-1, 1]],  # 18, 'right_elbow',
+        [[-1, 1], [-150, 0], [-1, 1]],  # 17, 'left_elbow',
+        [[-1, 1], [0, 150], [-1, 1]],  # 18, 'right_elbow',
         [[-90, 90], [-45, 45], [-180, 60]],  # 19, 'left_wrist',
         [[-90, 90], [-45, 45], [-60, 180]],  # 20, 'right_wrist',
     ]))
