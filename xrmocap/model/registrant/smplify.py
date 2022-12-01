@@ -15,6 +15,7 @@ from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
     get_keypoint_idx, get_keypoint_idxs_by_part,
 )
+from xrmocap.model.loss.mapping import LOSS_MAPPING
 from .handler.base_handler import BaseHandler, BaseInput
 from .handler.builder import build_handler
 from .optimizable_parameters import OptimizableParameters
@@ -42,6 +43,7 @@ class SMPLify(object):
                  hooks: List[Union[dict, SMPLifyBaseHook]] = [],
                  verbose: bool = False,
                  info_level: Literal['stage', 'step'] = 'step',
+                 grad_clip:float=1.0,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Re-implementation of SMPLify with extended features.
 
@@ -92,6 +94,7 @@ class SMPLify(object):
         self.device = device
         self.stage_config = stages
         self.optimizer = optimizer
+        self.grad_clip = grad_clip
         self.hooks = []
 
         # initialize body model
@@ -352,44 +355,101 @@ class SMPLify(object):
         self.call_hook('before_stage', **hook_kwargs)
 
         kwargs = kwargs.copy()
-        parameters = OptimizableParameters()
-        for key, value in optim_param.items():
-            fit_flag = kwargs.pop(f'fit_{key}', True)
-            parameters.add_param(key=key, param=value, fit_param=fit_flag)
-        optimizer = build_optimizer(parameters, self.optimizer)
-
+        
+        # add individual optimizer choice
+        optimizers = {}
+        if 'individual_optimizer' not in self.optimizer:
+            parameters = OptimizableParameters()
+            for key, value in optim_param.items():
+                fit_flag = kwargs.pop(f'fit_{key}', True)
+                parameters.add_param(key=key, param=value, fit_param=fit_flag)
+            optimizers['default_optimizer'] = build_optimizer(parameters, self.optimizer)
+        else:
+            # set an individual optimizer if optimizer config
+            # is given and fit_{key} is True
+            # update with the default optimizer or ignore otherwise
+            # | {key}_opt_config |  fit_{key}  |       optimizer     |
+            # | -----------------| ------------| --------------------|
+            # |       True       |     True    |   {key}_optimizer   |
+            # |       False      |     True    |   default_optimizer |
+            # |       True       |     False   |        ignore       |
+            # |       False      |     False   |        ignore       |
+                
+            _optim_param = optim_param.copy()
+            for key in _optim_param.copy().keys():
+                parameters = OptimizableParameters()
+                fit_flag = kwargs.pop(f'fit_{key}', True)
+                if f'{key}_optimizer' in self.optimizer.keys() and fit_flag:
+                    value = _optim_param.pop(key)
+                    parameters.add_param(key=key, param=value,
+                        fit_param=fit_flag)
+                    optimizers[key] = build_optimizer(parameters, 
+                        self.optimizer[f'{key}_optimizer'])
+                    self.logger.info(f'Add an individual optimizer for {key}')
+                elif not fit_flag:
+                    _optim_param.pop(key)
+                else:
+                    self.logger.info(f'No optimizer defined for {key}, '
+                        'get the default optimizer')
+                
+            if len(_optim_param) > 0:
+                parameters = OptimizableParameters()
+                if 'default_optimizer' not in self.optimizer:
+                    self.logger.error('Individual optimizer mode is selected but '
+                        'some optimizaters are not defined. '
+                        'Please set the default_optimzier or set optimizer '
+                        f'for {_optim_param.keys()}.')
+                else:
+                    for key in _optim_param.copy().keys():
+                        fit_flag = kwargs.pop(f'fit_{key}', True)
+                        value = _optim_param.pop(key)
+                        if fit_flag:
+                            parameters.add_param(key=key, param=value, 
+                                fit_param=fit_flag)
+                    optimizers['default_optimizer'] = build_optimizer(parameters, 
+                        self.optimizer['default_optimizer'])
+    
         pre_loss = None
         for iter_idx in range(n_iter):
+            for optimizer_key, optimizer in optimizers.items():
+                def closure():
+                    optimizer.zero_grad()
 
-            def closure():
-                optimizer.zero_grad()
-                betas_video = self.__expand_betas__(
-                    batch_size=optim_param['body_pose'].shape[0],
-                    betas=optim_param['betas'])
-                expanded_param = {}
-                expanded_param.update(optim_param)
-                expanded_param['betas'] = betas_video
-                loss_dict = self.evaluate(
-                    input_list=input_list,
-                    optim_param=expanded_param,
-                    use_shoulder_hip_only=use_shoulder_hip_only,
-                    body_weight=body_weight,
-                    **kwargs)
+                    betas_video = self.__expand_betas__(
+                        batch_size=optim_param['body_pose'].shape[0],
+                        betas=optim_param['betas'])
+                    expanded_param = {}
+                    expanded_param.update(optim_param)
+                    expanded_param['betas'] = betas_video
+                    loss_dict = self.evaluate(
+                        input_list=input_list,
+                        optim_param=expanded_param,
+                        use_shoulder_hip_only=use_shoulder_hip_only,
+                        body_weight=body_weight,
+                        **kwargs)
 
-                loss = loss_dict['total_loss']
-                loss.backward()
-                return loss
+                    loss = loss_dict[optimizer_key]
+                    total_loss = loss_dict['total_loss']
 
-            loss = optimizer.step(closure)
+                    loss.backward(retain_graph=True)
+
+                    torch.nn.utils.clip_grad_norm_(parameters=optim_param.values(), 
+                        max_norm=self.grad_clip)
+
+                    return total_loss
+
+                total_loss = optimizer.step(closure)
+
+            self.logger.info(total_loss)
             if iter_idx > 0 and pre_loss is not None and ftol > 0:
                 loss_rel_change = self.__compute_relative_change__(
-                    pre_loss, loss.item())
+                    pre_loss, total_loss.item())
                 if loss_rel_change < ftol:
                     if self.verbose:
                         self.logger.info(
                             f'[ftol={ftol}] Early stop at {iter_idx} iter!')
                     break
-            pre_loss = loss.item()
+            pre_loss = total_loss.item()
 
         stage_config = dict(
             use_shoulder_hip_only=use_shoulder_hip_only,
@@ -611,17 +671,18 @@ class SMPLify(object):
                         loss_tensor = handler(**handler_input)
             # if loss computed, record it in losses
             if loss_tensor is not None:
+                if loss_tensor.ndim == 3:
+                    loss_tensor = loss_tensor.sum(dim=(2, 1))
+                elif loss_tensor.ndim == 2:
+                    loss_tensor = loss_tensor.sum(dim=-1)
                 losses[handler_key] = loss_tensor
 
         total_loss = 0
         for key, loss in losses.items():
-            if loss.ndim == 3:
-                total_loss = total_loss + loss.sum(dim=(2, 1))
-            elif loss.ndim == 2:
-                total_loss = total_loss + loss.sum(dim=-1)
-            else:
-                total_loss = total_loss + loss
+            total_loss = total_loss + loss
         losses['total_loss'] = total_loss
+
+        losses = self.__post_process_loss__(losses)
 
         # warn once if there's item still in popped kwargs
         if not self.__stage_kwargs_warned__ and \
@@ -634,6 +695,29 @@ class SMPLify(object):
             warn_msg = warn_msg + table.get_string()
             self.logger.warning(warn_msg)
             self.__stage_kwargs_warned__ = True
+
+        return losses
+    def __post_process_loss__(self,
+                         losses: dict,
+                         **kwargs) -> dict:
+        """Process losses and map the losses to respective parameters.
+
+        Args:
+            losses (dict): Original loss, use handler_key as keys.
+
+        Returns:
+            dict: Processed loss, use parameter names as keys. 
+                Original keys included.
+        """
+
+        for loss_key in losses.copy().keys():
+            process_list = LOSS_MAPPING.get(loss_key, [])
+            for optimizer_loss in process_list:
+                losses[optimizer_loss] = losses[optimizer_loss] + \
+                    losses[loss_key] if optimizer_loss in losses \
+                        else losses[loss_key]
+
+        losses['default_optimizer'] = losses['total_loss']
 
         return losses
 

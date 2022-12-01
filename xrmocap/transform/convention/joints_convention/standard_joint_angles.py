@@ -27,7 +27,7 @@ TRANSFORMATION_AA_TO_SJA = torch.Tensor([
 TRANSFORMATION_SJA_TO_AA = \
     torch.inverse(TRANSFORMATION_AA_TO_SJA)
 
-# TODO: spines and shoulders may need further adjustment
+# # TODO: spines and shoulders may need further adjustment
 STANDARD_JOINT_ANGLE_LIMITS = torch.deg2rad(
     torch.Tensor([
         [[-45, 155], [-88, 17], [-105, 85]],  # 00, 'left_hip',
@@ -51,4 +51,48 @@ STANDARD_JOINT_ANGLE_LIMITS = torch.deg2rad(
         [[0, 0], [0, 150], [0, 0]],  # 18, 'right_elbow',
         [[-90, 90], [-45, 45], [-180, 60]],  # 19, 'left_wrist',
         [[-90, 90], [-45, 45], [-60, 180]],  # 20, 'right_wrist',
+    ]))
+
+
+
+# STANDARD_JOINT_ANGLE_LIMITS = torch.deg2rad(
+#     torch.Tensor([
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 00, 'left_hip',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 01, 'right_hip',
+#         [[-25, 15], [-3, 3], [-15, 15]],  # 02, 'spine1',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 03, 'left_knee',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 04, 'right_knee',
+#         [[-25, 15], [-3, 3], [-15, 15]],  # 05, 'spine2',
+#         [[-31, 63], [-30, 30], [-5, 5]],  # 06, 'left_ankle',
+#         [[-31, 63], [-30, 30], [-5, 5]],  # 07, 'right_ankle',
+#         [[-25, 15], [-3, 3], [-15, 15]],  # 08, 'spine3',
+#         [[-60, 45], [0, 0], [0, 0]],  # 09, 'left_foot',
+#         [[-60, 45], [0, 0], [0, 0]],  # 10, 'right_foot', 
+#         [[-37, 22], [-3, 3], [-15, 15]],  # 11, 'neck', 
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 12, 'left_collar',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 13, 'right_collar',
+#         [[-37, 22], [-180, 180], [-180, 180]],  # 14, 'head',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 15, 'left_shoulder',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 16, 'right_shoulder',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 17, 'left_elbow',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 18, 'right_elbow',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 19, 'left_wrist',
+#         [[-180, 180], [-180, 180], [-180, 180]],  # 20, 'right_wrist',
+#     ]))
+
+
+STANDARD_JOINT_ANGLE_LIMITS_LOCK_FOOT = torch.deg2rad(
+    torch.Tensor([
+        [[-31, 63], [-30, 30], [-5, 5]],  # 06, 'left_ankle',
+        [[-31, 63], [-30, 30], [-5, 5]],  # 07, 'right_ankle',
+        [[-60, 45], [0, 0], [0, 0]],  # 09, 'left_foot',
+        [[-60, 45], [0, 0], [0, 0]],  # 10, 'right_foot',
+    ]))
+
+STANDARD_JOINT_ANGLE_LIMITS_LOCK_APOSE_SPINE = torch.deg2rad(
+    torch.Tensor([
+        [[-3, 3], [-3, 3], [-3, 3]],  # 02, 'spine1',
+        [[-3, 3], [-3, 3], [-3, 3]],  # 05, 'spine2',
+        [[-3, 3], [-3, 3], [-3, 3]],  # 08, 'spine3',
+        [[-37, 22], [-3, 3], [-3, 3]],  # 11, 'neck',
     ]))
