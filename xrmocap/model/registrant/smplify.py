@@ -445,7 +445,6 @@ class SMPLify(object):
 
                 total_loss = optimizer.step(closure)
 
-            self.logger.info(total_loss)
             if iter_idx > 0 and pre_loss is not None and ftol > 0:
                 loss_rel_change = self.__compute_relative_change__(
                     pre_loss, total_loss.item())
