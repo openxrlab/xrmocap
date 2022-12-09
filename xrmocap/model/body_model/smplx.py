@@ -22,7 +22,7 @@ class SMPLX(_SMPLX):
                  *args,
                  use_face_contour: bool = True,
                  use_pca: bool = False,
-                 flat_hand_mean: bool = True,
+                 flat_hand_mean: bool = False,
                  keypoint_convention: str = 'smplx',
                  joints_regressor: str = None,
                  extra_joints_regressor: str = None,
