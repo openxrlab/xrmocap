@@ -70,9 +70,29 @@ class SMPLifyX(SMPLify):
                 Weight of body keypoints. Body part segmentation
                 definition is included in the HumanData convention.
                 Defaults to 1.0.
+            hand_weight (float, optional):
+                Weight of hands keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
+            face_weight (float, optional):
+                Weight of face keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
+            shoulder_weight (float, optional):
+                Weight of shoulder keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
+            hip_weight (float, optional):
+                Weight of hip keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
+            foot_weight (float, optional):
+                Weight of feet keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
 
         Returns:
-            torch.Tensor: Per keypoint weight tensor of shape (K).
+            torch.Tensor: _description_
         """
         n_keypoints = self.body_model.get_joint_number()
 

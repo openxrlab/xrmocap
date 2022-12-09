@@ -115,9 +115,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
             elif smplify['type'].lower() == 'smplifyx':
                 self.smpl_data_type = 'smplx'
             else:
-                self.logger.warning('smpl data type not defined, '
-                                    'set to smpl by default')
-                self.smpl_data_type = 'smpl'
+                self.logger.error('SMPL data type not found.')
             self.smplify = build_registrant(smplify)
         else:
             self.smplify = smplify
@@ -400,7 +398,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 Smpl data of the person.
         """
         self.logger.info('Estimating SMPL.')
-        working_convention = self.smpl_data_type
+        working_convention = self.smplify.body_model.keypoint_convention
         keypoints3d = convert_keypoints(
             keypoints=keypoints3d, dst=working_convention)
         keypoints3d = keypoints3d.to_tensor(device=self.smplify.device)
@@ -432,10 +430,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
             smpl_data = SMPLXData()
         elif self.smpl_data_type == 'smpl':
             smpl_data = SMPLData()
-        else:
-            self.logger.warning('smpl data type not defined, '
-                                'set to smpl by default')
-            smpl_data = SMPLData()
+
         smpl_data.from_param_dict(registrant_output)
 
         if return_joints or return_verts:
