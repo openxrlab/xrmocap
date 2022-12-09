@@ -16,7 +16,7 @@ from xrmocap.utils.distribute_utils import collect_results, is_main_process
 from xrmocap.utils.mvp_utils import (
     AverageMeter, convert_result_to_kps, norm2absolute,
 )
-from .metrics import calc_limbs_accuracy, evaluate
+from .metric import calc_limbs_accuracy, evaluate
 
 # yapf: enable
 
