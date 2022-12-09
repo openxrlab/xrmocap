@@ -102,7 +102,8 @@ class SMPLX(_SMPLX):
         """
 
         kwargs['get_skin'] = True
-        smplx_output = super(SMPLX, self).forward(*args, **kwargs)
+        smplx_output = super(SMPLX, self).forward(*args, return_verts=return_verts, 
+                                                  return_full_pose=return_full_pose, **kwargs)
 
         if not hasattr(self, 'joints_regressor'):
             joints = smplx_output.joints
