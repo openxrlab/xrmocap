@@ -1,0 +1,16 @@
+name: Find Issues
+
+on:
+  schedule:
+    - cron: "0 0 */2 * *"
+
+jobs:
+  check-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find issues
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'find-issues'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-state: 'open'

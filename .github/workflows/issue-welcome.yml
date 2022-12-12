@@ -1,0 +1,19 @@
+name: Issue Welcome
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  issue-welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - name: welcome
+        uses: actions-cool/issues-helper@v2.2.1
+        with:
+          actions: 'welcome'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            Hi @${{ github.event.issue.user.login }}, welcome to commit your first issue!
+            你好 @${{ github.event.issue.user.login }}，非常欢迎首次提交你的问题！
+          issue-contents: 'eyes'

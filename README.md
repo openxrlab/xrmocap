@@ -1,4 +1,10 @@
-# XRMocap
+<br/>
+
+<div align="center">
+    <img src="resources/xrmocap-logo.png" width="600"/>
+</div>
+
+<br/>
 
 <div align="left">
 
@@ -14,7 +20,7 @@
 
 English | [简体中文](README_CN.md)
 
-XRMoCap is an open-source PyTorch-based codebase for the use of multi-view motion capture. It is a part of the [OpenXRLab](https://openxrlab.com/) project.
+XRMoCap is an open-source PyTorch-based codebase for the use of multi-view motion capture. It is a part of the [OpenXRLab](https://openxrlab.org.cn/) project.
 
 If you are interested in single-view motion capture, please refer to [mmhuman3d](https://github.com/open-mmlab/mmhuman3d) for more details.
 
@@ -36,6 +42,18 @@ A detailed introduction can be found in [introduction.md](./docs/en/tutorials/in
 - **Integrate optimization-based and learning-based methods into one modular framework**
 
   XRMoCap decomposes the framework into several components, based on which optimization-based and learning-based methods are integrated into one framework. Users can easily prototype a customized multi-view mocap pipeline by choosing different components in configs.
+
+## News
+
+- 2022-10-14: XRMoCap [v0.6.0](https://github.com/openxrlab/xrmocap/releases/tag/v0.6.0) is released. Major updates include:
+  - Add [4D Association Graph](http://www.liuyebin.com/4dassociation/), the first Python implementation to reproduce this algorithm
+  - Add Multi-view multi-person top-down smpl estimation
+  - Add reprojection error point selector
+- 2022-09-01: XRMoCap [v0.5.0](https://github.com/openxrlab/xrmocap/releases/tag/v0.5.0) is released. Major updates include:
+  - Support [HuMMan Mocap](https://caizhongang.github.io/projects/HuMMan/) toolchain for multi-view single person SMPL estimation
+  - Reproduce [MvP](https://arxiv.org/pdf/2111.04076.pdf), a deep-learning-based SOTA for multi-view multi-human 3D pose estimation
+  - Reproduce [MVPose (single frame)](https://arxiv.org/abs/1901.04111) and [MVPose (temporal tracking and filtering)](https://ieeexplore.ieee.org/document/9492024), two optimization-based methods for multi-view multi-human 3D pose estimation
+  - Support SMPLify, SMPLifyX, SMPLifyD and SMPLifyXD
 
 
 ## Benchmark

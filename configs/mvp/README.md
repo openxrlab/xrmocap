@@ -27,7 +27,7 @@ MvP for Campus fine-tuned from the model weights pre-trained with 3 selected vie
 
 | Config | Campus  | Download |
 |:------:|:-------:|:--------:|
-| [mvp_campus.py](./campus_config/mvp_campus.py) | 96.77 | [model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_campus-e6093968_20220831.pth) |
+| [mvp_campus.py](./campus_config/mvp_campus.py) | 96.77 | [model](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_campus-e6093968_20220831.pth) |
 
 
 ### Shelf
@@ -36,7 +36,7 @@ MvP for Shelf fine-tuned from the model weights pre-trained with 5 selected view
 
 | Config | Shelf  | Download |
 |:------:|:-------:|:--------:|
-| [mvp_shelf.py](./shelf_config/mvp_shelf.py)  | 97.07 | [model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth)  |
+| [mvp_shelf.py](./shelf_config/mvp_shelf.py)  | 97.07 | [model](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth)  |
 
 
 ### CMU Panoptic
@@ -45,9 +45,9 @@ MvP for CMU Panoptic trained from stcratch with pre-trained Pose ResNet50 backbo
 
 | Config | AP25 | AP100 | Recall@500 | MPJPE(mm) |Download |
 |:------:|:----:|:----:|:---------:|:--------:|:--------:|
-| [mvp_panoptic.py](./panoptic_config/mvp_panoptic.py) | 91.49 | 97.91 | 99.85 |16.45 | [model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_5view-1b673cdf_20220831.pth) |
-| [mvp_panoptic_3cam.py](./panoptic_config/mvp_panoptic_3cam.py) | 54.66 | 95.12 | 98.83 |30.55 | [model](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_3view_3_12_23-4b391740_20220831.pth)  |
+| [mvp_panoptic.py](./panoptic_config/mvp_panoptic.py) | 91.49 | 97.91 | 99.85 |16.45 | [model](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_5view-1b673cdf_20220831.pth) |
+| [mvp_panoptic_3cam.py](./panoptic_config/mvp_panoptic_3cam.py) | 54.66 | 95.12 | 98.83 |30.55 | [model](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_3view_3_12_23-4b391740_20220831.pth)  |
 
 ### Pose ResNet50 Backbone
 
-All the checkpoints provided above were trained on top of the pre-trained [Pose ResNet50](https://openxrlab-share.oss-cn-hongkong.aliyuncs.com/xrmocap/weight/mvp/xrmocap_pose_resnet50_panoptic-5a2e53c9_20220831.pth) backbone weights.
+All the checkpoints provided above were trained on top of the pre-trained [Pose ResNet50](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_pose_resnet50_panoptic-5a2e53c9_20220831.pth) backbone weights.
