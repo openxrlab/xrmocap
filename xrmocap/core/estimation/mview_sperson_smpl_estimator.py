@@ -380,7 +380,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                       keypoints3d: Keypoints,
                       init_smpl_data: Union[None, SMPLData] = None,
                       return_joints: bool = False,
-                      return_verts=False) -> SMPLData:
+                      return_verts: bool = False) -> SMPLData:
         """Estimate smpl parameters according to keypoints3d.
 
         Args:
