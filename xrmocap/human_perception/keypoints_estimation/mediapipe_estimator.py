@@ -3,27 +3,27 @@ import logging
 import mediapipe as mp
 import numpy as np
 from tqdm import tqdm
-from typing import List, Tuple, Union
+from typing import Tuple, Union
 from xrprimer.utils.ffmpeg_utils import video_to_array
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
+from .mmpose_top_down_estimator import MMposeTopDownEstimator
 
 
-class MediapipeEstimator:
+class MediapipeEstimator(MMposeTopDownEstimator):
 
     def __init__(self,
                  mediapipe_kwargs: dict,
                  bbox_thr: float = 0.0,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Init a detector from mmpose.
+        """Init a detector from mediapipe.
 
         Args:
-            mmpose_kwargs (dict):
-                A dict contains args of mmpose.apis.init_detector.
-                Necessary keys: config, checkpoint
-                Optional keys: device
+            mediapipe_kwargs (dict):
+                A dict contains args of mediapipe.
+                refer to https://google.github.io/mediapipe/solutions/pose.html
+                in detail.
             bbox_thr (float, optional):
                 Threshold of a bbox. Those have lower scores will be ignored.
                 Defaults to 0.0.
@@ -48,7 +48,7 @@ class MediapipeEstimator:
         """
         return self.convention
 
-    def infer_single_frame(self, img_arr: np.ndarray, bbox_list: list):
+    def infer_single_img(self, img_arr: np.ndarray, bbox_list: list):
         multi_kps2d = []
         for bbox_dict in bbox_list:
             bbox = bbox_dict['bbox']
@@ -72,7 +72,8 @@ class MediapipeEstimator:
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
                     bbox_list: Union[tuple, list],
-                    disable_tqdm: bool = False) -> Tuple[list, list]:
+                    disable_tqdm: bool = False,
+                    return_heatmap: bool = False) -> Tuple[list, list]:
         """Infer frames already in memory(ndarray type).
 
         Args:
@@ -98,10 +99,6 @@ class MediapipeEstimator:
                     Shape of the nested lists is
                     (n_frame, n_human, n_keypoints, 3).
                     Each keypoint is an array of (x, y, confidence).
-                heatmap_list (list):
-                    A list of keypoint heatmaps. len(heatmap_list) == n_frame
-                    and the shape of heatmap_list[f] is
-                    (n_human, n_keypoints, width, height).
                 bbox_list (list):
                     A list of human bboxes.
                     Shape of the nested lists is (n_frame, n_human, 5).
@@ -120,8 +117,7 @@ class MediapipeEstimator:
                 if bbox[4] > 0.0:
                     bboxes_in_frame.append({'bbox': bbox, 'id': idx})
             if len(bboxes_in_frame) > 0:
-                pose_results = self.infer_single_frame(img_arr,
-                                                       bboxes_in_frame)
+                pose_results = self.infer_single_img(img_arr, bboxes_in_frame)
                 frame_kps_results = np.zeros(
                     shape=(
                         len(bbox_list[frame_index]),
@@ -149,6 +145,7 @@ class MediapipeEstimator:
             frame_path_list: list,
             bbox_list: Union[tuple, list],
             disable_tqdm: bool = False,
+            return_heatmap: bool = False,
             load_batch_size: Union[None, int] = None) -> Tuple[list, list]:
         """Infer frames from file.
 
@@ -176,10 +173,12 @@ class MediapipeEstimator:
                     Shape of the nested lists is
                     (n_frame, n_human, n_keypoints, 3).
                     Each keypoint is an array of (x, y, confidence).
-                heatmap_list (list):
-                    A list of keypoint heatmaps. len(heatmap_list) == n_frame
-                    and the shape of heatmap_list[f] is
-                    (n_human, n_keypoints, width, height).
+                bbox_list (list):
+                    A list of human bboxes.
+                    Shape of the nested lists is (n_frame, n_human, 5).
+                    Each bbox is a bbox_xyxy with a bbox_score at last.
+                    It could be smaller than the input bbox_list,
+                    if there's no keypoints detected in some bbox.
         """
         ret_kps_list = []
         ret_boox_list = []
@@ -189,13 +188,13 @@ class MediapipeEstimator:
             end_idx = min(len(frame_path_list), start_idx + load_batch_size)
             if load_batch_size < len(frame_path_list):
                 self.logger.info(
-                    'Processing mmpose on frames' +
+                    'Processing mediapipe on frames' +
                     f'({start_idx}-{end_idx})/{len(frame_path_list)}')
             image_array_list = []
             for frame_abs_path in frame_path_list[start_idx:end_idx]:
                 img_np = cv2.imread(frame_abs_path)
                 image_array_list.append(img_np)
-            batch_pose_list, batch_boox_list = \
+            batch_pose_list, _, batch_boox_list = \
                 self.infer_array(
                     image_array=image_array_list,
                     bbox_list=bbox_list[start_idx:end_idx],
@@ -207,7 +206,8 @@ class MediapipeEstimator:
     def infer_video(self,
                     video_path: str,
                     bbox_list: Union[tuple, list],
-                    disable_tqdm: bool = False) -> Tuple[list, list]:
+                    disable_tqdm: bool = False,
+                    return_heatmap: bool = False) -> Tuple[list, list]:
         """Infer frames from a video file.
 
         Args:
@@ -231,64 +231,16 @@ class MediapipeEstimator:
                     Shape of the nested lists is
                     (n_frame, n_human, n_keypoints, 3).
                     Each keypoint is an array of (x, y, confidence).
-                heatmap_list (list):
-                    A list of keypoint heatmaps. len(heatmap_list) == n_frame
-                    and the shape of heatmap_list[f] is
-                    (n_human, n_keypoints, width, height).
+                bbox_list (list):
+                    A list of human bboxes.
+                    Shape of the nested lists is (n_frame, n_human, 5).
+                    Each bbox is a bbox_xyxy with a bbox_score at last.
+                    It could be smaller than the input bbox_list,
+                    if there's no keypoints detected in some bbox.
         """
         image_array = video_to_array(input_path=video_path, logger=self.logger)
-        ret_kps_list, ret_boox_list = self.infer_array(
+        ret_kps_list, _, ret_boox_list = self.infer_array(
             image_array=image_array,
             bbox_list=bbox_list,
             disable_tqdm=disable_tqdm)
         return ret_kps_list, None, ret_boox_list
-
-    def get_keypoints_from_result(
-            self, kps2d_list: List[list]) -> Union[Keypoints, None]:
-        """Convert returned keypoints2d into an instance of class Keypoints.
-
-        Args:
-            kps2d_list (List[list]):
-                A list of human keypoints, returned by
-                infer methods.
-                Shape of the nested lists is
-                (n_frame, n_human, n_keypoints, 3).
-
-        Returns:
-            Union[Keypoints, None]:
-                An instance of Keypoints with mask and
-                convention, data type is numpy.
-                If no one has been detected in any frame,
-                a None will be returned.
-        """
-        # shape: (n_frame, n_human, n_keypoints, 3)
-        n_frame = len(kps2d_list)
-        human_count_list = [len(human_list) for human_list in kps2d_list]
-        if len(human_count_list) > 0:
-            n_human = max(human_count_list)
-        else:
-            n_human = 0
-        n_keypoints = get_keypoint_num(self.get_keypoints_convention_name())
-        if n_human > 0:
-            kps2d_arr = np.zeros(shape=(n_frame, n_human, n_keypoints, 3))
-            mask_arr = np.ones_like(kps2d_arr[..., 0], dtype=np.uint8)
-            for f_idx in range(n_frame):
-                if len(kps2d_list[f_idx]) <= 0:
-                    mask_arr[f_idx, ...] = 0
-                    continue
-                for h_idx in range(n_human):
-                    if h_idx < len(kps2d_list[f_idx]):
-                        mask_arr[f_idx, h_idx, ...] = np.sign(
-                            np.array(kps2d_list[f_idx][h_idx])[:, -1])
-                        kps2d_arr[f_idx,
-                                  h_idx, :, :] = kps2d_list[f_idx][h_idx]
-                    else:
-                        mask_arr[f_idx, h_idx, ...] = 0
-            keypoints2d = Keypoints(
-                kps=kps2d_arr,
-                mask=mask_arr,
-                convention=self.get_keypoints_convention_name(),
-                logger=self.logger)
-        else:
-            keypoints2d = None
-        return keypoints2d
