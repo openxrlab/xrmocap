@@ -1,4 +1,5 @@
 filterpy
+mediapipe
 numpy
 opencv-python-headless
 pre-commit
