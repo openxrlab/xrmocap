@@ -710,12 +710,12 @@ class SMPLify(object):
         ]
         self.body_keypoint_idxs = get_keypoint_idxs_by_part(
             'body', convention=convention)
-        shoulder_keypoint_idxs = get_keypoint_idxs_by_part(
+        self.shoulder_keypoint_idxs = get_keypoint_idxs_by_part(
             'shoulder', convention=convention)
-        hip_keypoint_idxs = get_keypoint_idxs_by_part(
+        self.hip_keypoint_idxs = get_keypoint_idxs_by_part(
             'hip', convention=convention)
         self.shoulder_hip_keypoint_idxs = [
-            *shoulder_keypoint_idxs, *hip_keypoint_idxs
+            *self.shoulder_keypoint_idxs, *self.hip_keypoint_idxs
         ]
         self.foot_keypoint_idxs = get_keypoint_idxs_by_part(
             'foot', convention=convention)
