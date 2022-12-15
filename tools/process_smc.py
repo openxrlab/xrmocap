@@ -115,7 +115,6 @@ def main(args):
                     data_source=keypoints3d.get_convention(),
                     mask=keypoints3d.get_mask()[0, 0, ...],
                     overwrite=True)
-
         if smpl_data is not None:
             selected_kinect = 1
             body_model_cfg = dict(
