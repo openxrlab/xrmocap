@@ -1,5 +1,6 @@
 # yapf: disable
 import torch
+from typing import Union
 
 from xrmocap.transform.convention.keypoints_convention import (
     get_keypoint_idxs_by_part,
@@ -54,9 +55,9 @@ class SMPLifyX(SMPLify):
                             body_weight: float = 1.0,
                             hand_weight: float = 1.0,
                             face_weight: float = 1.0,
-                            shoulder_weight: float = 1.0,
-                            hip_weight: float = 1.0,
-                            foot_weight: float = 1.0,
+                            shoulder_weight: Union[float, None] = None,
+                            hip_weight: Union[float, None] = None,
+                            foot_weight: Union[float, None] = None,
                             **kwargs) -> torch.Tensor:
         """Get per keypoint weight.
 
@@ -81,15 +82,15 @@ class SMPLifyX(SMPLify):
             shoulder_weight (float, optional):
                 Weight of shoulder keypoints. Body part segmentation
                 definition is included in the HumanData convention.
-                Defaults to 1.0.
+                Defaults to None.
             hip_weight (float, optional):
                 Weight of hip keypoints. Body part segmentation
                 definition is included in the HumanData convention.
-                Defaults to 1.0.
+                Defaults to None.
             foot_weight (float, optional):
                 Weight of feet keypoints. Body part segmentation
                 definition is included in the HumanData convention.
-                Defaults to 1.0.
+                Defaults to None.
 
         Returns:
             torch.Tensor: _description_
@@ -99,47 +100,49 @@ class SMPLifyX(SMPLify):
         # 3rd priority: set body parts weight manually
         # when both body weight and body parts weight set,
         # body parts weight override the body weight
-        if not use_shoulder_hip_only:
-            weight = torch.ones([n_keypoints]).to(self.device)
 
-            # "body": includes "shoulder", "hip" and "foot"
-            weight[self.body_keypoint_idxs] = \
-                weight[self.body_keypoint_idxs] * body_weight
+        weight = torch.ones([n_keypoints]).to(self.device)
 
-            if shoulder_weight != 1.0:
-                weight[self.shoulder_keypoint_idxs] = 1.0
-                weight[self.shoulder_keypoint_idxs] = \
-                    weight[self.shoulder_keypoint_idxs] * shoulder_weight
+        # "body": includes "shoulder", "hip" and "foot"
+        weight[self.body_keypoint_idxs] = \
+            weight[self.body_keypoint_idxs] * body_weight
 
-            if hip_weight != 1.0:
-                weight[self.hip_keypoint_idxs] = 1.0
-                weight[self.hip_keypoint_idxs] = \
-                    weight[self.hip_keypoint_idxs] * hip_weight
-
-            if foot_weight != 1.0:
-                weight[self.foot_keypoint_idxs] = 1.0
-                weight[self.foot_keypoint_idxs] = \
-                    weight[self.foot_keypoint_idxs] * foot_weight
-
-            weight[self.hand_keypoint_idxs] = \
-                weight[self.hand_keypoint_idxs] * hand_weight
-            weight[self.face_keypoint_idxs] = \
-                weight[self.face_keypoint_idxs] * face_weight
-
-        # 2nd priority: use_shoulder_hip_only
-        else:
-            self.logger.warning(
-                'use_shoulder_hip_only will be deprecated, '
-                'please manually set: body_weight=0.0, face_weight=0.0, '
-                'hand_weight=0.0, foot_weight=0.0, '
-                'shoulder_weight=1.0, hip_weight=1.0 to '
-                'make sure correct weights are set.')
-            weight = torch.zeros([n_keypoints]).to(self.device)
-            weight[self.shoulder_hip_keypoint_idxs] = 1.0
+        if shoulder_weight is not None:
+            weight[self.shoulder_keypoint_idxs] = 1.0
             weight[self.shoulder_keypoint_idxs] = \
                 weight[self.shoulder_keypoint_idxs] * shoulder_weight
+
+        if hip_weight is not None:
+            weight[self.hip_keypoint_idxs] = 1.0
             weight[self.hip_keypoint_idxs] = \
                 weight[self.hip_keypoint_idxs] * hip_weight
+
+        if foot_weight is not None:
+            weight[self.foot_keypoint_idxs] = 1.0
+            weight[self.foot_keypoint_idxs] = \
+                weight[self.foot_keypoint_idxs] * foot_weight
+
+        weight[self.hand_keypoint_idxs] = \
+            weight[self.hand_keypoint_idxs] * hand_weight
+        weight[self.face_keypoint_idxs] = \
+            weight[self.face_keypoint_idxs] * face_weight
+
+        # 2nd priority: use_shoulder_hip_only
+        if use_shoulder_hip_only:
+            weight = torch.zeros([n_keypoints]).to(self.device)
+            weight[self.shoulder_hip_keypoint_idxs] = 1.0
+            if shoulder_weight is not None and hip_weight is not None:
+                weight[self.shoulder_keypoint_idxs] = \
+                    weight[self.shoulder_keypoint_idxs] * shoulder_weight
+                weight[self.hip_keypoint_idxs] = \
+                    weight[self.hip_keypoint_idxs] * hip_weight
+            else:
+                self.logger.error(
+                    'use_shoulder_hip_only is deprecated, '
+                    'please manually set: body_weight=0.0, face_weight=0.0, '
+                    'hand_weight=0.0, shoulder_weight=1.0, hip_weight=1.0 to '
+                    'make sure correct weights are set.')
+                raise ValueError
 
         # 1st priority: keypoints ignored
         if hasattr(self, 'ignore_keypoint_idxs'):
