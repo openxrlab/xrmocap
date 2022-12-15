@@ -116,7 +116,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 self.smpl_data_type = 'smplx'
             else:
                 self.logger.error('SMPL data type not found.')
-                raise ValueError
+                raise TypeError
 
             self.smplify = build_registrant(smplify)
         else:
