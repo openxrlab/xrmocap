@@ -115,6 +115,19 @@ def main(args):
                     data_source=keypoints3d.get_convention(),
                     mask=keypoints3d.get_mask()[0, 0, ...],
                     overwrite=True)
+
+                image_array = smc_reader.get_kinect_color(kinect_id=view_idx)
+                image_array = bgr2rgb(image_array)
+                visualize_kp2d(
+                    kp2d=keypoints2d_list[view_idx]['keypoints'].reshape(
+                        n_frame, -1, 3)[..., :2],
+                    image_array=image_array,
+                    output_path=os.path.join(
+                        args.output_dir,
+                        f'{smc_name}_keypoints2d' + f'_{view_idx:02d}.mp4'),
+                    data_source=keypoints2d_list[view_idx]['convention'],
+                    mask=keypoints2d_list[view_idx]['mask'][0, 0, ...],
+                    overwrite=True)
         if smpl_data is not None:
             selected_kinect = 1
             body_model_cfg = dict(

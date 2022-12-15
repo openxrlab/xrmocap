@@ -10,14 +10,22 @@ bbox_detector = dict(
         'mmdet_faster_rcnn_r50_fpn_coco.py',
         device='cuda'),
     batch_size=10)
+# kps2d_estimator = dict(
+#     type='MMposeTopDownEstimator',
+#     mmpose_kwargs=dict(
+#         checkpoint='weight/hrnet_w48_coco_wholebody' +
+#         '_384x288_dark-f5726563_20200918.pth',
+#         config='configs/modules/human_perception/mmpose_hrnet_w48_' +
+#         'coco_wholebody_384x288_dark_plus.py',
+#         device='cuda'),
+#     bbox_thr=0.95)
 kps2d_estimator = dict(
-    type='MMposeTopDownEstimator',
-    mmpose_kwargs=dict(
-        checkpoint='weight/hrnet_w48_coco_wholebody' +
-        '_384x288_dark-f5726563_20200918.pth',
-        config='configs/modules/human_perception/mmpose_hrnet_w48_' +
-        'coco_wholebody_384x288_dark_plus.py',
-        device='cuda'),
+    type='MediapipeEstimator',
+    mediapipe_kwargs=dict(
+        static_image_mode=True,
+        model_complexity=2,
+        enable_segmentation=False,
+        min_detection_confidence=0.5),
     bbox_thr=0.95)
 triangulator = dict(type='AniposelibTriangulator', camera_parameters=[])
 smplify = dict(

@@ -286,6 +286,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
             keypoints2d = self.kps2d_estimator.get_keypoints_from_result(
                 kps2d_list)
             ret_list.append(keypoints2d)
+            # import pdb; pdb.set_trace()
         return ret_list
 
     def estimate_keypoints3d(self, cam_param: List[FisheyeCameraParameter],
