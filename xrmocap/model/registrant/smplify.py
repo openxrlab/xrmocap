@@ -763,7 +763,7 @@ class SMPLify(object):
                 Defaults to None.
 
         Returns:
-            torch.Tensor: _description_
+            torch.Tensor: Per keypoint weight tensor of shape (K).
         """
         n_keypoints = self.body_model.get_joint_number()
 
