@@ -5,7 +5,7 @@ from typing import List, Tuple, Union, overload
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.ffmpeg_utils import video_to_array
 
-from xrmocap.data_structure.body_model import SMPLData, SMPLXData, SMPLXData
+from xrmocap.data_structure.body_model import SMPLData, SMPLXData
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import (
     MMdetDetector, MMposeTopDownEstimator, build_detector,
