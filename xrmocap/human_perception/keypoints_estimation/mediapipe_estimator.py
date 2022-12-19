@@ -3,15 +3,15 @@ import logging
 import mediapipe as mp
 import numpy as np
 from tqdm import tqdm
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 from xrprimer.utils.ffmpeg_utils import video_to_array
 from xrprimer.utils.log_utils import get_logger
 
+from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
-from .mmpose_top_down_estimator import MMposeTopDownEstimator
 
 
-class MediapipeEstimator(MMposeTopDownEstimator):
+class MediapipeEstimator():
 
     def __init__(self,
                  mediapipe_kwargs: dict,
@@ -249,3 +249,53 @@ class MediapipeEstimator(MMposeTopDownEstimator):
             bbox_list=bbox_list,
             disable_tqdm=disable_tqdm)
         return ret_kps_list, None, ret_boox_list
+
+    def get_keypoints_from_result(
+            self, kps2d_list: List[list]) -> Union[Keypoints, None]:
+        """Convert returned keypoints2d into an instance of class Keypoints.
+
+        Args:
+            kps2d_list (List[list]):
+                A list of human keypoints, returned by
+                infer methods.
+                Shape of the nested lists is
+                (n_frame, n_human, n_keypoints, 3).
+
+        Returns:
+            Union[Keypoints, None]:
+                An instance of Keypoints with mask and
+                convention, data type is numpy.
+                If no one has been detected in any frame,
+                a None will be returned.
+        """
+        # shape: (n_frame, n_human, n_keypoints, 3)
+        n_frame = len(kps2d_list)
+        human_count_list = [len(human_list) for human_list in kps2d_list]
+        if len(human_count_list) > 0:
+            n_human = max(human_count_list)
+        else:
+            n_human = 0
+        n_keypoints = get_keypoint_num(self.get_keypoints_convention_name())
+        if n_human > 0:
+            kps2d_arr = np.zeros(shape=(n_frame, n_human, n_keypoints, 3))
+            mask_arr = np.ones_like(kps2d_arr[..., 0], dtype=np.uint8)
+            for f_idx in range(n_frame):
+                if len(kps2d_list[f_idx]) <= 0:
+                    mask_arr[f_idx, ...] = 0
+                    continue
+                for h_idx in range(n_human):
+                    if h_idx < len(kps2d_list[f_idx]):
+                        mask_arr[f_idx, h_idx, ...] = np.sign(
+                            np.array(kps2d_list[f_idx][h_idx])[:, -1])
+                        kps2d_arr[f_idx,
+                                  h_idx, :, :] = kps2d_list[f_idx][h_idx]
+                    else:
+                        mask_arr[f_idx, h_idx, ...] = 0
+            keypoints2d = Keypoints(
+                kps=kps2d_arr,
+                mask=mask_arr,
+                convention=self.get_keypoints_convention_name(),
+                logger=self.logger)
+        else:
+            keypoints2d = None
+        return keypoints2d
