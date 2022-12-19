@@ -36,3 +36,6 @@ def test_mvpose_evaluation():
     pred_kps3d = pred_keypoints3d.get_keypoints()
     assert pred_kps3d.shape == (5, 2, 17, 4)
     assert pred_keypoints3d.get_mask().shape == (5, 2, 17)
+
+
+test_mvpose_evaluation()

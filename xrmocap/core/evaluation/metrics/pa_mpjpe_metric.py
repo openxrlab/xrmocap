@@ -29,7 +29,9 @@ class PAMPJPEMetric(BaseMetric):
         pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
         gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
         _, _, rotation, scaling, transl = compute_similarity_transform(
-            gt_kps3d, pred_kps3d, compute_optimal_scale=True)
+            gt_kps3d.reshape(-1, 3),
+            pred_kps3d.reshape(-1, 3),
+            compute_optimal_scale=True)
         pred_kps3d_pa = (scaling * pred_kps3d.dot(rotation)) + transl
 
         pred_keypoints3d_pa = pred_keypoints3d.clone()

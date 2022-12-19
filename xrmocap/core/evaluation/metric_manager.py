@@ -4,6 +4,7 @@ from typing import List, Union
 from xrprimer.utils.log_utils import get_logger
 
 from .metrics.base_metric import BaseMetric
+from .metrics.builder import build_metric
 
 # yapf: enable
 
@@ -38,7 +39,7 @@ class MetricManager:
         unsorted_list = []
         for metric in metric_list:
             if isinstance(metric, dict):
-                pass
+                metric = build_metric(metric)
             unsorted_list.append(metric)
         # sort metrics by RANK
         self.metric_list = _sort_metrics_by_rank(unsorted_list)
@@ -61,6 +62,13 @@ class MetricManager:
                 pick_dict[name] = pick_value
         else:
             pick_dict = raw_pick_dict
+            for key in list(pick_dict.keys()):
+                value = pick_dict[key]
+                if value != 'all' and \
+                        not isinstance(value, list):
+                    pick_dict[key] = [
+                        value,
+                    ]
         self.pick_dict = pick_dict
 
     def __call__(self, *args, **kwargs) -> dict:
@@ -84,7 +92,7 @@ class MetricManager:
                 if name == 'all':
                     manager_ret_dict[name] = metric_ret_dict
                 else:
-                    manager_ret_dict[name] = dict
+                    manager_ret_dict[name] = dict()
                     for key in selections:
                         manager_ret_dict[name][key] = metric_ret_dict[key]
         return manager_ret_dict
@@ -94,14 +102,14 @@ def _sort_metrics_by_rank(unsorted_list: List[BaseMetric]) -> List[BaseMetric]:
     sorted_list = []
     cur_rank = 0
     unsorted_idxs = list(range(len(unsorted_list)))
-    while len(unsorted_idxs) <= 0:
+    while len(unsorted_idxs) > 0:
         new_unsorted_idxs = []
         for idx in unsorted_idxs:
             metric = unsorted_list[idx]
             rank = metric.__class__.RANK
             # rank matches, add to sorted list
             if rank == cur_rank:
-                sorted_list.append(metric)
+                sorted_list.insert(0, metric)
             # not matched yet, preprare for next iter
             else:
                 new_unsorted_idxs.append(idx)

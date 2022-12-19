@@ -61,7 +61,7 @@ class End2EndEvaluation(BaseEvaluation):
             _ = len(fisheye_list)
             if end_of_clip:
                 end_of_clip_idxs.append(frame_idx)
-            # predict kps3d end2end
+            # TODO: predict kps3d end2end
             pred_kps3d = None
             # concat predict kps3d
             for idx, identity in enumerate(identities):
@@ -93,7 +93,7 @@ class End2EndEvaluation(BaseEvaluation):
             scene_pred_kps3d = pred_kps3d[start_idx:end_idx]
             pred_keypoints3d = Keypoints(
                 kps=scene_pred_kps3d,
-                mask=scene_pred_kps3d[..., -1:],
+                mask=scene_pred_kps3d[..., -1] > 0,
                 convention=pred_convention,
                 logger=self.logger)
             pred_keypoints3d = convert_keypoints(
@@ -103,7 +103,7 @@ class End2EndEvaluation(BaseEvaluation):
             scene_gt_kps3d = gt_kps3d[start_idx:end_idx]
             gt_keypoints3d = Keypoints(
                 kps=scene_gt_kps3d,
-                mask=scene_gt_kps3d[..., -1:],
+                mask=scene_gt_kps3d[..., -1] > 0,
                 convention=self.dataset.gt_kps3d_convention,
                 logger=self.logger)
             gt_keypoints3d = convert_keypoints(
