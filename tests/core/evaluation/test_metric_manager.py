@@ -74,14 +74,17 @@ def test_call():
             mpjpe='mpjpe_value',
             pa_mpjpe='pa_mpjpe_value'),
     )
+    gt_path = os.path.join(INPUT_DIR, 'gt_keypoints3d.npz')
+    gt_keypoints3d = Keypoints.fromfile(gt_path)
+    gt_keypoints3d = convert_keypoints(
+        gt_keypoints3d, dst='coco', approximate=True)
     pred_path = os.path.join(INPUT_DIR, 'pred_keypoints3d.npz')
     pred_keypoints3d = Keypoints.fromfile(pred_path)
     pred_keypoints3d = convert_keypoints(
         pred_keypoints3d, dst='coco', approximate=True)
-    gt_path = os.path.join(INPUT_DIR, 'pred_keypoints3d.npz')
-    gt_keypoints3d = Keypoints.fromfile(gt_path)
-    gt_keypoints3d = convert_keypoints(
-        gt_keypoints3d, dst='coco', approximate=True)
+    gt_keypoints3d.set_keypoints(
+        gt_keypoints3d.get_keypoints()
+        [:, :pred_keypoints3d.get_person_number(), :, :])
     result_dict = manager(
         pred_keypoints3d=pred_keypoints3d,
         gt_keypoints3d=gt_keypoints3d,
