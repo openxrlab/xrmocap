@@ -49,7 +49,22 @@ class MediapipeEstimator(MMposeTopDownEstimator):
         return self.convention
 
     def infer_single_img(self, img_arr: np.ndarray, bbox_list: list):
-        multi_kps2d = []
+        """Infer a single img with bbox.
+
+        Args:
+            image_array (Union[np.ndarray, list]):
+                BGR image ndarray in shape [height, width, 3],
+            bbox_list (Union[tuple, list]):
+                A list of human bboxes.
+                Shape of the nested lists is (n_frame, n_human, 5).
+                Each bbox is a bbox_xyxy with a bbox_score at last.
+
+        Returns:
+            multi_kps2d (list):
+                A list of dict for human keypoints and bbox.
+        """
+        rt_bbox_list = []
+        rt_kps2d_list = []
         for bbox_dict in bbox_list:
             bbox = bbox_dict['bbox']
             kps2d = None
@@ -66,14 +81,15 @@ class MediapipeEstimator(MMposeTopDownEstimator):
                     ] for landmark in result_mp.pose_landmarks.landmark]
                     kps2d = np.array(kps_list)
             if kps2d is not None:
-                multi_kps2d.append(dict(bbox=bbox, keypoints=kps2d))
-        return multi_kps2d
+                rt_bbox_list.append(bbox)
+                rt_kps2d_list.append(kps2d)
+        return rt_bbox_list, rt_kps2d_list
 
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
                     bbox_list: Union[tuple, list],
                     disable_tqdm: bool = False,
-                    return_heatmap: bool = False) -> Tuple[list, list]:
+                    **kwargs) -> Tuple[list, list]:
         """Infer frames already in memory(ndarray type).
 
         Args:
@@ -87,9 +103,6 @@ class MediapipeEstimator(MMposeTopDownEstimator):
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
-            return_heatmap (bool, optional):
-                Whether to return heatmap.
                 Defaults to False.
 
         Returns:
@@ -117,18 +130,17 @@ class MediapipeEstimator(MMposeTopDownEstimator):
                 if bbox[4] > 0.0:
                     bboxes_in_frame.append({'bbox': bbox, 'id': idx})
             if len(bboxes_in_frame) > 0:
-                pose_results = self.infer_single_img(img_arr, bboxes_in_frame)
+                bbox_results, kps2d_results = self.infer_single_img(
+                    img_arr, bboxes_in_frame)
                 frame_kps_results = np.zeros(
                     shape=(
-                        len(bbox_list[frame_index]),
+                        len(kps2d_results),
                         n_kps,
                         3,
                     ))
-                frame_bbox_results = np.zeros(
-                    shape=(len(bbox_list[frame_index]), 5))
-                for idx, person_dict in enumerate(pose_results):
-                    bbox = person_dict['bbox']
-                    keypoints = person_dict['keypoints']
+                frame_bbox_results = np.zeros(shape=(len(bbox_results), 5))
+                for idx, (bbox, keypoints) in enumerate(
+                        zip(bbox_results, kps2d_results)):
                     frame_bbox_results[idx] = bbox
                     frame_kps_results[idx] = keypoints
                 frame_kps_results = frame_kps_results.tolist()
@@ -140,13 +152,12 @@ class MediapipeEstimator(MMposeTopDownEstimator):
             ret_bbox_list += [frame_bbox_results]
         return ret_kps_list, None, ret_bbox_list
 
-    def infer_frames(
-            self,
-            frame_path_list: list,
-            bbox_list: Union[tuple, list],
-            disable_tqdm: bool = False,
-            return_heatmap: bool = False,
-            load_batch_size: Union[None, int] = None) -> Tuple[list, list]:
+    def infer_frames(self,
+                     frame_path_list: list,
+                     bbox_list: Union[tuple, list],
+                     disable_tqdm: bool = False,
+                     load_batch_size: Union[None, int] = None,
+                     **kwargs) -> Tuple[list, list]:
         """Infer frames from file.
 
         Args:
@@ -158,9 +169,6 @@ class MediapipeEstimator(MMposeTopDownEstimator):
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
-            return_heatmap (bool, optional):
-                Whether to return heatmap.
                 Defaults to False.
             load_batch_size (Union[None, int], optional):
                 How many frames are loaded at the same time.
@@ -207,7 +215,7 @@ class MediapipeEstimator(MMposeTopDownEstimator):
                     video_path: str,
                     bbox_list: Union[tuple, list],
                     disable_tqdm: bool = False,
-                    return_heatmap: bool = False) -> Tuple[list, list]:
+                    **kwargs) -> Tuple[list, list]:
         """Infer frames from a video file.
 
         Args:
@@ -219,9 +227,6 @@ class MediapipeEstimator(MMposeTopDownEstimator):
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
-            return_heatmap (bool, optional):
-                Whether to return heatmap.
                 Defaults to False.
 
         Returns:
