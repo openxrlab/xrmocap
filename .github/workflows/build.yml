@@ -52,6 +52,9 @@ jobs:
           rm -rf xrmocap.egg-info
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           pip install xrprimer
+          pip install git+https://github.com/open-mmlab/mmhuman3d.git
+          pip uninstall opencv-python opencv-python-headless -y
+          pip install opencv-python-headless
           pip install -e .
       - name: Install pytest plugin
         run: |
