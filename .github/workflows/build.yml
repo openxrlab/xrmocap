@@ -41,10 +41,6 @@ jobs:
           conda activate openxrlab
           conda list | grep torch
           conda list | grep mmcv
-      - name: Install mmhumman3d
-        run: |
-          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
-          pip install git+https://github.com/open-mmlab/mmhuman3d.git
       - name: Prepare test data
         run: |
           sh scripts/download_test_data.sh
@@ -56,6 +52,7 @@ jobs:
           rm -rf xrmocap.egg-info
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           pip install xrprimer
+          pip install git+https://github.com/open-mmlab/mmhuman3d.git
           pip install -e .
       - name: Install pytest plugin
         run: |
