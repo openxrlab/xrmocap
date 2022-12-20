@@ -56,7 +56,7 @@ class MediapipeEstimator():
                 BGR image ndarray in shape [height, width, 3],
             bbox_list (Union[tuple, list]):
                 A list of human bboxes.
-                Shape of the nested lists is (n_frame, n_human, 5).
+                Shape of the nested lists is (n_human, 5).
                 Each bbox is a bbox_xyxy with a bbox_score at last.
 
         Returns:
@@ -65,8 +65,7 @@ class MediapipeEstimator():
         """
         rt_bbox_list = []
         rt_kps2d_list = []
-        for bbox_dict in bbox_list:
-            bbox = bbox_dict['bbox']
+        for bbox in bbox_list:
             kps2d = None
             if bbox[4] > self.bbox_thr:
                 img = img_arr[int(bbox[1]):int(bbox[3]),
@@ -128,7 +127,7 @@ class MediapipeEstimator():
             bboxes_in_frame = []
             for idx, bbox in enumerate(bbox_list[frame_index]):
                 if bbox[4] > 0.0:
-                    bboxes_in_frame.append({'bbox': bbox, 'id': idx})
+                    bboxes_in_frame.append(bbox)
             if len(bboxes_in_frame) > 0:
                 bbox_results, kps2d_results = self.infer_single_img(
                     img_arr, bboxes_in_frame)
