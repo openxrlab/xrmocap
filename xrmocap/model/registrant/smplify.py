@@ -378,9 +378,9 @@ class SMPLify(object):
             # |       False      |     False   |        ignore       |
             self.individual_optimizer = True
             _optim_param = optim_param.copy()
-            for key in _optim_param.copy().keys():
+            for key in list(_optim_param.keys()):
                 parameters = OptimizableParameters()
-                fit_flag = kwargs.pop(f'fit_{key}', True)
+                fit_flag = kwargs.pop(f'fit_{key}', False)
                 if f'{key}_optimizer' in self.optimizer.keys() and fit_flag:
                     value = _optim_param.pop(key)
                     parameters.add_param(
@@ -399,11 +399,12 @@ class SMPLify(object):
                 if 'default_optimizer' not in self.optimizer:
                     self.logger.error(
                         'Individual optimizer mode is selected but '
-                        'some optimizaters are not defined. '
+                        'some optimizers are not defined. '
                         'Please set the default_optimzier or set optimizer '
                         f'for {_optim_param.keys()}.')
+                    raise KeyError
                 else:
-                    for key in _optim_param.copy().keys():
+                    for key in list(_optim_param.keys()):
                         fit_flag = kwargs.pop(f'fit_{key}', True)
                         value = _optim_param.pop(key)
                         if fit_flag:
@@ -412,7 +413,7 @@ class SMPLify(object):
                     optimizers['default_optimizer'] = build_optimizer(
                         parameters, self.optimizer['default_optimizer'])
 
-        pre_loss = None
+        previous_loss = None
         for iter_idx in range(n_iter):
             for optimizer_key, optimizer in optimizers.items():
 
@@ -432,6 +433,13 @@ class SMPLify(object):
                         body_weight=body_weight,
                         **kwargs)
 
+                    if optimizer_key not in loss_dict.keys():
+                        self.logger.error(
+                            f'Individual optimizer is set for {optimizer_key}'
+                            'but there is no loss calculated for this '
+                            'optimizer. Please check LOSS_MAPPING and '
+                            'make sure respective losses are turned on.')
+                        raise KeyError
                     loss = loss_dict[optimizer_key]
                     total_loss = loss_dict['total_loss']
 
@@ -445,15 +453,15 @@ class SMPLify(object):
 
                 total_loss = optimizer.step(closure)
 
-            if iter_idx > 0 and pre_loss is not None and ftol > 0:
+            if iter_idx > 0 and previous_loss is not None and ftol > 0:
                 loss_rel_change = self.__compute_relative_change__(
-                    pre_loss, total_loss.item())
+                    previous_loss, total_loss.item())
                 if loss_rel_change < ftol:
                     if self.verbose:
                         self.logger.info(
                             f'[ftol={ftol}] Early stop at {iter_idx} iter!')
                     break
-            pre_loss = total_loss.item()
+            previous_loss = total_loss.item()
 
         stage_config = dict(
             use_shoulder_hip_only=use_shoulder_hip_only,
@@ -687,7 +695,7 @@ class SMPLify(object):
         losses['total_loss'] = total_loss
 
         if self.individual_optimizer:
-            losses = self.__post_process_loss__(losses)
+            losses = self._post_process_loss(losses)
         else:
             losses['default_optimizer'] = total_loss
 
@@ -705,7 +713,7 @@ class SMPLify(object):
 
         return losses
 
-    def __post_process_loss__(self, losses: dict, **kwargs) -> dict:
+    def _post_process_loss(self, losses: dict, **kwargs) -> dict:
         """Process losses and map the losses to respective parameters.
 
         Args:
@@ -716,7 +724,7 @@ class SMPLify(object):
                 Original keys included.
         """
 
-        for loss_key in losses.copy().keys():
+        for loss_key in list(losses.keys()):
             process_list = LOSS_MAPPING.get(loss_key, [])
             for optimizer_loss in process_list:
                 losses[optimizer_loss] = losses[optimizer_loss] + \
