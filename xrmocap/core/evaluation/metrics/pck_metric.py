@@ -9,7 +9,7 @@ from .base_metric import BaseMetric
 
 
 class PCKMetric(BaseMetric):
-    RANK = 0
+    RANK = 1
 
     def __init__(
         self,

@@ -13,7 +13,7 @@ from .base_metric import BaseMetric
 
 
 class PAMPJPEMetric(BaseMetric):
-    RANK = 1
+    RANK = 0
 
     def __init__(
         self,

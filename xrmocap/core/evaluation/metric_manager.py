@@ -12,7 +12,7 @@ from .metrics.builder import build_metric
 class MetricManager:
     """MetricManager is a class for multiple metrics evaluation.
 
-    It sorts metrics by ranks(descend), and call the calculation functions in
+    It sorts metrics by ranks(ascend), and call the calculation functions in
     turn.
     """
 
@@ -109,7 +109,7 @@ def _sort_metrics_by_rank(unsorted_list: List[BaseMetric]) -> List[BaseMetric]:
             rank = metric.__class__.RANK
             # rank matches, add to sorted list
             if rank == cur_rank:
-                sorted_list.insert(0, metric)
+                sorted_list.append(metric)
             # not matched yet, preprare for next iter
             else:
                 new_unsorted_idxs.append(idx)
