@@ -9,6 +9,10 @@ from .base_metric import BaseMetric
 
 
 class PCKMetric(BaseMetric):
+    """PCK metric measures accuracy of the localization of the body joints.
+
+    It depends on rank-0 metric pa_mpjpe.
+    """
     RANK = 1
 
     def __init__(

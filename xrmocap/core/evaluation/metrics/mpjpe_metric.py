@@ -11,6 +11,7 @@ from .base_metric import BaseMetric
 
 
 class MPJPEMetric(BaseMetric):
+    """Mean per-joint position error(MPJPE)."""
     RANK = 0
 
     def __init__(

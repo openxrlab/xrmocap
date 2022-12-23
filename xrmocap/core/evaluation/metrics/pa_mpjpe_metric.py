@@ -13,6 +13,7 @@ from .base_metric import BaseMetric
 
 
 class PAMPJPEMetric(BaseMetric):
+    """MPJPE after further alignment(Procrustes analysis (PA))."""
     RANK = 0
 
     def __init__(
