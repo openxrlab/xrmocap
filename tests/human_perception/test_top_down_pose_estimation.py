@@ -33,7 +33,7 @@ def fixture():
         image_array=image_array, output_path=video_path, disable_log=True)
 
 
-def test_mmdet_detector():
+def test_mmpose_topdown_estimator():
     empty_bbox = [0.0, 0.0, 0.0, 0.0, 0.0]
     single_person_bbox = np.load(
         os.path.join(input_dir, 'single_person.npz'), allow_pickle=True)
@@ -130,3 +130,37 @@ def test_mmdet_detector():
     assert len(heatmap_list) == len(heatmap_list)  # n_frame
     assert len(heatmap_list[0]) == len(pose_list[0])  # n_person
     assert len(heatmap_list[0][0]) == 133  # n_keypoints
+
+
+def test_mediapipe_estimator():
+    single_person_bbox = np.load(
+        os.path.join(input_dir, 'single_person.npz'), allow_pickle=True)
+    # shape(4, 1, 5) to list
+    single_person_bbox = single_person_bbox['mmdet_result'].tolist()
+    estimator_config = dict(
+        mmcv.Config.fromfile(
+            'configs/modules/human_perception/mediapipe_pose_estimator.py'))
+    # test init
+    mp_estimator = build_detector(estimator_config)
+    # test convention
+    assert mp_estimator.get_keypoints_convention_name() ==\
+        'mediapipe_body'
+    # test infer frames
+    image_dir = os.path.join(output_dir, 'rgb_frames')
+    frame_list = glob.glob(os.path.join(image_dir, '*.png'))
+    pose_list, _, _ = mp_estimator.infer_frames(
+        frame_path_list=frame_list,
+        bbox_list=single_person_bbox,
+        disable_tqdm=False)
+    assert len(pose_list) == len(frame_list)  # n_frame
+    assert len(pose_list[0]) == len(single_person_bbox[0])  # n_person
+    assert len(pose_list[0][0]) == 33  # n_keypoints
+    _ = mp_estimator.get_keypoints_from_result(pose_list)
+    # test infer video
+    video_path = os.path.join(output_dir, 'rgb_video.mp4')
+    pose_list, _, _ = mp_estimator.infer_video(
+        video_path=video_path,
+        bbox_list=single_person_bbox,
+        disable_tqdm=False,
+        return_heatmap=False)
+    assert len(pose_list) > 0

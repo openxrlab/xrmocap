@@ -1,6 +1,7 @@
 aniposelib @ git+https://github.com/liruilong940607/aniposelib.git
 coverage
 filterpy
+mediapipe
 mmdet @ git+https://github.com/open-mmlab/mmdetection.git
 mmhuman3d @ git+https://github.com/open-mmlab/mmhuman3d.git
 mmpose @ git+https://github.com/open-mmlab/mmpose.git

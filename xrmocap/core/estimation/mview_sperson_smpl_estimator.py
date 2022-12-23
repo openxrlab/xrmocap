@@ -5,7 +5,7 @@ from typing import List, Tuple, Union, overload
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.ffmpeg_utils import video_to_array
 
-from xrmocap.data_structure.body_model import SMPLData
+from xrmocap.data_structure.body_model import SMPLData, SMPLXData
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import (
     MMdetDetector, MMposeTopDownEstimator, build_detector,
@@ -110,6 +110,14 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
 
         if isinstance(smplify, dict):
             smplify['logger'] = logger
+            if smplify['type'].lower() == 'smplify':
+                self.smpl_data_type = 'smpl'
+            elif smplify['type'].lower() == 'smplifyx':
+                self.smpl_data_type = 'smplx'
+            else:
+                self.logger.error('SMPL data type not found.')
+                raise TypeError
+
             self.smplify = build_registrant(smplify)
         else:
             self.smplify = smplify
@@ -173,6 +181,7 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
         img_arr: Union[None, np.ndarray] = None,
         img_paths: Union[None, List[List[str]]] = None,
         video_paths: Union[None, List[str]] = None,
+        init_smpl_data: Union[None, SMPLData] = None,
     ) -> Tuple[List[Keypoints], Keypoints, SMPLData]:
         """Run mutli-view single-person smpl estimator once. run() needs one
         images input among [img_arr, img_paths, video_paths].
@@ -222,7 +231,8 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
         keypoints2d_list = self.estimate_keypoints2d(img_arr=mview_img_arr)
         keypoints3d = self.estimate_keypoints3d(
             cam_param=cam_param, keypoints2d_list=keypoints2d_list)
-        smpl_data = self.estimate_smpl(keypoints3d=keypoints3d)
+        smpl_data = self.estimate_smpl(
+            keypoints3d=keypoints3d, init_smpl_data=init_smpl_data)
         return keypoints2d_list, keypoints3d, smpl_data
 
     def estimate_keypoints2d(
@@ -366,7 +376,11 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                     keypoints3d, **optim_kwargs)
         return keypoints3d
 
-    def estimate_smpl(self, keypoints3d: Keypoints) -> SMPLData:
+    def estimate_smpl(self,
+                      keypoints3d: Keypoints,
+                      init_smpl_data: Union[None, SMPLData] = None,
+                      return_joints: bool = False,
+                      return_verts: bool = False) -> SMPLData:
         """Estimate smpl parameters according to keypoints3d.
 
         Args:
@@ -374,18 +388,34 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 A keypoints3d Keypoints instance, with only one person
                 inside. This method will take the person at
                 keypoints3d.get_keypoints()[:, 0, ...] to run smplify.
+            init_smpl_dict (dict, optional):
+                A dict of init parameters. init_dict.keys() is a
+                sub-set of self.__class__.OPTIM_PARAM.
+                Defaults to an empty dict.
+            return_joints (bool, optional):
+                Whether to return joints. Defaults to False.
+            return_verts (bool, optional):
+                Whether to return vertices. Defaults to False.
 
         Returns:
             SMPLData:
                 Smpl data of the person.
         """
         self.logger.info('Estimating SMPL.')
-        working_convention = 'smpl'
+        working_convention = self.smplify.body_model.keypoint_convention
         keypoints3d = convert_keypoints(
             keypoints=keypoints3d, dst=working_convention)
         keypoints3d = keypoints3d.to_tensor(device=self.smplify.device)
         kps3d_tensor = keypoints3d.get_keypoints()[:, 0, :, :3].float()
         kps3d_conf = keypoints3d.get_mask()[:, 0, ...]
+
+        # load init smpl data
+        if init_smpl_data is not None:
+            init_smpl_dict = init_smpl_data.to_tensor_dict(
+                device=self.smplify.device)
+        else:
+            init_smpl_dict = {}
+
         # build and run
         kp3d_mse_input = build_handler(
             dict(
@@ -401,10 +431,25 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
                 keypoints3d_conf=kps3d_conf,
                 keypoints3d_convention=working_convention,
                 handler_key='keypoints3d_limb_len'))
+
         registrant_output = self.smplify(
-            input_list=[kp3d_mse_input, kp3d_llen_input])
-        smpl_data = SMPLData()
+            input_list=[kp3d_mse_input, kp3d_llen_input],
+            init_param_dict=init_smpl_dict,
+            return_joints=return_joints,
+            return_verts=return_verts)
+
+        if self.smpl_data_type == 'smplx':
+            smpl_data = SMPLXData()
+        elif self.smpl_data_type == 'smpl':
+            smpl_data = SMPLData()
+
         smpl_data.from_param_dict(registrant_output)
+
+        if return_joints:
+            smpl_data['joints'] = registrant_output['joints']
+        if return_verts:
+            smpl_data['vertices'] = registrant_output['vertices']
+
         return smpl_data
 
     def select_camera(self, cam_param: List[FisheyeCameraParameter],

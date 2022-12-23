@@ -12,6 +12,7 @@ from xrmocap.core.hook.smplify_hook.builder import (
     SMPLifyBaseHook, build_smplify_hook,
 )
 from xrmocap.model.body_model.builder import build_body_model
+from xrmocap.model.loss.mapping import LOSS_MAPPING
 from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
     get_keypoint_idx, get_keypoint_idxs_by_part,
 )
@@ -42,6 +43,7 @@ class SMPLify(object):
                  hooks: List[Union[dict, SMPLifyBaseHook]] = [],
                  verbose: bool = False,
                  info_level: Literal['stage', 'step'] = 'step',
+                 grad_clip: float = 1.0,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Re-implementation of SMPLify with extended features.
 
@@ -92,7 +94,9 @@ class SMPLify(object):
         self.device = device
         self.stage_config = stages
         self.optimizer = optimizer
+        self.grad_clip = grad_clip
         self.hooks = []
+        self.individual_optimizer = False
 
         # initialize body model
         if isinstance(body_model, dict):
@@ -169,7 +173,7 @@ class SMPLify(object):
         ret_dict = {}
         for key in self.__class__.OPTIM_PARAM:
             if key in init_dict:
-                init_param = init_dict[key]
+                init_param = init_dict[key].to(self.device)
             else:
                 init_param = None
             ret_param = self.__match_init_batch_size__(
@@ -352,44 +356,112 @@ class SMPLify(object):
         self.call_hook('before_stage', **hook_kwargs)
 
         kwargs = kwargs.copy()
-        parameters = OptimizableParameters()
-        for key, value in optim_param.items():
-            fit_flag = kwargs.pop(f'fit_{key}', True)
-            parameters.add_param(key=key, param=value, fit_param=fit_flag)
-        optimizer = build_optimizer(parameters, self.optimizer)
 
-        pre_loss = None
+        # add individual optimizer choice
+        optimizers = {}
+        if 'individual_optimizer' not in self.optimizer:
+            parameters = OptimizableParameters()
+            for key, value in optim_param.items():
+                fit_flag = kwargs.pop(f'fit_{key}', True)
+                parameters.add_param(key=key, param=value, fit_param=fit_flag)
+            optimizers['default_optimizer'] = build_optimizer(
+                parameters, self.optimizer)
+        else:
+            # set an individual optimizer if optimizer config
+            # is given and fit_{key} is True
+            # update with the default optimizer or ignore otherwise
+            # | {key}_opt_config |  fit_{key}  |       optimizer     |
+            # | -----------------| ------------| --------------------|
+            # |       True       |     True    |   {key}_optimizer   |
+            # |       False      |     True    |   default_optimizer |
+            # |       True       |     False   |        ignore       |
+            # |       False      |     False   |        ignore       |
+            self.individual_optimizer = True
+            _optim_param = optim_param.copy()
+            for key in list(_optim_param.keys()):
+                parameters = OptimizableParameters()
+                fit_flag = kwargs.pop(f'fit_{key}', False)
+                if f'{key}_optimizer' in self.optimizer.keys() and fit_flag:
+                    value = _optim_param.pop(key)
+                    parameters.add_param(
+                        key=key, param=value, fit_param=fit_flag)
+                    optimizers[key] = build_optimizer(
+                        parameters, self.optimizer[f'{key}_optimizer'])
+                    self.logger.info(f'Add an individual optimizer for {key}')
+                elif not fit_flag:
+                    _optim_param.pop(key)
+                else:
+                    self.logger.info(f'No optimizer defined for {key}, '
+                                     'get the default optimizer')
+
+            if len(_optim_param) > 0:
+                parameters = OptimizableParameters()
+                if 'default_optimizer' not in self.optimizer:
+                    self.logger.error(
+                        'Individual optimizer mode is selected but '
+                        'some optimizers are not defined. '
+                        'Please set the default_optimzier or set optimizer '
+                        f'for {_optim_param.keys()}.')
+                    raise KeyError
+                else:
+                    for key in list(_optim_param.keys()):
+                        fit_flag = kwargs.pop(f'fit_{key}', True)
+                        value = _optim_param.pop(key)
+                        if fit_flag:
+                            parameters.add_param(
+                                key=key, param=value, fit_param=fit_flag)
+                    optimizers['default_optimizer'] = build_optimizer(
+                        parameters, self.optimizer['default_optimizer'])
+
+        previous_loss = None
         for iter_idx in range(n_iter):
+            for optimizer_key, optimizer in optimizers.items():
 
-            def closure():
-                optimizer.zero_grad()
-                betas_video = self.__expand_betas__(
-                    batch_size=optim_param['body_pose'].shape[0],
-                    betas=optim_param['betas'])
-                expanded_param = {}
-                expanded_param.update(optim_param)
-                expanded_param['betas'] = betas_video
-                loss_dict = self.evaluate(
-                    input_list=input_list,
-                    optim_param=expanded_param,
-                    use_shoulder_hip_only=use_shoulder_hip_only,
-                    body_weight=body_weight,
-                    **kwargs)
+                def closure():
+                    optimizer.zero_grad()
 
-                loss = loss_dict['total_loss']
-                loss.backward()
-                return loss
+                    betas_video = self.__expand_betas__(
+                        batch_size=optim_param['body_pose'].shape[0],
+                        betas=optim_param['betas'])
+                    expanded_param = {}
+                    expanded_param.update(optim_param)
+                    expanded_param['betas'] = betas_video
+                    loss_dict = self.evaluate(
+                        input_list=input_list,
+                        optim_param=expanded_param,
+                        use_shoulder_hip_only=use_shoulder_hip_only,
+                        body_weight=body_weight,
+                        **kwargs)
 
-            loss = optimizer.step(closure)
-            if iter_idx > 0 and pre_loss is not None and ftol > 0:
+                    if optimizer_key not in loss_dict.keys():
+                        self.logger.error(
+                            f'Individual optimizer is set for {optimizer_key}'
+                            'but there is no loss calculated for this '
+                            'optimizer. Please check LOSS_MAPPING and '
+                            'make sure respective losses are turned on.')
+                        raise KeyError
+                    loss = loss_dict[optimizer_key]
+                    total_loss = loss_dict['total_loss']
+
+                    loss.backward(retain_graph=True)
+
+                    torch.nn.utils.clip_grad_norm_(
+                        parameters=optim_param.values(),
+                        max_norm=self.grad_clip)
+
+                    return total_loss
+
+                total_loss = optimizer.step(closure)
+
+            if iter_idx > 0 and previous_loss is not None and ftol > 0:
                 loss_rel_change = self.__compute_relative_change__(
-                    pre_loss, loss.item())
+                    previous_loss, total_loss.item())
                 if loss_rel_change < ftol:
                     if self.verbose:
                         self.logger.info(
                             f'[ftol={ftol}] Early stop at {iter_idx} iter!')
                     break
-            pre_loss = loss.item()
+            previous_loss = total_loss.item()
 
         stage_config = dict(
             use_shoulder_hip_only=use_shoulder_hip_only,
@@ -491,7 +563,8 @@ class SMPLify(object):
         model_joints_convention = self.body_model.keypoint_convention
         model_joints_weights = self.get_keypoint_weight(
             use_shoulder_hip_only=use_shoulder_hip_only,
-            body_weight=body_weight)
+            body_weight=body_weight,
+            **kwargs)
         model_vertices = body_model_output.get('vertices', None)
 
         loss_dict = self.__compute_loss__(
@@ -610,17 +683,21 @@ class SMPLify(object):
                         loss_tensor = handler(**handler_input)
             # if loss computed, record it in losses
             if loss_tensor is not None:
+                if loss_tensor.ndim == 3:
+                    loss_tensor = loss_tensor.sum(dim=(2, 1))
+                elif loss_tensor.ndim == 2:
+                    loss_tensor = loss_tensor.sum(dim=-1)
                 losses[handler_key] = loss_tensor
 
         total_loss = 0
         for key, loss in losses.items():
-            if loss.ndim == 3:
-                total_loss = total_loss + loss.sum(dim=(2, 1))
-            elif loss.ndim == 2:
-                total_loss = total_loss + loss.sum(dim=-1)
-            else:
-                total_loss = total_loss + loss
+            total_loss = total_loss + loss
         losses['total_loss'] = total_loss
+
+        if self.individual_optimizer:
+            losses = self._post_process_loss(losses)
+        else:
+            losses['default_optimizer'] = total_loss
 
         # warn once if there's item still in popped kwargs
         if not self.__stage_kwargs_warned__ and \
@@ -633,6 +710,28 @@ class SMPLify(object):
             warn_msg = warn_msg + table.get_string()
             self.logger.warning(warn_msg)
             self.__stage_kwargs_warned__ = True
+
+        return losses
+
+    def _post_process_loss(self, losses: dict, **kwargs) -> dict:
+        """Process losses and map the losses to respective parameters.
+
+        Args:
+            losses (dict): Original loss, use handler_key as keys.
+
+        Returns:
+            dict: Processed loss, use parameter names as keys.
+                Original keys included.
+        """
+
+        for loss_key in list(losses.keys()):
+            process_list = LOSS_MAPPING.get(loss_key, [])
+            for optimizer_loss in process_list:
+                losses[optimizer_loss] = losses[optimizer_loss] + \
+                    losses[loss_key] if optimizer_loss in losses \
+                    else losses[loss_key]
+
+        losses['default_optimizer'] = losses['total_loss']
 
         return losses
 
@@ -698,17 +797,36 @@ class SMPLify(object):
                     self.ignore_keypoint_idxs.append(keypoint_idx)
 
         # obtain body part keypoint indexes
-        shoulder_keypoint_idxs = get_keypoint_idxs_by_part(
+        self.face_keypoint_idxs = get_keypoint_idxs_by_part(
+            'head', convention=convention)
+        left_hand_keypoint_idxs = get_keypoint_idxs_by_part(
+            'left_hand', convention=convention)
+        right_hand_keypoint_idxs = get_keypoint_idxs_by_part(
+            'right_hand', convention=convention)
+        self.hand_keypoint_idxs = [
+            *left_hand_keypoint_idxs, *right_hand_keypoint_idxs
+        ]
+        self.body_keypoint_idxs = get_keypoint_idxs_by_part(
+            'body', convention=convention)
+        self.shoulder_keypoint_idxs = get_keypoint_idxs_by_part(
             'shoulder', convention=convention)
-        hip_keypoint_idxs = get_keypoint_idxs_by_part(
+        self.hip_keypoint_idxs = get_keypoint_idxs_by_part(
             'hip', convention=convention)
         self.shoulder_hip_keypoint_idxs = [
-            *shoulder_keypoint_idxs, *hip_keypoint_idxs
+            *self.shoulder_keypoint_idxs, *self.hip_keypoint_idxs
         ]
+        self.foot_keypoint_idxs = get_keypoint_idxs_by_part(
+            'foot', convention=convention)
 
     def get_keypoint_weight(self,
                             use_shoulder_hip_only: bool = False,
-                            body_weight: float = 1.0) -> torch.Tensor:
+                            body_weight: float = 1.0,
+                            hand_weight: float = 1.0,
+                            face_weight: float = 1.0,
+                            shoulder_weight: Union[float, None] = None,
+                            hip_weight: Union[float, None] = None,
+                            foot_weight: Union[float, None] = None,
+                            **kwargs) -> torch.Tensor:
         """Get per keypoint weight.
 
         Args:
@@ -721,20 +839,81 @@ class SMPLify(object):
                 Weight of body keypoints. Body part segmentation
                 definition is included in the HumanData convention.
                 Defaults to 1.0.
+            hand_weight (float, optional):
+                Weight of hands keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
+            face_weight (float, optional):
+                Weight of face keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to 1.0.
+            shoulder_weight (float, optional):
+                Weight of shoulder keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to None.
+            hip_weight (float, optional):
+                Weight of hip keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to None.
+            foot_weight (float, optional):
+                Weight of feet keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+                Defaults to None.
 
         Returns:
             torch.Tensor: Per keypoint weight tensor of shape (K).
         """
         n_keypoints = self.body_model.get_joint_number()
 
+        # 3rd priority: set body parts weight manually
+        # when both body weight and body parts weight set,
+        # body parts weight override the body weight
+        weight = torch.ones([n_keypoints]).to(self.device)
+
+        # "body" includes "shoulder", "hip" and "foot" keypoints
+        weight[self.body_keypoint_idxs] = \
+            weight[self.body_keypoint_idxs] * body_weight
+
+        if shoulder_weight is not None:
+            weight[self.shoulder_keypoint_idxs] = 1.0
+            weight[self.shoulder_keypoint_idxs] = \
+                weight[self.shoulder_keypoint_idxs] * shoulder_weight
+
+        if hip_weight is not None:
+            weight[self.hip_keypoint_idxs] = 1.0
+            weight[self.hip_keypoint_idxs] = \
+                weight[self.hip_keypoint_idxs] * hip_weight
+
+        if foot_weight is not None:
+            weight[self.foot_keypoint_idxs] = 1.0
+            weight[self.foot_keypoint_idxs] = \
+                weight[self.foot_keypoint_idxs] * foot_weight
+
+        weight[self.face_keypoint_idxs] = \
+            weight[self.face_keypoint_idxs] * face_weight
+
+        weight[self.hand_keypoint_idxs] = \
+            weight[self.hand_keypoint_idxs] * hand_weight
+
+        # 2nd priority: use_shoulder_hip_only
         if use_shoulder_hip_only:
             weight = torch.zeros([n_keypoints]).to(self.device)
             weight[self.shoulder_hip_keypoint_idxs] = 1.0
-            weight = weight * body_weight
-        else:
-            weight = torch.ones([n_keypoints]).to(self.device)
-            weight = weight * body_weight
+            if shoulder_weight is not None and hip_weight is not None and \
+                    body_weight * face_weight * hand_weight == 0.0:
+                weight[self.shoulder_keypoint_idxs] = \
+                    weight[self.shoulder_keypoint_idxs] * shoulder_weight
+                weight[self.hip_keypoint_idxs] = \
+                    weight[self.hip_keypoint_idxs] * hip_weight
+            else:
+                self.logger.error(
+                    'use_shoulder_hip_only is deprecated, '
+                    'please manually set: body_weight=0.0, face_weight=0.0, '
+                    'hand_weight=0.0, shoulder_weight=1.0, hip_weight=1.0 to '
+                    'make sure correct weights are set.')
+                raise ValueError
 
+        # 1st priority: keypoints ignored
         if hasattr(self, 'ignore_keypoint_idxs'):
             weight[self.ignore_keypoint_idxs] = 0.0
 
