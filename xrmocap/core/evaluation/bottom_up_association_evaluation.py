@@ -8,7 +8,7 @@ from xrprimer.utils.log_utils import get_logger
 from xrprimer.utils.path_utils import prepare_output_path
 
 from xrmocap.core.evaluation.align_keypoints3d import align_keypoints3d
-from xrmocap.core.evaluation.metrics import calc_limbs_accuracy, evaluate
+from xrmocap.core.evaluation.metric import calc_limbs_accuracy, evaluate
 from xrmocap.data.data_visualization.builder import (
     BaseDataVisualization, build_data_visualization,
 )

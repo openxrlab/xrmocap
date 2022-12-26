@@ -88,6 +88,7 @@ Supported datasets:
 - [x] [Campus](https://campar.in.tum.de/Chair/MultiHumanPose) (CVPR'2014)
 - [x] [Shelf](https://campar.in.tum.de/Chair/MultiHumanPose) (CVPR'2014)
 - [x] [CMU Panoptic](http://domedb.perception.cs.cmu.edu/) (ICCV'2015)
+- [x] [4D Association](https://github.com/zhangyux15/multiview_human_dataset) (CVPR'2020)
 
 </details>
 
