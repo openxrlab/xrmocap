@@ -10,6 +10,7 @@ from .prior_optimizer import PriorConstrain
 from .rm_duplicate import RemoveDuplicate
 from .smpl_shape_aware_optimizer import SMPLShapeAwareOptimizer
 from .trajectory_optimizer import TrajectoryOptimizer
+from .prior_optimizer import PriorConstraint
 
 KEYPOINTS3D_OPTIMIZERS = Registry('keypoints3d_optimizer')
 
@@ -30,7 +31,7 @@ KEYPOINTS3D_OPTIMIZERS.register_module(
 KEYPOINTS3D_OPTIMIZERS.register_module(
     name='FourDAGOptimizer', module=FourDAGOptimizer)
 KEYPOINTS3D_OPTIMIZERS.register_module(
-    name='PriorConstrain', module=PriorConstrain)
+    name='PriorConstraint', module=PriorConstraint)
 
 
 def build_keypoints3d_optimizer(cfg) -> BaseOptimizer:

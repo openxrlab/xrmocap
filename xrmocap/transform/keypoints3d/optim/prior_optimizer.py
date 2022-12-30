@@ -14,7 +14,7 @@ from .base_optimizer import BaseOptimizer
 # yapf: enable
 
 
-class PriorConstrain(BaseOptimizer):
+class PriorConstraint(BaseOptimizer):
     """This optimization tool sets a bbox and remove 3D keypoints with large
     movement between frames for move outside the bbox.
 
