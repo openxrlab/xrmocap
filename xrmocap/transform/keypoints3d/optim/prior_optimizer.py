@@ -156,7 +156,7 @@ class PriorConstraint(BaseOptimizer):
                 if self.stand_only:
                     height_from_ground = np.dot(
                         np.array(body_center), self.ground_norm)
-                    if height_from_ground > self.standing_thr:
+                    if height_from_ground < self.standing_thr:
                         self.logger.info(
                             f'Person {person_idx} in frmae {frame_idx} '
                             f'is not in a standing pose: '
