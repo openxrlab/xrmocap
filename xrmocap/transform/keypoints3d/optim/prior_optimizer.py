@@ -156,12 +156,12 @@ class PriorConstraint(BaseOptimizer):
                 if self.stand_only:
                     height_from_ground = np.dot(
                         np.array(body_center), self.ground_norm)
-                    if height_from_ground > self.ground_level:
+                    if height_from_ground > self.standing_thr:
                         self.logger.info(
                             f'Person {person_idx} in frmae {frame_idx} '
                             f'is not in a standing pose: '
                             f'{height_from_ground} with '
-                            f'threshold {self.ground_level}.')
+                            f'threshold {self.standing_thr}.')
                         kps3d_optim[frame_idx,
                                     person_idx, :, :3] = kps3d_person
                         break
