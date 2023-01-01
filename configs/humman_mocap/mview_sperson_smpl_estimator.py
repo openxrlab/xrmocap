@@ -148,7 +148,9 @@ smplify = dict(
             smooth_joint_weight=0.0,
             pose_reg_weight=0.0,
             pose_prior_weight=0.0,
-            body_weight=5.0,
+            body_weight=0.0,
+            shoulder_weight=1.0,
+            hip_weight=1.0,
             use_shoulder_hip_only=True),
         # stage 2
         dict(

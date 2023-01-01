@@ -1,23 +1,35 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+# isort:skip_file
 import argparse
 import logging
+import mmcv
 import os
 import os.path as osp
-from functools import partial
-
-import mmcv
 import torch.multiprocessing as mp
-from torch.multiprocessing import Process, set_start_method
-
-from mmdeploy.apis import (create_calib_input_data, extract_model,
-                           get_predefined_partition_cfg, torch2onnx,
-                           torch2torchscript, visualize_model)
+from functools import partial
+from mmdeploy.apis import (
+    create_calib_input_data,
+    extract_model,
+    get_predefined_partition_cfg,
+    torch2onnx,
+    torch2torchscript,
+    visualize_model,
+)
 from mmdeploy.apis.core import PIPELINE_MANAGER
 from mmdeploy.backend.sdk.export_info import export2SDK
-from mmdeploy.utils import (IR, Backend, get_backend, get_calib_filename,
-                            get_ir_config, get_model_inputs,
-                            get_partition_config, get_root_logger, load_config,
-                            target_wrapper)
+from mmdeploy.utils import (
+    IR,
+    Backend,
+    get_backend,
+    get_calib_filename,
+    get_ir_config,
+    get_model_inputs,
+    get_partition_config,
+    get_root_logger,
+    load_config,
+    target_wrapper,
+)
+from torch.multiprocessing import Process, set_start_method
 
 
 def parse_args():
@@ -247,9 +259,8 @@ def main():
             ncnn_api.from_onnx(onnx_path, osp.join(args.work_dir, onnx_name))
 
             if quant:
-                from onnx2ncnn_quant_table import get_table
-
                 from mmdeploy.apis.ncnn import get_quant_model_file, ncnn2int8
+                from onnx2ncnn_quant_table import get_table
 
                 deploy_cfg, model_cfg = load_config(deploy_cfg_path,
                                                     model_cfg_path)
@@ -306,9 +317,11 @@ def main():
             'OpenVINO is not available, please install OpenVINO first.'
 
         import mmdeploy.apis.openvino as openvino_api
-        from mmdeploy.apis.openvino import (get_input_info_from_cfg,
-                                            get_mo_options_from_cfg,
-                                            get_output_model_file)
+        from mmdeploy.apis.openvino import (
+            get_input_info_from_cfg,
+            get_mo_options_from_cfg,
+            get_output_model_file,
+        )
 
         PIPELINE_MANAGER.set_log_level(log_level, [openvino_api.from_onnx])
 

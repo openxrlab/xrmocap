@@ -9,11 +9,12 @@ from xrprimer.utils.log_utils import get_logger
 from xrmocap.transform.bbox import qsort_bbox_list
 
 try:
-    from mmdet.apis import inference_detector, init_detector
-    has_mmdet = True
+    from mmdeploy.apis.utils import build_task_processor
+    from mmdeploy.utils import get_input_shape, load_config
+    has_mmdeploy = True
     import_exception = ''
 except (ImportError, ModuleNotFoundError):
-    has_mmdet = False
+    has_mmdeploy = False
     import traceback
     stack_str = ''
     for line in traceback.format_stack():
@@ -23,11 +24,14 @@ except (ImportError, ModuleNotFoundError):
     import_exception = stack_str + import_exception
 
 
-class MMdetDetector:
+class MMdettrtDetector:
     """Detector wrapped from mmdetection."""
 
     def __init__(self,
-                 mmdet_kwargs: dict,
+                 deploy_cfg: str,
+                 model_cfg: str,
+                 backend_files: str,
+                 device: str = 'cuda',
                  batch_size: int = 1,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Init a detector from mmdetection.
@@ -44,12 +48,16 @@ class MMdetDetector:
                 Defaults to None.
         """
         self.logger = get_logger(logger)
-        if not has_mmdet:
+        if not has_mmdeploy:
             self.logger.error(import_exception)
-            raise ModuleNotFoundError('Please install mmdet to run detection.')
-        # build the detector from a config file and a checkpoint file
-        self.det_model = init_detector(**mmdet_kwargs)
+            raise ImportError
         self.batch_size = batch_size
+
+        deploy_cfg, model_cfg = load_config(deploy_cfg, model_cfg)
+        self.task_processor = build_task_processor(model_cfg, deploy_cfg,
+                                                   device)
+        self.det_model = self.task_processor.init_backend_model(backend_files)
+        self.input_shape = get_input_shape(deploy_cfg)
 
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
@@ -89,7 +97,10 @@ class MMdetDetector:
                 for _, img in enumerate(img_batch):
                     list_batch.append(img)
                 img_batch = list_batch
-            mmdet_results = inference_detector(self.det_model, img_batch)
+            model_inputs, _ = self.task_processor.create_input(
+                img_batch, self.input_shape)
+            mmdet_results = self.task_processor.run_inference(
+                self.det_model, model_inputs)
             additional_ret = True
             for frame_result in mmdet_results:
                 if len(frame_result) != 2:
