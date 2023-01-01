@@ -355,7 +355,8 @@ class MMposetrtTopDownEstimator:
                                       dataset_info=None,
                                       return_heatmap=False,
                                       outputs=None):
-        """Inference a single image with a list of person bounding boxes.
+        """Rewrite function of mmpose to adpat mmdeploy. 
+        Inference a single image with a list of person bounding boxes.
         Support single-frame and multi-frame inference setting.
 
         Note:
