@@ -166,7 +166,7 @@ class SMPLXData(SMPLData):
             smplx_dict (dict):
                 A dict of ndarray|Tensor parameters.
                 global_orient and body_pose are necessary,
-                jaw_pose, leye_pose, reye_pose,
+                expression, jaw_pose, leye_pose, reye_pose,
                 left_hand_pose, right_hand_pose, transl and
                 betas are optional.
                 Other keys are ignored.
@@ -261,6 +261,8 @@ class SMPLXData(SMPLData):
             self.set_transl(smplx_dict['transl'])
         if 'betas' in smplx_dict:
             self.set_betas(smplx_dict['betas'])
+        if 'expression' in smplx_dict:
+            self.set_expression(smplx_dict['expression'])
 
     def to_param_dict(self,
                       repeat_betas: bool = True,
