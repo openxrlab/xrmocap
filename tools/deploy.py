@@ -1,35 +1,93 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# isort:skip_file
+# yapf: disable
 import argparse
 import logging
 import mmcv
 import os
 import os.path as osp
+import tempfile
 import torch.multiprocessing as mp
 from functools import partial
 from mmdeploy.apis import (
-    create_calib_input_data,
-    extract_model,
-    get_predefined_partition_cfg,
-    torch2onnx,
-    torch2torchscript,
-    visualize_model,
+    create_calib_input_data, extract_model, get_predefined_partition_cfg,
+    torch2onnx, torch2torchscript, visualize_model,
 )
 from mmdeploy.apis.core import PIPELINE_MANAGER
 from mmdeploy.backend.sdk.export_info import export2SDK
 from mmdeploy.utils import (
-    IR,
-    Backend,
-    get_backend,
-    get_calib_filename,
-    get_ir_config,
-    get_model_inputs,
-    get_partition_config,
-    get_root_logger,
-    load_config,
+    IR, Backend, get_backend, get_calib_filename, get_ir_config,
+    get_model_inputs, get_partition_config, get_root_logger, load_config,
     target_wrapper,
 )
 from torch.multiprocessing import Process, set_start_method
+
+try:
+    from mmdeploy.apis.tensorrt import is_available as trt_is_available
+    from mmdeploy.apis.tensorrt import onnx2tensorrt
+    has_tensorrt = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_tensorrt = False
+try:
+    import mmdeploy.apis.ncnn as ncnn_api
+    from mmdeploy.apis.ncnn import get_output_model_file, get_quant_model_file
+    from mmdeploy.apis.ncnn import is_available as is_available_ncnn
+    from mmdeploy.apis.ncnn import ncnn2int8
+    from onnx2ncnn_quant_table import get_table
+    has_ncnn = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_ncnn = False
+try:
+    import mmdeploy.apis.snpe as snpe_api
+    from mmdeploy.apis.snpe import get_env_key
+    from mmdeploy.apis.snpe import \
+        get_output_model_file as get_output_model_file_snpe
+    from mmdeploy.apis.snpe import is_available as is_available
+    has_snpe = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_snpe = False
+try:
+    import mmdeploy.apis.openvino as openvino_api
+    from mmdeploy.apis.openvino import (
+        get_input_info_from_cfg, get_mo_options_from_cfg,
+    )
+    from mmdeploy.apis.openvino import \
+        get_output_model_file as get_output_model_file_openvino
+    from mmdeploy.apis.openvino import is_available as is_available_openvino
+    has_openvino = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_openvino = False
+try:
+    from mmdeploy.apis.pplnn import from_onnx
+    from mmdeploy.apis.pplnn import is_available as is_available_pplnn
+    has_pplnn = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_pplnn = False
+try:
+    from mmdeploy.apis.rknn import is_available as rknn_is_available
+    from mmdeploy.apis.rknn import onnx2rknn
+    has_rknn = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_rknn = False
+try:
+    from mmdeploy.apis.ascend import from_onnx as from_onnx_ascend
+    from mmdeploy.backend.ascend import update_sdk_pipeline
+    has_ascend = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_ascend = False
+try:
+    from mmdeploy.apis.coreml import from_torchscript
+    has_coreml = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_coreml = False
+# yapf:enable
 
 
 def parse_args():
@@ -208,13 +266,10 @@ def main():
     if backend == Backend.TENSORRT:
         model_params = get_model_inputs(deploy_cfg)
         assert len(model_params) == len(ir_files)
-
-        from mmdeploy.apis.tensorrt import is_available as trt_is_available
-        assert trt_is_available(
+        assert has_tensorrt and trt_is_available(
         ), 'TensorRT is not available,' \
             + ' please install TensorRT and build TensorRT custom ops first.'
 
-        from mmdeploy.apis.tensorrt import onnx2tensorrt
         PIPELINE_MANAGER.enable_multiprocess(True, [onnx2tensorrt])
         PIPELINE_MANAGER.set_log_level(log_level, [onnx2tensorrt])
 
@@ -238,16 +293,11 @@ def main():
             backend_files.append(osp.join(args.work_dir, save_file))
 
     elif backend == Backend.NCNN:
-        from mmdeploy.apis.ncnn import is_available as is_available_ncnn
-
-        if not is_available_ncnn():
+        if not has_ncnn or not is_available_ncnn():
             logger.error('ncnn support is not available, please make sure \
                 1) `mmdeploy_onnx2ncnn` existed in `PATH` \
                 2) python import ncnn success')
             exit(1)
-
-        import mmdeploy.apis.ncnn as ncnn_api
-        from mmdeploy.apis.ncnn import get_output_model_file
 
         PIPELINE_MANAGER.set_log_level(log_level, [ncnn_api.from_onnx])
 
@@ -259,9 +309,6 @@ def main():
             ncnn_api.from_onnx(onnx_path, osp.join(args.work_dir, onnx_name))
 
             if quant:
-                from mmdeploy.apis.ncnn import get_quant_model_file, ncnn2int8
-                from onnx2ncnn_quant_table import get_table
-
                 deploy_cfg, model_cfg = load_config(deploy_cfg_path,
                                                     model_cfg_path)
                 quant_onnx, quant_table, quant_param, quant_bin = get_quant_model_file(  # noqa: E501
@@ -287,16 +334,12 @@ def main():
                 backend_files += [model_param_path, model_bin_path]
 
     elif backend == Backend.SNPE:
-        from mmdeploy.apis.snpe import is_available as is_available
 
-        if not is_available():
+        if not has_snpe or not is_available():
             logger.error('snpe support is not available, please check \
                 1) `snpe-onnx-to-dlc` existed in `PATH` 2) snpe only support \
                     ubuntu18.04')
             exit(1)
-
-        import mmdeploy.apis.snpe as snpe_api
-        from mmdeploy.apis.snpe import get_env_key, get_output_model_file
 
         if get_env_key() not in os.environ:
             os.environ[get_env_key()] = args.uri
@@ -305,29 +348,22 @@ def main():
 
         backend_files = []
         for onnx_path in ir_files:
-            dlc_path = get_output_model_file(onnx_path, args.work_dir)
+            dlc_path = get_output_model_file_snpe(onnx_path, args.work_dir)
             onnx_name = osp.splitext(osp.split(onnx_path)[1])[0]
             snpe_api.from_onnx(onnx_path, osp.join(args.work_dir, onnx_name))
             backend_files = [dlc_path]
 
     elif backend == Backend.OPENVINO:
-        from mmdeploy.apis.openvino import \
-            is_available as is_available_openvino
-        assert is_available_openvino(), \
-            'OpenVINO is not available, please install OpenVINO first.'
 
-        import mmdeploy.apis.openvino as openvino_api
-        from mmdeploy.apis.openvino import (
-            get_input_info_from_cfg,
-            get_mo_options_from_cfg,
-            get_output_model_file,
-        )
+        assert has_openvino and is_available_openvino(), \
+            'OpenVINO is not available, please install OpenVINO first.'
 
         PIPELINE_MANAGER.set_log_level(log_level, [openvino_api.from_onnx])
 
         openvino_files = []
         for onnx_path in ir_files:
-            model_xml_path = get_output_model_file(onnx_path, args.work_dir)
+            model_xml_path = get_output_model_file_openvino(
+                onnx_path, args.work_dir)
             input_info = get_input_info_from_cfg(deploy_cfg)
             output_names = get_ir_config(deploy_cfg).output_names
             mo_options = get_mo_options_from_cfg(deploy_cfg)
@@ -337,11 +373,8 @@ def main():
         backend_files = openvino_files
 
     elif backend == Backend.PPLNN:
-        from mmdeploy.apis.pplnn import is_available as is_available_pplnn
-        assert is_available_pplnn(), \
+        assert has_pplnn and is_available_pplnn(), \
             'PPLNN is not available, please install PPLNN first.'
-
-        from mmdeploy.apis.pplnn import from_onnx
 
         pplnn_pipeline_funcs = [from_onnx]
         PIPELINE_MANAGER.set_log_level(log_level, pplnn_pipeline_funcs)
@@ -365,11 +398,9 @@ def main():
         backend_files = pplnn_files
 
     elif backend == Backend.RKNN:
-        from mmdeploy.apis.rknn import is_available as rknn_is_available
-        assert rknn_is_available(
+        assert has_rknn and rknn_is_available(
         ), 'RKNN is not available, please install RKNN first.'
 
-        from mmdeploy.apis.rknn import onnx2rknn
         PIPELINE_MANAGER.enable_multiprocess(True, [onnx2rknn])
         PIPELINE_MANAGER.set_log_level(logging.INFO, [onnx2rknn])
 
@@ -377,7 +408,6 @@ def main():
         for model_id, onnx_path in zip(range(len(ir_files)), ir_files):
             pre_fix_name = osp.splitext(osp.split(onnx_path)[1])[0]
             output_path = osp.join(args.work_dir, pre_fix_name + '.rknn')
-            import tempfile
             dataset_file = tempfile.NamedTemporaryFile(suffix='.txt').name
             with open(dataset_file, 'w') as f:
                 f.writelines([osp.abspath(args.img)])
@@ -390,9 +420,9 @@ def main():
 
             backend_files.append(output_path)
     elif backend == Backend.ASCEND:
-        from mmdeploy.apis.ascend import from_onnx
-
-        ascend_pipeline_funcs = [from_onnx]
+        assert has_ascend,\
+            'ASCEND is not available, please install ASCEND first.'
+        ascend_pipeline_funcs = [from_onnx_ascend]
         PIPELINE_MANAGER.set_log_level(log_level, ascend_pipeline_funcs)
 
         model_inputs = get_model_inputs(deploy_cfg)
@@ -400,16 +430,16 @@ def main():
         om_files = []
         for model_id, onnx_path in enumerate(ir_files):
             om_path = osp.splitext(onnx_path)[0] + '.om'
-            from_onnx(onnx_path, args.work_dir, model_inputs[model_id])
+            from_onnx_ascend(onnx_path, args.work_dir, model_inputs[model_id])
             om_files.append(om_path)
         backend_files = om_files
 
         if args.dump_info:
-            from mmdeploy.backend.ascend import update_sdk_pipeline
             update_sdk_pipeline(args.work_dir)
 
     elif backend == Backend.COREML:
-        from mmdeploy.apis.coreml import from_torchscript
+        assert has_coreml,\
+            'COREML is not available, please install COREML first.'
         coreml_pipeline_funcs = [from_torchscript]
         PIPELINE_MANAGER.set_log_level(log_level, coreml_pipeline_funcs)
 
