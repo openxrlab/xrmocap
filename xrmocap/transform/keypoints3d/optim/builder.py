@@ -6,6 +6,7 @@ from .fourdag_base_optimizer import FourDAGBaseOptimizer
 from .fourdag_optimization import FourDAGOptimizer
 from .median_smooth import MedianSmooth
 from .nan_interpolation import NanInterpolation
+from .prior_optimizer import PriorConstraint
 from .rm_duplicate import RemoveDuplicate
 from .smpl_shape_aware_optimizer import SMPLShapeAwareOptimizer
 from .trajectory_optimizer import TrajectoryOptimizer
@@ -28,6 +29,8 @@ KEYPOINTS3D_OPTIMIZERS.register_module(
     name='FourDAGBaseOptimizer', module=FourDAGBaseOptimizer)
 KEYPOINTS3D_OPTIMIZERS.register_module(
     name='FourDAGOptimizer', module=FourDAGOptimizer)
+KEYPOINTS3D_OPTIMIZERS.register_module(
+    name='PriorConstraint', module=PriorConstraint)
 
 
 def build_keypoints3d_optimizer(cfg) -> BaseOptimizer:
