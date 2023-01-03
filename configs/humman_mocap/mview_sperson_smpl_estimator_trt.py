@@ -3,7 +3,7 @@ work_dir = './temp'
 verbose = True
 logger = None
 bbox_detector = dict(
-    type='MMdettrtDetector',
+    type='MMdetTrtDetector',
     deploy_cfg='configs/modules/human_perception/deploy/' +
     'detection_tensorrt_dynamic-320x320-1344x1344.py',
     model_cfg='configs/modules/human_perception/' +
@@ -12,7 +12,7 @@ bbox_detector = dict(
     device='cuda',
     batch_size=10)
 kps2d_estimator = dict(
-    type='MMposetrtTopDownEstimator',
+    type='MMposeTrtTopDownEstimator',
     deploy_cfg='configs/modules/human_perception/deploy/' +
     'pose-detection_tensorrt_static-384x288.py',
     model_cfg='configs/modules/human_perception/' +

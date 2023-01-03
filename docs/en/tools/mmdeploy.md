@@ -5,7 +5,7 @@
 - [Run](#Run)
 
 ### Overview
-This tool coverts human perception module into TensorRT with mmdeploy.
+This tool converts human perception pytorch module into TensorRT engine with mmdeploy.
 
 ### Installation
 Please refer to [official repository](https://github.com/open-mmlab/mmdeploy/blob/master/docs/en/get_started.md) for installation.
@@ -13,5 +13,6 @@ Please refer to [official repository](https://github.com/open-mmlab/mmdeploy/blo
 ### Run
 
 ```
-sh scripts/run_mmdeploy.sh
+sh scripts/deploy_mmdet_faster_rcnn.sh
+sh scripts/deploy_mmpose_hrnet.sh
 ```
