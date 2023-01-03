@@ -44,7 +44,11 @@ A detailed introduction can be found in [introduction.md](./docs/en/tutorials/in
   XRMoCap decomposes the framework into several components, based on which optimization-based and learning-based methods are integrated into one framework. Users can easily prototype a customized multi-view mocap pipeline by choosing different components in configs.
 
 ## News
-
+- 2022-12-21: XRMoCap [v0.7.0](https://github.com/openxrlab/xrmocap/releases/tag/v0.7.0) is released. Major updates include:
+  - Add [mview_mperson_end2end_estimator](https://github.com/openxrlab/xrmocap/blob/main/xrmocap/core/estimation/mview_mperson_end2end_estimator.py) for learning-based method
+  - Add SMPLX support and allow smpl_data initiation in `mview_sperson_smpl_estimator`
+  - Add multiple optimizers, detailed joint weights and priors, grad clipping for better SMPLify results
+  - Add [mediapipe_estimator](https://github.com/openxrlab/xrmocap/blob/main/xrmocap/human_perception/keypoints_estimation/mediapipe_estimator.py) for human keypoints2d perception
 - 2022-10-14: XRMoCap [v0.6.0](https://github.com/openxrlab/xrmocap/releases/tag/v0.6.0) is released. Major updates include:
   - Add [4D Association Graph](http://www.liuyebin.com/4dassociation/), the first Python implementation to reproduce this algorithm
   - Add Multi-view multi-person top-down smpl estimation
@@ -72,6 +76,7 @@ Supported methods:
 - [x] [Shape-aware 3D Pose Optimization](https://ait.ethz.ch/projects/2021/multi-human-pose/) (ICCV'2019)
 - [x] [MvP](https://arxiv.org/pdf/2111.04076.pdf) (NeurIPS'2021)
 - [x] [HuMMan MoCap](https://caizhongang.github.io/projects/HuMMan/) (ECCV'2022)
+- [x] [4D Association Graph](http://www.liuyebin.com/4dassociation/) (CVPR'2020)
 
 </details>
 
@@ -83,6 +88,7 @@ Supported datasets:
 - [x] [Campus](https://campar.in.tum.de/Chair/MultiHumanPose) (CVPR'2014)
 - [x] [Shelf](https://campar.in.tum.de/Chair/MultiHumanPose) (CVPR'2014)
 - [x] [CMU Panoptic](http://domedb.perception.cs.cmu.edu/) (ICCV'2015)
+- [x] [4D Association](https://github.com/zhangyux15/multiview_human_dataset) (CVPR'2020)
 
 </details>
 

@@ -13,7 +13,8 @@ import os
 import pickle
 
 from xrmocap.transform.convention.joints_convention.standard_joint_angles import (  # noqa:E501
-    STANDARD_JOINT_ANGLE_LIMITS, TRANSFORMATION_AA_TO_SJA,
+    STANDARD_JOINT_ANGLE_LIMITS, STANDARD_JOINT_ANGLE_LIMITS_LOCK_APOSE_SPINE,
+    STANDARD_JOINT_ANGLE_LIMITS_LOCK_FOOT, TRANSFORMATION_AA_TO_SJA,
     TRANSFORMATION_SJA_TO_AA,
 )
 from xrmocap.transform.limbs import search_limbs
@@ -90,7 +91,11 @@ class JointPriorLoss(torch.nn.Module):
                  loss_weight: float = 1.0,
                  use_full_body: bool = False,
                  smooth_spine: bool = False,
-                 smooth_spine_loss_weight: float = 1.0):
+                 lock_foot: bool = False,
+                 lock_apose_spine: bool = False,
+                 smooth_spine_loss_weight: float = 1.0,
+                 lock_foot_loss_weight: float = 1.0,
+                 lock_apose_spine_loss_weight: float = 1.0):
         """Prior loss for joint angles.
 
         Args:
@@ -110,17 +115,25 @@ class JointPriorLoss(torch.nn.Module):
                 smooth spine loss. Defaults to 1.0.
         """
         super().__init__()
-        assert reduction in ('none', 'mean', 'sum')
+        assert reduction in (None, 'none', 'mean', 'sum')
         self.reduction = reduction
         self.loss_weight = loss_weight
         self.use_full_body = use_full_body
         self.smooth_spine = smooth_spine
+        self.lock_foot = lock_foot
+        self.lock_apose_spine = lock_apose_spine
         self.smooth_spine_loss_weight = smooth_spine_loss_weight
+        self.lock_foot_loss_weight = lock_foot_loss_weight
+        self.lock_apose_spine_loss_weight = lock_apose_spine_loss_weight
 
         if self.use_full_body:
             self.register_buffer('R_t', TRANSFORMATION_AA_TO_SJA)
             self.register_buffer('R_t_inv', TRANSFORMATION_SJA_TO_AA)
             self.register_buffer('sja_limits', STANDARD_JOINT_ANGLE_LIMITS)
+            self.register_buffer('sja_lock_foot',
+                                 STANDARD_JOINT_ANGLE_LIMITS_LOCK_FOOT)
+            self.register_buffer('sja_apose_spine',
+                                 STANDARD_JOINT_ANGLE_LIMITS_LOCK_APOSE_SPINE)
 
     def forward(self,
                 body_pose: torch.Tensor,
@@ -150,48 +163,67 @@ class JointPriorLoss(torch.nn.Module):
             if loss_weight_override is not None \
             else self.loss_weight
 
+        batch_size = body_pose.shape[0]
+        body_pose_reshape = body_pose.reshape(batch_size, -1, 3)
+        assert body_pose_reshape.shape[1] in (21, 23)  # smpl-x, smpl
+        body_pose_reshape = body_pose_reshape[:, :21, :]
+
+        body_pose_sja = aa_to_sja(body_pose_reshape, self.R_t, self.R_t_inv)
+
+        parts_joint_prior_losses = []
+        pred_poses = []
+        limits = []
+        weights = []
+
         if self.use_full_body:
-            batch_size = body_pose.shape[0]
-            body_pose_reshape = body_pose.reshape(batch_size, -1, 3)
-            assert body_pose_reshape.shape[1] in (21, 23)  # smpl-x, smpl
-            body_pose_reshape = body_pose_reshape[:, :21, :]
-
-            body_pose_sja = aa_to_sja(body_pose_reshape, self.R_t,
-                                      self.R_t_inv)
-
-            lower_limits = self.sja_limits[:, :, 0]  # shape: (21, 3)
-            upper_limits = self.sja_limits[:, :, 1]  # shape: (21, 3)
-
-            lower_loss = (torch.exp(F.relu(lower_limits - body_pose_sja)) -
-                          1).pow(2)
-            upper_loss = (torch.exp(F.relu(body_pose_sja - upper_limits)) -
-                          1).pow(2)
-
-            standard_joint_angle_prior_loss = (lower_loss + upper_loss).view(
-                body_pose.shape[0], -1)  # shape: (n, 3)
-
-            joint_prior_loss = standard_joint_angle_prior_loss
+            pred_poses.append(body_pose_sja)
+            limits.append(self.sja_limits)
+            weights.append(1.0)
 
         else:
             # default joint prior loss applied on elbows and knees
-            joint_prior_loss = (torch.exp(
-                body_pose[:, [55, 58, 12, 15]] *
-                torch.tensor([1., -1., -1, -1.], device=body_pose.device)) -
-                                1)**2
+            pred_poses.append(body_pose_sja[:, [3, 4, 17, 18]])
+            limits.append(self.sja_limits[[3, 4, 17, 18]])
+            weights.append(1.0)
+
+        if self.lock_foot:
+            pred_poses.append(body_pose_sja[:, [6, 7, 9, 10]])
+            limits.append(self.sja_lock_foot)
+            weights.append(self.lock_foot_loss_weight)
+
+        if self.lock_apose_spine:
+            pred_poses.append(body_pose_sja[:, [2, 5, 8, 11]])
+            limits.append(self.sja_apose_spine)
+            weights.append(self.lock_apose_spine_loss_weight)
 
         if self.smooth_spine:
-            spine1 = body_pose[:, [9, 10, 11]]
-            spine2 = body_pose[:, [18, 19, 20]]
-            spine3 = body_pose[:, [27, 28, 29]]
+            spine1 = body_pose_reshape[:, 2, :]
+            spine2 = body_pose_reshape[:, 5, :]
+            spine3 = body_pose_reshape[:, 8, :]
+
             smooth_spine_loss_12 = (torch.exp(F.relu(-spine1 * spine2)) -
                                     1).pow(2) * self.smooth_spine_loss_weight
             smooth_spine_loss_23 = (torch.exp(F.relu(-spine2 * spine3)) -
                                     1).pow(2) * self.smooth_spine_loss_weight
 
-            joint_prior_loss = torch.cat(
-                [joint_prior_loss, smooth_spine_loss_12, smooth_spine_loss_23],
-                axis=1)
+            parts_joint_prior_losses.append(smooth_spine_loss_12)
+            parts_joint_prior_losses.append(smooth_spine_loss_23)
 
+        for idx, weight in enumerate(weights):
+            lower_limits = limits[idx][:, :, 0]
+            upper_limits = limits[idx][:, :, 1]
+            pred_pose = pred_poses[idx]
+
+            lower_loss = (torch.exp(F.relu(lower_limits - pred_pose)) -
+                          1).pow(2)
+            upper_loss = (torch.exp(F.relu(pred_pose - upper_limits)) -
+                          1).pow(2)
+            loss = (lower_loss + upper_loss).view(body_pose.shape[0],
+                                                  -1)  # (n, 3)
+
+            parts_joint_prior_losses.append(weight * loss)
+
+        joint_prior_loss = torch.cat(parts_joint_prior_losses, axis=1)
         joint_prior_loss = loss_weight * joint_prior_loss
 
         if reduction == 'mean':
