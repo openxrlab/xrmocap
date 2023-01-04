@@ -1,13 +1,14 @@
+# yapf: disable
 import logging
 import numpy as np
-import warnings
-from PIL import Image
 from tqdm import tqdm
 from typing import Tuple, Union
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
-from .mmpose_top_down_estimator import MMposeTopDownEstimator
+from .mmpose_top_down_estimator import (
+    MMposeTopDownEstimator, __translate_data_source__,
+)
 
 try:
     from mmcv import digit_version
@@ -15,7 +16,7 @@ try:
     from mmdeploy.apis.utils import build_task_processor
     from mmdeploy.utils import get_input_shape, load_config
     from mmpose import __version__ as mmpose_version
-    from mmpose.core.bbox import bbox_xywh2xyxy, bbox_xyxy2xywh
+    from mmpose.core.bbox import bbox_xyxy2xywh
     from mmpose.datasets.dataset_info import DatasetInfo
     from mmpose.datasets.pipelines import Compose
     has_mmdeploy = True
@@ -29,6 +30,7 @@ except (ImportError, ModuleNotFoundError):
             stack_str += line + '\n'
     import_exception = traceback.format_exc() + '\n'
     import_exception = stack_str + import_exception
+# yapf: enable
 
 
 class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
@@ -73,11 +75,21 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
         if digit_version(mmpose_version) <= digit_version('0.13.0'):
             self.use_old_api = True
 
+    def get_keypoints_convention_name(self) -> str:
+        """Get data_source from dataset type in config file of the pose model.
+
+        Returns:
+            str:
+                Name of the keypoints convention. Must be
+                a key of KEYPOINTS_FACTORY.
+        """
+        return __translate_data_source__(self.model_cfg.data['test']['type'])
+
     def infer_array(self,
                     image_array: Union[np.ndarray, list],
                     bbox_list: Union[tuple, list],
                     disable_tqdm: bool = False,
-                    return_heatmap: bool = False) -> Tuple[list, list]:
+                    **kwargs) -> Tuple[list, list]:
         """Infer frames already in memory(ndarray type).
 
         Args:
@@ -91,9 +103,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                 Each bbox is a bbox_xyxy with a bbox_score at last.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
-            return_heatmap (bool, optional):
-                Whether to return heatmap.
                 Defaults to False.
 
         Returns:
@@ -115,7 +124,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                     if there's no keypoints detected in some bbox.
         """
         ret_kps_list = []
-        ret_heatmap_list = []
         ret_bbox_list = []
         n_frame = len(image_array)
         n_kps = get_keypoint_num(self.get_keypoints_convention_name())
@@ -128,7 +136,7 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             for frame_index in range(start_index, end_index, 1):
                 bboxes_in_frame = []
                 for idx, bbox in enumerate(bbox_list[frame_index]):
-                    if bbox[4] > 0.0:
+                    if bbox[4] > self.bbox_thr:
                         bboxes_in_frame.append({'bbox': bbox, 'id': idx})
                 person_results = bboxes_in_frame
             if not self.use_old_api:
@@ -136,25 +144,14 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             else:
                 img_input = dict(img_or_path=img_arr)
             if len(bboxes_in_frame) > 0:
-                pose_results, returned_outputs = \
-                        self.inference_top_down_pose_model(
-                            model=self.pose_model,
-                            person_results=person_results,
-                            bbox_thr=self.bbox_thr,
-                            format='xyxy',
-                            dataset=self.model_cfg.data['test']['type'],
-                            return_heatmap=return_heatmap,
-                            outputs=None,
-                            **img_input)
+                pose_results = self.inference_top_down_pose_model(
+                    person_results=person_results, **img_input)
                 frame_kps_results = np.zeros(
                     shape=(
                         len(bbox_list[frame_index]),
                         n_kps,
                         3,
                     ))
-                frame_heatmap_results = [
-                    None,
-                ] * len(bbox_list[frame_index])
                 frame_bbox_results = np.zeros(
                     shape=(len(bbox_list[frame_index]), 5))
                 for idx, person_dict in enumerate(pose_results):
@@ -163,12 +160,7 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                     keypoints = person_dict['keypoints']
                     frame_bbox_results[id] = bbox
                     frame_kps_results[id] = keypoints
-                    if return_heatmap:
-                        # returned_outputs[0]['heatmap'].shape:
-                        # 1, 133, 96, 72
-                        frame_heatmap_results[id] = returned_outputs[0][
-                            'heatmap'][idx]
-                        ret_heatmap_list += [frame_heatmap_results]
+
                 frame_kps_results = frame_kps_results.tolist()
                 frame_bbox_results = frame_bbox_results.tolist()
             else:
@@ -176,124 +168,47 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                 frame_bbox_results = []
             ret_kps_list += [frame_kps_results]
             ret_bbox_list += [frame_bbox_results]
-        return ret_kps_list, ret_heatmap_list, ret_bbox_list
+        return ret_kps_list, None, ret_bbox_list
 
     def inference_top_down_pose_model(self,
-                                      model,
                                       imgs_or_paths,
-                                      person_results=None,
-                                      bbox_thr=None,
-                                      format='xywh',
-                                      dataset='TopDownCocoDataset',
-                                      dataset_info=None,
-                                      return_heatmap=False,
-                                      outputs=None):
+                                      person_results=None):
         """Rewrite function of mmpose to adpat mmdeploy. Inference a single
         image with a list of person bounding boxes. Support single-frame and
         multi-frame inference setting.
 
-        Note:
-            - num_frames: F
-            - num_people: P
-            - num_keypoints: K
-            - bbox height: H
-            - bbox width: W
-
         Args:
-            model (nn.Module): The loaded pose model.
             imgs_or_paths (str | np.ndarray | list(str) | list(np.ndarray)):
                 Image filename(s) or loaded image(s).
             person_results (list(dict), optional): a list of detected
                 persons that  ``bbox`` and/or ``track_id``:
 
-                - ``bbox`` (4, ) or (5, ): The person bounding box, which
-                    contains box coordinates (and score).
-                - ``track_id`` (int): The unique id for each human instance.
-                    If not provided, a dummy person result with a bbox
-                    covering  entire image will be used. Default: None.
-            bbox_thr (float | None): Threshold for bounding boxes. Only bboxes
-                with higher scores will be fed into the pose detector.
-                If bbox_thr is None, all boxes will be used.
-            format (str): bbox format ('xyxy' | 'xywh'). Default: 'xywh'.
-
-                - `xyxy` means (left, top, right, bottom),
-                - `xywh` means (left, top, width, height).
-            dataset (str): Dataset name, e.g. 'TopDownCocoDataset'.
-                It is deprecated. Please use dataset_info instead.
-            dataset_info (DatasetInfo): A class containing all dataset info.
-            return_heatmap (bool) : Flag to return heatmap, default: False
-            outputs (list(str) | tuple(str)) : Names of layers whose outputs
-                need to be returned. Default: None.
-
         Returns:
-            tuple:
-            - pose_results (list[dict]): The bbox & pose info. \
+            pose_results (list[dict]): The bbox & pose info. \
                 Each item in the list is a dictionary, \
                 containing the bbox: (left, top, right, bottom, [score]) \
                 and the pose (ndarray[Kx3]): x, y, score.
-            - returned_outputs (list[dict[np.ndarray[N, K, H, W] | \
-                torch.Tensor[N, K, H, W]]]): \
-                Output feature maps from layers specified in `outputs`. \
-                Includes 'heatmap' if `return_heatmap` is True.
         """
 
-        # decide whether to use multi frames for inference
-        if isinstance(imgs_or_paths, (list, tuple)):
-            use_multi_frames = True
-        else:
-            assert isinstance(imgs_or_paths, (str, np.ndarray))
-            use_multi_frames = False
         # get dataset info
         cfg = self.model_cfg
         dataset_info = cfg.data.test.dataset_info
         dataset_info = DatasetInfo(dataset_info)
-        if dataset_info is None:
-            warnings.warn(
-                'dataset is deprecated.'
-                'Please set `dataset_info` in the config.'
-                'Check https://github.com/open-mmlab/mmpose/pull/663'
-                ' for details.', DeprecationWarning)
-
-        # only two kinds of bbox format is supported.
-        assert format in ['xyxy', 'xywh']
-
         pose_results = []
-        returned_outputs = []
-
-        if person_results is None:
-            # create dummy person results
-            sample = imgs_or_paths[0] if use_multi_frames else imgs_or_paths
-            if isinstance(sample, str):
-                width, height = Image.open(sample).size
-            else:
-                height, width = sample.shape[:2]
-            person_results = [{'bbox': np.array([0, 0, width, height])}]
-
-        if len(person_results) == 0:
-            return pose_results, returned_outputs
 
         # Change for-loop preprocess each bbox to preprocess
         # all bboxes at once.
         bboxes = np.array([box['bbox'] for box in person_results])
 
         # Select bboxes by score threshold
-        if bbox_thr is not None:
+        if self.bbox_thr is not None:
             assert bboxes.shape[1] == 5
-            valid_idx = np.where(bboxes[:, 4] > bbox_thr)[0]
+            valid_idx = np.where(bboxes[:, 4] > self.bbox_thr)[0]
             bboxes = bboxes[valid_idx]
             person_results = [person_results[i] for i in valid_idx]
 
-        if format == 'xyxy':
-            bboxes_xyxy = bboxes
-            bboxes_xywh = bbox_xyxy2xywh(bboxes)
-        else:
-            # format is already 'xywh'
-            bboxes_xywh = bboxes
-            bboxes_xyxy = bbox_xywh2xyxy(bboxes)
-
-        # if bbox_thr remove all bounding box
-        if len(bboxes_xywh) == 0:
-            return [], []
+        bboxes_xyxy = bboxes
+        bboxes_xywh = bbox_xyxy2xywh(bboxes)
 
         # build the data pipeline
         test_pipeline = Compose(cfg.test_pipeline)
@@ -308,6 +223,10 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
         for bbox in bboxes_xywh:
             # prepare data
             data = {
+                'img':
+                imgs_or_paths,
+                'bbox':
+                bbox,
                 'bbox_score':
                 bbox[4] if len(bbox) == 5 else 1,
                 'bbox_id':
@@ -327,22 +246,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                 }
             }
 
-            if use_multi_frames:
-                # weight for different frames in multi-frame inference setting
-                data['frame_weight'] =\
-                        cfg.data.test.data_cfg.frame_weight_test
-                if isinstance(imgs_or_paths[0], np.ndarray):
-                    data['img'] = imgs_or_paths
-                else:
-                    data['image_file'] = imgs_or_paths
-            else:
-                if isinstance(imgs_or_paths, np.ndarray):
-                    data['img'] = imgs_or_paths
-                else:
-                    data['image_file'] = imgs_or_paths
-
-            data['bbox'] = bbox
-
             data = test_pipeline(data)
             batch_data.append(data)
 
@@ -354,21 +257,14 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             if isinstance(v, DataContainer):
                 batch_data[k] = v.data[0]
 
-        result = model(
+        result = self.pose_model(
             **batch_data,
             return_loss=False,
-            return_heatmap=return_heatmap,
+            return_heatmap=False,
             target=None,
             target_weight=None)
-        if return_heatmap:
-            heatmap = result['output_heatmap']
-        else:
-            heatmap = None
-        poses = result['preds']
-        returned_outputs.append(dict(heatmap=heatmap))
 
-        assert len(poses) == len(person_results), print(
-            len(poses), len(person_results), len(bboxes_xyxy))
+        poses = result['preds']
         for pose, person_result, bbox_xyxy in zip(poses, person_results,
                                                   bboxes_xyxy):
             pose_result = person_result.copy()
@@ -376,4 +272,4 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             pose_result['bbox'] = bbox_xyxy
             pose_results.append(pose_result)
 
-        return pose_results, returned_outputs
+        return pose_results

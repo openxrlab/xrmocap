@@ -18,7 +18,7 @@ DETECTORS = Registry('detector')
 DETECTORS.register_module(
     name=('MMposeTopDownEstimator'), module=MMposeTopDownEstimator)
 DETECTORS.register_module(
-    name=('MMposetrtTopDownEstimator'), module=MMposeTrtTopDownEstimator)
+    name=('MMposeTrtTopDownEstimator'), module=MMposeTrtTopDownEstimator)
 DETECTORS.register_module(
     name=('MediapipeEstimator'), module=MediapipeEstimator)
 DETECTORS.register_module(name=('MMdetDetector'), module=MMdetDetector)
