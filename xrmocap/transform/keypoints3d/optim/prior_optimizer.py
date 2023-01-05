@@ -41,9 +41,10 @@ class PriorConstraint(BaseOptimizer):
                 Whether to log info. Defaults to True.
             bbox_size (list, optional):
                 Edge length of the bounding box.
+                Unit should align with input data.
                 Defaults to [2.0, 2.0, 2.0].
             stand_only (bool, optional):
-                Only apply to the stand position.
+                Only apply bbox constraint to standing position.
                 Defaults to False.
             ground_norm (list, optional):
                 Norm of the ground in the world coordinate.
@@ -51,10 +52,12 @@ class PriorConstraint(BaseOptimizer):
                 is in the standing position.
                 Defaults to [0.0, 1.0, 0.0].
             standing_thr (float, optional):
-                Threshold for standing position.
+                Body center height threshold for standing
+                position in the world coordinate.
+                Unit should align with input data.
                 Defaults to 0.0.
             use_limb_length (bool, optional):
-                Whether to use bone length prior constrain
+                Whether to use bone length prior constraint
                 between frames.
                 Defaults to False.
             n_max_frame (int, optional):

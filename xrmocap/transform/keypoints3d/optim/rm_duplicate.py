@@ -79,6 +79,10 @@ class RemoveDuplicate(BaseOptimizer):
             kps3d_frame = kps3d[frame_idx, ...]
             kps3d_frame = kps3d_frame[~np.isnan(kps3d_frame[:, 0, 0])]
 
+            # skip empty frame
+            if kps3d_frame.shape[0] == 0:
+                continue
+
             # calculate distance and remove duplicate
             dist = self.get_kps3d_dist(kps3d_frame)
 
