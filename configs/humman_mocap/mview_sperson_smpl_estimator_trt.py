@@ -3,21 +3,22 @@ work_dir = './temp'
 verbose = True
 logger = None
 bbox_detector = dict(
-    type='MMdetDetector',
-    mmdet_kwargs=dict(
-        checkpoint='weight/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
-        config='configs/modules/human_perception/' +
-        'mmdet_faster_rcnn_r50_fpn_coco.py',
-        device='cuda'),
+    type='MMdetTrtDetector',
+    deploy_cfg='configs/modules/human_perception/deploy/' +
+    'detection_tensorrt_dynamic-320x320-1344x1344.py',
+    model_cfg='configs/modules/human_perception/' +
+    'mmdet_faster_rcnn_r50_fpn_coco.py',
+    backend_files=['weight/mmdet_faster_rcnn/end2end.engine'],
+    device='cuda',
     batch_size=10)
 kps2d_estimator = dict(
-    type='MMposeTopDownEstimator',
-    mmpose_kwargs=dict(
-        checkpoint='weight/hrnet_w48_coco_wholebody' +
-        '_384x288_dark-f5726563_20200918.pth',
-        config='configs/modules/human_perception/mmpose_hrnet_w48_' +
-        'coco_wholebody_384x288_dark_plus.py',
-        device='cuda'),
+    type='MMposeTrtTopDownEstimator',
+    deploy_cfg='configs/modules/human_perception/deploy/' +
+    'pose-detection_tensorrt_static-384x288.py',
+    model_cfg='configs/modules/human_perception/' +
+    'mmpose_hrnet_w48_coco_wholebody_384x288_dark_plus.py',
+    backend_files=['weight/mmpose_hrnet/end2end.engine'],
+    device='cuda',
     bbox_thr=0.95)
 triangulator = dict(type='AniposelibTriangulator', camera_parameters=[])
 smplify = dict(
