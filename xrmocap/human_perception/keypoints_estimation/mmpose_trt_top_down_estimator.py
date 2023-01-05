@@ -173,9 +173,10 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
     def inference_top_down_pose_model(self,
                                       imgs_or_paths,
                                       person_results=None):
-        """Rewrite function of mmpose to adpat mmdeploy. Inference a single
-        image with a list of person bounding boxes. Support single-frame and
-        multi-frame inference setting.
+        """Inference a single image with a list of person bounding boxes. In
+        order to align the output of mmpose model, we rewrite function of
+        mmpose to adpat tensorrt engine, instead of calling the function of
+        mmdeploy.
 
         Args:
             imgs_or_paths (str | np.ndarray | list(str) | list(np.ndarray)):
