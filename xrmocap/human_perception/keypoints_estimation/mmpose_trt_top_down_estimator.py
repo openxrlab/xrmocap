@@ -11,11 +11,9 @@ from .mmpose_top_down_estimator import (
 )
 
 try:
-    from mmcv import digit_version
     from mmcv.parallel import DataContainer, collate, scatter
     from mmdeploy.apis.utils import build_task_processor
     from mmdeploy.utils import get_input_shape, load_config
-    from mmpose import __version__ as mmpose_version
     from mmpose.core.bbox import bbox_xyxy2xywh
     from mmpose.datasets.dataset_info import DatasetInfo
     from mmpose.datasets.pipelines import Compose
@@ -70,10 +68,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
         # mmpose inference api takes one image per call
         self.batch_size = 1
         self.bbox_thr = bbox_thr
-
-        self.use_old_api = False
-        if digit_version(mmpose_version) <= digit_version('0.13.0'):
-            self.use_old_api = True
 
     def get_keypoints_convention_name(self) -> str:
         """Get data_source from dataset type in config file of the pose model.
@@ -139,13 +133,9 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                     if bbox[4] > self.bbox_thr:
                         bboxes_in_frame.append({'bbox': bbox, 'id': idx})
                 person_results = bboxes_in_frame
-            if not self.use_old_api:
-                img_input = dict(imgs_or_paths=img_arr)
-            else:
-                img_input = dict(img_or_path=img_arr)
             if len(bboxes_in_frame) > 0:
                 pose_results = self.inference_top_down_pose_model(
-                    person_results=person_results, **img_input)
+                    person_results=person_results, img=img_arr)
                 frame_kps_results = np.zeros(
                     shape=(
                         len(bbox_list[frame_index]),
@@ -170,24 +160,22 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             ret_bbox_list += [frame_bbox_results]
         return ret_kps_list, None, ret_bbox_list
 
-    def inference_top_down_pose_model(self,
-                                      imgs_or_paths,
-                                      person_results=None):
+    def inference_top_down_pose_model(self, img, person_results):
         """Inference a single image with a list of person bounding boxes. In
-        order to align the output of mmpose model, we rewrite function of
+        order to align the output of mmpose model, we rewrite the function of
         mmpose to adpat tensorrt engine, instead of calling the function of
         mmdeploy.
 
         Args:
-            imgs_or_paths (str | np.ndarray | list(str) | list(np.ndarray)):
+            img (np.ndarray):
                 Image filename(s) or loaded image(s).
-            person_results (list(dict), optional): a list of detected
+            person_results (list(dict)): a list of detected
                 persons that  ``bbox`` and/or ``track_id``:
 
         Returns:
-            pose_results (list[dict]): The bbox & pose info. \
-                Each item in the list is a dictionary, \
-                containing the bbox: (left, top, right, bottom, [score]) \
+            pose_results (list[dict]): The bbox & pose info.
+                Each item in the list is a dictionary,
+                containing the bbox: (left, top, right, bottom, [score])
                 and the pose (ndarray[Kx3]): x, y, score.
         """
 
@@ -207,7 +195,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             valid_idx = np.where(bboxes[:, 4] > self.bbox_thr)[0]
             bboxes = bboxes[valid_idx]
             person_results = [person_results[i] for i in valid_idx]
-
         bboxes_xyxy = bboxes
         bboxes_xywh = bbox_xyxy2xywh(bboxes)
 
@@ -225,7 +212,7 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             # prepare data
             data = {
                 'img':
-                imgs_or_paths,
+                img,
                 'bbox':
                 bbox,
                 'bbox_score':
@@ -246,7 +233,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                     'flip_pairs': flip_pairs
                 }
             }
-
             data = test_pipeline(data)
             batch_data.append(data)
 
@@ -264,7 +250,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
             return_heatmap=False,
             target=None,
             target_weight=None)
-
         poses = result['preds']
         for pose, person_result, bbox_xyxy in zip(poses, person_results,
                                                   bboxes_xyxy):
