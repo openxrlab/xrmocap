@@ -22,7 +22,7 @@ class SMPLX(_SMPLX):
                  *args,
                  use_face_contour: bool = True,
                  use_pca: bool = False,
-                 flat_hand_mean: bool = True,
+                 flat_hand_mean: bool = False,
                  keypoint_convention: str = 'smplx',
                  joints_regressor: str = None,
                  extra_joints_regressor: str = None,
@@ -102,7 +102,8 @@ class SMPLX(_SMPLX):
         """
 
         kwargs['get_skin'] = True
-        smplx_output = super(SMPLX, self).forward(*args, **kwargs)
+        smplx_output = super(SMPLX, self).forward(*args, return_verts=return_verts, 
+                                                  return_full_pose=return_full_pose, **kwargs)
 
         if not hasattr(self, 'joints_regressor'):
             joints = smplx_output.joints
