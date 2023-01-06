@@ -1,4 +1,4 @@
-# Tool mmdeply
+# Tool mmdeploy
 
 - [Overview](#overview)
 - [Installation](#Installation)
@@ -18,7 +18,7 @@ git clone https://github.com/open-mmlab/mmdeploy.git /path/of/mmdeploy
 ```
 
 ### Run
-Remember to change path of mmdeply.
+Remember to change the path of mmdeploy.
 ```
 # mmdet
 mkdir ./weight/mmdet_faster_rcnn/
