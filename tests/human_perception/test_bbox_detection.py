@@ -30,7 +30,7 @@ def fixture():
     smc_reader = SMCReader('tests/data/p000103_a000011_tiny.smc')
     single_image_array = smc_reader.get_kinect_color(kinect_id=0, frame_id=0)
     single_image_array = bgr2rgb(single_image_array)
-    image_array = single_image_array.repeat(2, axis=0)
+    image_array = single_image_array.repeat(4, axis=0)
     image_dir = os.path.join(output_dir, 'rgb_frames')
     array_to_images(
         image_array=image_array, output_folder=image_dir, disable_log=True)
@@ -204,3 +204,68 @@ def test_mmtrack_detector_infer():
         output_path = os.path.join(
             output_dir, f'mmtrack_mframe_mperson_{frame_idx:06d}.jpg')
         cv2.imwrite(output_path, canvas)
+
+
+@pytest.mark.skipif(
+    not os.path.exists('weight/mmdet_faster_rcnn/end2end.engine'),
+    reason='TensorRT engine has not been found.')
+def test_mmdet_trt_detector_infer():
+    detector_config = dict(
+        mmcv.Config.fromfile('configs/modules/human_perception/' +
+                             'mmdet_trt_faster_rcnn_detector.py'))
+    detector_config['device'] = device
+    # test init
+    mmdet_detector = build_detector(detector_config)
+    # test infer frames
+    image_dir = os.path.join(output_dir, 'rgb_frames')
+    frame_list = glob.glob(os.path.join(image_dir, '*.png'))
+    ret_list = mmdet_detector.infer_frames(
+        frame_path_list=frame_list, disable_tqdm=False, multi_person=False)
+    assert len(ret_list) == len(frame_list)
+    assert len(ret_list[0]) == 1
+    assert len(ret_list[0][0]) == 5
+    for frame_idx, frame_path in enumerate(frame_list):
+        canvas = cv2.imread(frame_path)
+        bboxes = ret_list[frame_idx]
+        for bbox in bboxes:
+            if bbox[4] > 0.0:
+                bbox = np.asarray(bbox, dtype=np.int32)
+                cv2.rectangle(
+                    img=canvas,
+                    pt1=bbox[:2],
+                    pt2=bbox[2:4],
+                    color=[0, 255, 0],
+                    thickness=2)
+        output_path = os.path.join(output_dir,
+                                   f'mmdet_trt_frame_{frame_idx:06d}.jpg')
+        cv2.imwrite(output_path, canvas)
+    # test infer video
+    video_path = os.path.join(output_dir, 'rgb_video.mp4')
+    ret_list = mmdet_detector.infer_video(
+        video_path=video_path, disable_tqdm=True)
+    assert len(ret_list) > 0
+    # test infer batch
+    mmdet_detector.batch_size = 2
+    image_array = images_to_array(input_folder=image_dir)
+    ret_list = mmdet_detector.infer_array(
+        image_array=image_array, disable_tqdm=False)
+    assert len(ret_list) == len(image_array)
+    # test infer multi_person
+    frame_list = [os.path.join(input_dir, 'multi_person.png')]
+    ret_list = mmdet_detector.infer_frames(
+        frame_path_list=frame_list, disable_tqdm=True, multi_person=True)
+    assert len(ret_list) == len(frame_list)
+    assert len(ret_list[0]) > 1
+    canvas = cv2.imread(frame_list[0])
+    bboxes = ret_list[0]
+    for bbox in bboxes:
+        if bbox[4] > 0.0:
+            bbox = np.asarray(bbox, dtype=np.int32)
+            cv2.rectangle(
+                img=canvas,
+                pt1=bbox[:2],
+                pt2=bbox[2:4],
+                color=[0, 255, 0],
+                thickness=2)
+    output_path = os.path.join(output_dir, 'mmdet_trt_multi_person.jpg')
+    cv2.imwrite(output_path, canvas)

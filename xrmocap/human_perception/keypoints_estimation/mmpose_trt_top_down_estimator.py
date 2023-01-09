@@ -134,8 +134,6 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                         bboxes_in_frame.append({'bbox': bbox, 'id': idx})
                 person_results = bboxes_in_frame
             if len(bboxes_in_frame) > 0:
-                pose_results = self.inference_top_down_pose_model(
-                    person_results=person_results, img=img_arr)
                 frame_kps_results = np.zeros(
                     shape=(
                         len(bbox_list[frame_index]),
@@ -144,12 +142,18 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                     ))
                 frame_bbox_results = np.zeros(
                     shape=(len(bbox_list[frame_index]), 5))
-                for idx, person_dict in enumerate(pose_results):
-                    id = person_dict['id']
-                    bbox = person_dict['bbox']
-                    keypoints = person_dict['keypoints']
-                    frame_bbox_results[id] = bbox
-                    frame_kps_results[id] = keypoints
+                for person_idx, person_bbox in enumerate(person_results):
+                    pose_results = self.inference_top_down_pose_model(
+                        person_results=[person_bbox], img=img_arr)
+                    if len(pose_results) > 0:
+                        id = pose_results[0]['id']
+                    else:
+                        id = None
+                    if id is not None:
+                        bbox = pose_results[0]['bbox']
+                        keypoints = pose_results[0]['keypoints']
+                        frame_bbox_results[id] = bbox
+                        frame_kps_results[id] = keypoints
 
                 frame_kps_results = frame_kps_results.tolist()
                 frame_bbox_results = frame_bbox_results.tolist()
@@ -158,7 +162,7 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                 frame_bbox_results = []
             ret_kps_list += [frame_kps_results]
             ret_bbox_list += [frame_bbox_results]
-        return ret_kps_list, None, ret_bbox_list
+        return ret_kps_list, [], ret_bbox_list
 
     def inference_top_down_pose_model(self, img, person_results):
         """Inference a single image with a list of person bounding boxes. In
