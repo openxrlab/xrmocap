@@ -251,4 +251,3 @@ def test_mmpose_trt_topdown_estimator():
     assert keypoints2d.get_frame_number() == 3
     assert keypoints2d.get_person_number() == 7
     assert keypoints2d.get_keypoints_number() == 133
-
