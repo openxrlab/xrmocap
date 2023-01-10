@@ -29,7 +29,7 @@ jobs:
       run:
         shell: bash -l {0}
     container:
-      image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu102_py38_torch181_mmcv153
+      image: openxrlab/xrmocap_runtime:ubuntu1804_x64_cu114_py38_torch1120_mmcv161
       env:
         GITHUB_ACTIONS: true
     steps:
@@ -52,9 +52,6 @@ jobs:
           rm -rf xrmocap.egg-info
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           pip install xrprimer
-          pip install git+https://github.com/open-mmlab/mmhuman3d.git
-          pip uninstall opencv-python opencv-python-headless -y
-          pip install opencv-python-headless
           pip install -e .
       - name: Install pytest plugin
         run: |
