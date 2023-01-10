@@ -1,6 +1,6 @@
 type = 'MMposeTrtTopDownEstimator'
 deploy_cfg = 'configs/modules/human_perception/deploy/' + \
-    'pose-detection_tensorrt_static-384x288.py'
+    'pose-detection_tensorrt_dynamic-384x288.py'
 model_cfg = 'configs/modules/human_perception/mmpose_hrnet_w48_' + \
     'coco_wholebody_384x288_dark_plus.py'
 backend_files = [
