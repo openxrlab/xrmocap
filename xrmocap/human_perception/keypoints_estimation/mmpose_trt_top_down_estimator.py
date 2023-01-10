@@ -65,6 +65,8 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                                                    self.deploy_cfg, device)
         self.pose_model = self.task_processor.init_backend_model(backend_files)
         self.input_shape = get_input_shape(deploy_cfg)
+        self.max_batch_size = self.deploy_cfg['backend_config'][
+            'model_inputs'][0]['input_shapes']['input']['max_shape'][0]
         # mmpose inference api takes one image per call
         self.batch_size = 1
         self.bbox_thr = bbox_thr
@@ -142,18 +144,21 @@ class MMposeTrtTopDownEstimator(MMposeTopDownEstimator):
                     ))
                 frame_bbox_results = np.zeros(
                     shape=(len(bbox_list[frame_index]), 5))
-                for person_idx, person_bbox in enumerate(person_results):
+                for person_idx in range(0, len(person_results),
+                                        self.max_batch_size):
+                    end_idx = person_idx + self.max_batch_size \
+                        if person_idx + self.max_batch_size \
+                        <= len(person_results) \
+                        else len(person_results)
                     pose_results = self.inference_top_down_pose_model(
-                        person_results=[person_bbox], img=img_arr)
-                    if len(pose_results) > 0:
-                        id = pose_results[0]['id']
-                    else:
-                        id = None
-                    if id is not None:
-                        bbox = pose_results[0]['bbox']
-                        keypoints = pose_results[0]['keypoints']
-                        frame_bbox_results[id] = bbox
-                        frame_kps_results[id] = keypoints
+                        person_results=person_results[person_idx:end_idx],
+                        img=img_arr)
+                    for pose_idx, pose_result in enumerate(pose_results):
+                        person_id_int = pose_result['id']
+                        bbox = pose_result['bbox']
+                        keypoints = pose_result['keypoints']
+                        frame_bbox_results[person_id_int] = bbox
+                        frame_kps_results[person_id_int] = keypoints
 
                 frame_kps_results = frame_kps_results.tolist()
                 frame_bbox_results = frame_bbox_results.tolist()

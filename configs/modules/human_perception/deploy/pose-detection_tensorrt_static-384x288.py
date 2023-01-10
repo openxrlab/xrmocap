@@ -7,7 +7,8 @@ onnx_config = dict(
     input_names=['input'],
     output_names=['output'],
     input_shape=[288, 384],
-    optimize=True)
+    optimize=True,
+    dynamic_axes=dict(input=dict({0: 'batch'}), output=dict({0: 'batch'})))
 codebase_config = dict(type='mmpose', task='PoseDetection')
 backend_config = dict(
     type='tensorrt',
@@ -17,6 +18,6 @@ backend_config = dict(
             input_shapes=dict(
                 input=dict(
                     min_shape=[1, 3, 384, 288],
-                    opt_shape=[1, 3, 384, 288],
-                    max_shape=[1, 3, 384, 288])))
+                    opt_shape=[2, 3, 384, 288],
+                    max_shape=[5, 3, 384, 288])))
     ])
