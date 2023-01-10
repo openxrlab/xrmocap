@@ -9,7 +9,7 @@ from .base_tracking import BaseTracking
 class KeypointsDistanceTracking(BaseTracking):
 
     def __init__(self,
-                 tracking_distance: np.float,
+                 tracking_distance: np.float32,
                  tracking_kps3d_convention: str,
                  tracking_kps3d_name: List[str],
                  verbose: bool = False,
@@ -18,7 +18,7 @@ class KeypointsDistanceTracking(BaseTracking):
         method assigns identities of the closest person in last frame.
 
         Args:
-            tracking_distance (np.float):
+            tracking_distance (np.float32):
                 The distance considered to be the same kps3d.
             tracking_kps3d_convention (str): The convention of kps3d.
             tracking_kps3d_name (List[str]): The name of the tracked kps3d.

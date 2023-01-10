@@ -324,7 +324,7 @@ def add_campus_jaw_headtop(nose, kps3d_campus):
                     head_center - shouler_cneter) * np.array([0.75, 0.75, 1.5])
             else:
                 face_dir = face_dir / np.linalg.norm(face_dir)
-                z_dir = np.array([0., 0., 1.], dtype=np.float)
+                z_dir = np.array([0., 0., 1.], dtype=np.float32)
                 add_kps3d[1] = add_kps3d[0] + face_dir * 0.125 + z_dir * 0.145
 
             kps3d[-2:] = add_kps3d

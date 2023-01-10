@@ -6,7 +6,7 @@ import numpy as np
 class H5Helper:
     """Some helper function related to h5py."""
     h5_element_type = \
-        (np.int64, np.float64, str, np.float, float, np.float32, int)
+        (np.int64, np.float64, str, float, np.float32, int)
     h5_list_type = \
         (list, np.ndarray)
 
