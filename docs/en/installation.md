@@ -31,6 +31,8 @@ Optional:
 
 ## A from-scratch setup script
 
+Below is an example setup script on Ubuntu18.04. For older version like `pytorch==1.8`, please refer to our [release history](https://github.com/openxrlab/xrmocap/blob/v0.7.0/docs/en/installation.md).
+
 ```shell
 conda create -n xrmocap python=3.8
 source activate xrmocap

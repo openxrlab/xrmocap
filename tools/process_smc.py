@@ -130,7 +130,7 @@ def main(args):
             selected_kinect = 1
             if smpl_type == 'smplx':
                 body_model_cfg = dict(
-                    type='SMPLX',
+                    type=smpl_type.upper(),
                     gender='neutral',
                     num_betas=10,
                     keypoint_src='smplx',
@@ -141,7 +141,7 @@ def main(args):
                     batch_size=1)
             else:
                 body_model_cfg = dict(
-                    type='SMPL',
+                    type=smpl_type.upper(),
                     gender='neutral',
                     num_betas=10,
                     keypoint_src='smpl_45',
