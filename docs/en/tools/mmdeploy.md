@@ -9,7 +9,7 @@
 This tool converts human perception pytorch module into TensorRT engine with mmdeploy.
 
 ### Installation
-Please refer to [official repository](https://github.com/open-mmlab/mmdeploy/blob/master/docs/en/get_started.md) for installation.
+Please refer to [official repository](https://github.com/open-mmlab/mmdeploy/blob/master/docs/en/get_started.md) for installation. We also provide a [from-scratch setup script](../installation.md#a-from-scratch-setup-script) in XRMoCap.
 
 
 ### Clone
@@ -21,7 +21,7 @@ git clone https://github.com/open-mmlab/mmdeploy.git /path/of/mmdeploy
 Remember to change the path of mmdeploy.
 ```
 # mmdet
-mkdir ./weight/mmdet_faster_rcnn/
+mkdir -p weight/mmdet_faster_rcnn/
 python /path/of/mmdeploy/tools/deploy.py \
     ./configs/modules/human_perception/deploy/detection_tensorrt_dynamic-320x320-1344x1344.py \
     ./configs/modules/human_perception/mmdet_faster_rcnn_r50_fpn_coco.py \
@@ -32,7 +32,7 @@ python /path/of/mmdeploy/tools/deploy.py \
     --dump-info
 
 # mmpose
-mkdir ./weight/mmpose_hrnet/
+mkdir -p weight/mmpose_hrnet/
 python /path/of/mmdeploy/tools/deploy.py \
     ./configs/modules/human_perception/deploy/pose-detection_tensorrt_dynamic-384x288.py\
     ./configs/modules/human_perception/mmpose_hrnet_w48_coco_wholebody_384x288_dark_plus.py \

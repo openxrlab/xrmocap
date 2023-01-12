@@ -21,12 +21,13 @@
 
 Optional:
 
-| Name                                                     | When it is required       | What's important                                             |
-| :------------------------------------------------------- | :------------------------ | :----------------------------------------------------------- |
-| [MMPose](https://github.com/open-mmlab/mmpose)           | Keypoints 2D estimation.  | Install `mmcv-full`, instead of `mmcv`.                      |
-| [MMDetection](https://github.com/open-mmlab/mmdetection) | Bbox 2D estimation.       | Install `mmcv-full`, instead of `mmcv`.                      |
-| [MMTracking](https://github.com/open-mmlab/mmtracking)   | Multiple object tracking. | Install `mmcv-full`, instead of `mmcv`.                      |
-| [Aniposelib](https://github.com/google/aistplusplus_api) | Triangulation.            | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
+| Name                                                     | When it is required            | What's important                                             |
+| :------------------------------------------------------- | :----------------------------- | :----------------------------------------------------------- |
+| [MMPose](https://github.com/open-mmlab/mmpose)           | Keypoints 2D estimation.       | Install `mmcv-full`, instead of `mmcv`.                      |
+| [MMDetection](https://github.com/open-mmlab/mmdetection) | Bbox 2D estimation.            | Install `mmcv-full`, instead of `mmcv`.                      |
+| [MMTracking](https://github.com/open-mmlab/mmtracking)   | Multiple object tracking.      | Install `mmcv-full`, instead of `mmcv`.                      |
+| [MMDeploy](https://github.com/open-mmlab/mmdeploy)       | Faster mmdet+mmpose inference. | Install `mmcv-full`, `cudnn` and `TensorRT`.                 |
+| [Aniposelib](https://github.com/google/aistplusplus_api) | Triangulation.                 | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
 
 ## A from-scratch setup script
 
@@ -38,7 +39,7 @@ source activate xrmocap
 conda install -y ffmpeg
 
 # install pytorch
-conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.1 -c pytorch
+conda install pytorch==1.12.0 torchvision==0.13.0 cudatoolkit=11.3 -c pytorch
 
 # install pytorch3d
 conda install -y -c fvcore -c iopath -c conda-forge fvcore iopath
@@ -46,10 +47,34 @@ conda install -y -c bottler nvidiacub
 conda install -y pytorch3d -c pytorch3d
 
 # install mmcv-full
-pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.8.1/index.html
+pip install mmcv-full==1.6.1 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.0/index.html
 
 # install xrprimer
 pip install xrprimer
+
+# install cudnn for mmdeploy
+apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8=8.2.4.15-1+cuda11.4 \
+    libcudnn8-dev=8.2.4.15-1+cuda11.4 \
+    && apt-mark hold libcudnn8 && \
+    rm -rf /var/lib/apt/lists/*
+# install TensorRT for mmdeploy, please get TensorRT from nvidia official website
+cd /opt && \
+    tar -xzvf TensorRT-8.2.3.0.Linux.x86_64-gnu.cuda-11.4.cudnn8.2.tar.gz && \
+    rm TensorRT-8.2.3.0.Linux.x86_64-gnu.cuda-11.4.cudnn8.2.tar.gz && \
+    cd TensorRT-8.2.3.0/python && \
+    pip install tensorrt-8.2.3.0-cp38-none-linux_x86_64.whl && \
+# install mmdeploy and build ops
+cd /opt && \
+	conda install cmake && \
+    git clone https://github.com/open-mmlab/mmdeploy.git && \
+    cd mmdeploy && pip install -e . && \
+    mkdir -p build && cd build && \
+    cmake -DCMAKE_CXX_COMPILER=g++ -DMMDEPLOY_TARGET_BACKENDS=trt \
+        -DTENSORRT_DIR=/opt/TensorRT-8.2.3.0 \
+        -DCUDNN_DIR=/usr/lib/x86_64-linux-gnu .. && \
+    make -j$(nproc) && make install && \
+    make clean
 
 # clone xrmocap
 git clone https://github.com/openxrlab/xrmocap.git
@@ -77,19 +102,19 @@ conda activate xrmocap
 
 #### b. Install MMHuman3D.
 
-Here we take `torch_version=1.8.1` and `cu_version=10.2` as example. For other versions, please follow the [official instructions](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md)
+Here we take `torch_version=1.12.0` and `cu_version=11.3` as example. For other versions, please follow the [official instructions](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/install.md)
 
 ```shell
 # install ffmpeg from main channel
 conda install ffmpeg
 # install pytorch
-conda install -y pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=10.2 -c pytorch
+conda install pytorch==1.12.0 torchvision==0.13.0 cudatoolkit=11.3 -c pytorch
 # install pytorch3d
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 conda install -c bottler nvidiacub -y
 conda install pytorch3d -c pytorch3d
 # install mmcv-full for human_perception
-pip install mmcv-full==1.5.3 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.1/index.html
+pip install mmcv-full==1.6.1 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.0/index.html
 # install mmhuman3d
 pip install git+https://github.com/open-mmlab/mmhuman3d.git
 ```
@@ -124,7 +149,7 @@ If everything goes well, try to [run unittest](#test-environment) or go back to 
 
 ### Run with Docker Image
 
-We provide a [Dockerfile](../../Dockerfile) to build an image. Ensure that you are using [docker version](https://docs.docker.com/engine/install/) >=19.03 and `"default-runtime": "nvidia"` in daemon.json.
+We provide a [Dockerfile](../../Dockerfile) to build an image. Ensure that you are using [docker version](https://docs.docker.com/engine/install/) >=19.03 and `"default-runtime": "nvidia"` in `daemon.json`.
 
 ```shell
 # build an image with PyTorch 1.8.1, CUDA 10.2

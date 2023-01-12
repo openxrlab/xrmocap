@@ -17,6 +17,7 @@ from xrprimer.utils.path_utils import (
 )
 
 from xrmocap.core.estimation.builder import build_estimator
+from xrmocap.data_structure.body_model import SMPLXData
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.io.camera import get_all_color_kinect_parameter_from_smc
 from xrmocap.transform.image.color import bgr2rgb
@@ -34,7 +35,7 @@ def main(args):
     file_name = args.smc_path.rsplit('/', 1)[-1]
     smc_name = file_name.rsplit('.', 1)[0]
     if not args.disable_log_file:
-        time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        time_str = datetime.datetime.now().strftime('%Y.%m.%d_%H:%M:%S')
         log_path = os.path.join(args.output_dir, f'{smc_name}_{time_str}.txt')
         logger = setup_logger(logger_name=__name__, logger_path=log_path)
     else:
@@ -61,11 +62,14 @@ def main(args):
         overwrite=True,
         logger=logger)
     for kinect_index in range(smc_reader.num_kinects):
-        sv_img_array = smc_reader.get_kinect_color(kinect_id=kinect_index)
-        sv_img_array = bgr2rgb(sv_img_array)
         view_temp_dir = os.path.join(frame_temp_dir,
                                      f'view_{kinect_index:02d}')
-        array_to_images(sv_img_array, view_temp_dir, logger=logger)
+        temp_dir_exist = check_path_existence(view_temp_dir, 'dir')
+        if not (args.keep_frames
+                and temp_dir_exist == Existence.DirectoryExistNotEmpty):
+            sv_img_array = smc_reader.get_kinect_color(kinect_id=kinect_index)
+            sv_img_array = bgr2rgb(sv_img_array)
+            array_to_images(sv_img_array, view_temp_dir, logger=logger)
         sview_img_list = sorted(
             glob.glob(os.path.join(view_temp_dir, '*.png')))
         mview_img_list.append(sview_img_list)
@@ -79,12 +83,20 @@ def main(args):
     keypoints3d_path = os.path.join(args.output_dir,
                                     f'{smc_name}_keypoints3d.npz')
     keypoints3d.dump(keypoints3d_path)
-    smpl_path = os.path.join(args.output_dir, f'{smc_name}_smpl_data.npz')
+    if isinstance(smpl_data, SMPLXData):
+        smpl_type = 'smplx'
+    else:
+        smpl_type = 'smpl'
+    smpl_path = os.path.join(args.output_dir,
+                             f'{smc_name}_{smpl_type}_data.npz')
     smpl_data.dump(smpl_path)
-    shutil.rmtree(frame_temp_dir)
+    if not args.keep_frames:
+        shutil.rmtree(frame_temp_dir)
     # write results to the output smc
 
     if args.visualize:
+        projector = mview_sp_smpl_estimator.triangulator.get_projector()
+        del mview_sp_smpl_estimator
         if keypoints3d is not None:
             # visualize triangulation result
             visualize_kp3d(
@@ -93,7 +105,6 @@ def main(args):
                                          f'{smc_name}_keypoints3d.mp4'),
                 data_source=keypoints3d.get_convention(),
                 mask=keypoints3d.get_mask()[0, 0, ...])
-            projector = mview_sp_smpl_estimator.triangulator.get_projector()
             kps3d = keypoints3d.get_keypoints()[:, 0, ...]
             kps3d_mask = keypoints3d.get_mask()[:, 0, ...]
             n_frame = len(kps3d)
@@ -117,14 +128,26 @@ def main(args):
                     overwrite=True)
         if smpl_data is not None:
             selected_kinect = 1
-            body_model_cfg = dict(
-                type='SMPL',
-                gender='neutral',
-                num_betas=10,
-                keypoint_src='smpl_45',
-                keypoint_dst='smpl',
-                model_path='xrmocap_data/body_models',
-                batch_size=1)
+            if smpl_type == 'smplx':
+                body_model_cfg = dict(
+                    type='SMPLX',
+                    gender='neutral',
+                    num_betas=10,
+                    keypoint_src='smplx',
+                    keypoint_dst='smplx',
+                    model_path='xrmocap_data/body_models',
+                    use_face_contour=True,
+                    use_pca=False,
+                    batch_size=1)
+            else:
+                body_model_cfg = dict(
+                    type='SMPL',
+                    gender='neutral',
+                    num_betas=10,
+                    keypoint_src='smpl_45',
+                    keypoint_dst='smpl',
+                    model_path='xrmocap_data/body_models',
+                    batch_size=1)
             cam_param = cam_param_list[selected_kinect]
             if cam_param.world2cam:
                 cam_param.inverse_extrinsic()
@@ -136,8 +159,8 @@ def main(args):
                 poses=smpl_data['fullpose'].reshape(motion_len, -1),
                 betas=smpl_data['betas'],
                 transl=smpl_data['transl'],
-                output_path=os.path.join(args.output_dir,
-                                         f'{smc_name}_smpl_overlay.mp4'),
+                output_path=os.path.join(
+                    args.output_dir, f'{smc_name}_{smpl_type}_overlay.mp4'),
                 body_model_config=body_model_cfg,
                 K=np.array(cam_param.get_intrinsic()),
                 R=np.array(cam_param.extrinsic_r),
@@ -169,6 +192,12 @@ def setup_parser():
         '--visualize',
         action='store_true',
         help='If checked, visualize result.',
+        default=False)
+    parser.add_argument(
+        '--keep_frames',
+        action='store_true',
+        help='If checked, frames extracted from SMC' +
+        ' will be kept in file system.',
         default=False)
     # log args
     parser.add_argument(
