@@ -29,6 +29,7 @@ def test_new():
         fullpose=np.zeros(shape=(2, 55, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
+        mask=np.ones(shape=(2, )),
         logger='root')
     assert smplx_data['betas'][0, 0] == 0
     assert smplx_data.get_expression().shape == (2, 10)

@@ -26,6 +26,7 @@ class SMPLXDData(SMPLXData):
                  betas: Union[np.ndarray, torch.Tensor, None] = None,
                  expression: Union[np.ndarray, torch.Tensor, None] = None,
                  displacement: Union[np.ndarray, torch.Tensor, None] = None,
+                 mask: Union[np.ndarray, torch.Tensor, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Construct a SMPLXData instance with pre-set values.
 
@@ -56,6 +57,11 @@ class SMPLXDData(SMPLXData):
                 in shape [frame_num, NUM_VERTS].
                 Defaults to None,
                 zero-tensor in shape [frame_num, NUM_VERTS] will be created.
+            mask (Union[np.ndarray, torch.Tensor, None], optional):
+                A tensor or ndarray for visibility mask,
+                in shape [n_frame, ].
+                Defaults to None,
+                one-tensor in shape [n_frame, ] will be created.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -67,6 +73,7 @@ class SMPLXDData(SMPLXData):
             fullpose=fullpose,
             betas=betas,
             expression=expression,
+            mask=mask,
             logger=logger)
         if displacement is None and 'displacement' not in self:
             displacement = np.zeros(

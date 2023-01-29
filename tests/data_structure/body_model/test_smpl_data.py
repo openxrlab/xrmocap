@@ -28,6 +28,7 @@ def test_new():
         fullpose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
+        mask=np.ones(shape=(2, )),
         logger='root')
     assert smpl_data['betas'][0, 0] == 0
     # new with smpl_dict

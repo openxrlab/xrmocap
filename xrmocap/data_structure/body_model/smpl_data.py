@@ -34,6 +34,7 @@ class SMPLData(dict):
                  fullpose: Union[np.ndarray, torch.Tensor, None] = None,
                  transl: Union[np.ndarray, torch.Tensor, None] = None,
                  betas: Union[np.ndarray, torch.Tensor, None] = None,
+                 mask: Union[np.ndarray, torch.Tensor, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Construct a SMPLData instance with pre-set values.
 
@@ -54,6 +55,11 @@ class SMPLData(dict):
                 in shape [n_frame, betas_dim].
                 Defaults to None,
                 zero-tensor in shape [n_frame, 10] will be created.
+            mask (Union[np.ndarray, torch.Tensor, None], optional):
+                A tensor or ndarray for visibility mask,
+                in shape [n_frame, ].
+                Defaults to None,
+                one-tensor in shape [n_frame, ] will be created.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -78,6 +84,10 @@ class SMPLData(dict):
             betas = np.zeros(shape=(self.get_batch_size(), 10))
         if betas is not None:
             self.set_betas(betas)
+        if mask is None and 'mask' not in self:
+            mask = np.ones(shape=(self.get_batch_size()))
+        if mask is not None:
+            self.set_mask(mask)
 
     @classmethod
     def fromfile(cls, npz_path: str) -> 'SMPLData':
@@ -223,6 +233,27 @@ class SMPLData(dict):
         betas_np = betas.reshape(-1, betas_dim)
         super().__setitem__('betas', betas_np)
 
+    def set_mask(self, mask: Union[np.ndarray, torch.Tensor]) -> None:
+        """Set mask data.
+
+        Args:
+            mask (Union[np.ndarray, torch.Tensor]):
+                Visibility mask in ndarray or tensor,
+                in shape [batch_size, ].
+
+        Raises:
+            TypeError: Type of mask is not correct.
+        """
+        if isinstance(mask, np.ndarray):
+            mask_np = mask.reshape(-1)
+        elif isinstance(mask, torch.Tensor):
+            mask_np = mask.detach().cpu().numpy().reshape(-1)
+        else:
+            self.logger.error('Type of mask is not correct.\n' +
+                              f'Type: {type(mask)}.')
+            raise TypeError
+        super().__setitem__('mask', mask_np)
+
     def __setitem__(self, __k: Any, __v: Any) -> None:
         """Set item according to its key.
 
@@ -238,6 +269,8 @@ class SMPLData(dict):
             self.set_fullpose(__v)
         elif __k == 'betas':
             self.set_betas(__v)
+        elif __k == 'mask':
+            self.set_mask(__v)
         else:
             super().__setitem__(__k, __v)
 
@@ -310,6 +343,14 @@ class SMPLData(dict):
                 betas.shape[0] != batch_size:
             betas = betas.repeat(repeats=batch_size, axis=0)
         return betas
+
+    def get_mask(self) -> np.ndarray:
+        """Get mask.
+
+        Returns:
+            ndarray: mask in shape [batch_size, ].
+        """
+        return self.__getitem__('mask').reshape(-1)
 
     def to_param_dict(self, repeat_betas: bool = True) -> dict:
         """Split fullpose into global_orient and body_pose, return all the
