@@ -19,7 +19,6 @@ class SMPLXDData(SMPLXData):
     NUM_VERTS = 10475
 
     def __init__(self,
-                 src_dict: dict = None,
                  gender: Union[Literal['female', 'male', 'neutral'],
                                None] = None,
                  fullpose: Union[np.ndarray, torch.Tensor, None] = None,
@@ -28,14 +27,9 @@ class SMPLXDData(SMPLXData):
                  expression: Union[np.ndarray, torch.Tensor, None] = None,
                  displacement: Union[np.ndarray, torch.Tensor, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Construct a SMPLXData instance with pre-set values. If any of
-        gender, fullpose, transl, betas is provided, it will override the item
-        in source_dict.
+        """Construct a SMPLXData instance with pre-set values.
 
         Args:
-            src_dict (dict, optional):
-                A dict with items in HumanData fashion.
-                Defaults to None.
             gender (Union[
                     Literal['female', 'male', 'neutral'], None], optional):
                 Gender of the body model.
@@ -68,7 +62,6 @@ class SMPLXDData(SMPLXData):
         """
         SMPLXData.__init__(
             self,
-            src_dict=src_dict,
             gender=gender,
             transl=transl,
             fullpose=fullpose,
@@ -80,6 +73,36 @@ class SMPLXDData(SMPLXData):
                 shape=(self.get_batch_size(), self.__class__.NUM_VERTS))
         if displacement is not None:
             self.set_displacement(displacement)
+
+    @classmethod
+    def from_dict(cls, smpl_data_dict: Union['SMPLXDData',
+                                             dict]) -> 'SMPLXDData':
+        """Construct a body model data structure from a SMPLXDData, or a
+        degraded smplxd_data in dict type.
+
+        Args:
+            smplxd_data_dict (dict):
+                A degraded smplxd_data in dict type.
+
+        Returns:
+            SMPLXData:
+                A SMPLXDData instance load from dict.
+        """
+        smplxd_data_dict = smpl_data_dict
+        assert 'gender' in smplxd_data_dict
+        assert 'fullpose' in smplxd_data_dict
+        assert 'transl' in smplxd_data_dict
+        assert 'betas' in smplxd_data_dict
+        assert 'expression' in smplxd_data_dict
+        assert 'displacement' in smplxd_data_dict
+        ret_instance = cls(
+            gender=smplxd_data_dict['gender'],
+            fullpose=smplxd_data_dict['fullpose'],
+            transl=smplxd_data_dict['transl'],
+            betas=smplxd_data_dict['betas'],
+            expression=smplxd_data_dict['expression'],
+            displacement=smplxd_data_dict['displacement'])
+        return ret_instance
 
     def set_displacement(
             self, displacement: Union[np.ndarray, torch.Tensor]) -> None:
@@ -128,7 +151,8 @@ class SMPLXDData(SMPLXData):
             SMPLXData.__setitem__(self, __k, __v)
 
     def from_param_dict(self, smplxd_dict: dict) -> None:
-        """Load SMPLX+D parameters from smplxd_dict.
+        """Load SMPLX+D parameters from smplxd_dict, which is the output of a
+        body model in most cases.
 
         Args:
             smplx_dict (dict):

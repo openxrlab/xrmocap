@@ -29,21 +29,15 @@ class SMPLData(dict):
     }
 
     def __init__(self,
-                 src_dict: dict = None,
                  gender: Union[Literal['female', 'male', 'neutral'],
                                None] = None,
                  fullpose: Union[np.ndarray, torch.Tensor, None] = None,
                  transl: Union[np.ndarray, torch.Tensor, None] = None,
                  betas: Union[np.ndarray, torch.Tensor, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Construct a SMPLData instance with pre-set values. If any of gender,
-        fullpose, transl, betas is provided, it will override the item in
-        source_dict.
+        """Construct a SMPLData instance with pre-set values.
 
         Args:
-            src_dict (dict, optional):
-                A dict with items in HumanData fashion.
-                Defaults to None.
             gender (Union[
                     Literal['female', 'male', 'neutral'], None], optional):
                 Gender of the body model.
@@ -64,10 +58,7 @@ class SMPLData(dict):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
-        if src_dict is not None:
-            super().__init__(src_dict)
-        else:
-            super().__init__()
+        super().__init__()
         self.n_body_joints = self.__class__.DEFAULT_BODY_JOINTS_NUM
         self.logger = get_logger(logger)
         if gender is None and 'gender' not in self:
@@ -102,6 +93,31 @@ class SMPLData(dict):
         """
         ret_instance = cls()
         ret_instance.load(npz_path)
+        return ret_instance
+
+    @classmethod
+    def from_dict(cls, smpl_data_dict: Union['SMPLData', dict]) -> 'SMPLData':
+        """Construct a body model data structure from a SMPLData, or a degraded
+        smpl_data in dict type.
+
+        Args:
+            smpl_data_dict (dict):
+                A degraded smpl_data in dict type.
+
+        Returns:
+            SMPLData:
+                A SMPLData instance load from dict.
+        """
+        assert 'gender' in smpl_data_dict
+        assert 'fullpose' in smpl_data_dict
+        assert 'transl' in smpl_data_dict
+        assert 'betas' in smpl_data_dict
+        ret_instance = cls(
+            gender=smpl_data_dict['gender'],
+            fullpose=smpl_data_dict['fullpose'],
+            transl=smpl_data_dict['transl'],
+            betas=smpl_data_dict['betas'],
+        )
         return ret_instance
 
     @classmethod
@@ -375,7 +391,8 @@ class SMPLData(dict):
         np.savez_compressed(npz_path, **self)
 
     def from_param_dict(self, smpl_dict: dict) -> None:
-        """Load SMPL parameters from smpl_dict.
+        """Load SMPL parameters from smpl_dict, which is the output of a body
+        model in most cases.
 
         Args:
             smpl_dict (dict):
