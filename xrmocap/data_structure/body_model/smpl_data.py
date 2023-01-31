@@ -245,9 +245,9 @@ class SMPLData(dict):
             TypeError: Type of mask is not correct.
         """
         if isinstance(mask, np.ndarray):
-            mask_np = mask.reshape(-1)
+            mask_np = mask.reshape(-1).astype(np.uint8)
         elif isinstance(mask, torch.Tensor):
-            mask_np = mask.detach().cpu().numpy().reshape(-1)
+            mask_np = mask.detach().cpu().numpy().reshape(-1).astype(np.uint8)
         else:
             self.logger.error('Type of mask is not correct.\n' +
                               f'Type: {type(mask)}.')
@@ -351,6 +351,14 @@ class SMPLData(dict):
             ndarray: mask in shape [batch_size, ].
         """
         return self.__getitem__('mask').reshape(-1)
+
+    def get_gender(self) -> str:
+        """Get gender.
+
+        Returns:
+            str: gender in ['neutral', 'female', 'male'].
+        """
+        return self.__getitem__('gender')
 
     def to_param_dict(self, repeat_betas: bool = True) -> dict:
         """Split fullpose into global_orient and body_pose, return all the
@@ -481,4 +489,8 @@ class SMPLData(dict):
         with np.load(npz_path, allow_pickle=True) as npz_file:
             tmp_data_dict = dict(npz_file)
             for key, value in tmp_data_dict.items():
+                if isinstance(value, np.ndarray) and\
+                        len(value.shape) == 0:
+                    # value is not an ndarray before dump
+                    value = value.item()
                 self.__setitem__(key, value)
