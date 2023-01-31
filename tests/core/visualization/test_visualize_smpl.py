@@ -99,6 +99,38 @@ def test_visualize_smpl_data():
         overwrite=True,
         background_dir=img_dir,
     )
+    # test return array
+    ret_arr = visualize_smpl_data(
+        smpl_data=smpl_data_list[0],
+        body_model=neutral_cfg,
+        cam_param=pinhole_param,
+        output_path=output_frames,
+        overwrite=True,
+        background_dir=img_dir,
+        return_array=True)
+    assert len(ret_arr.shape) == 4 and ret_arr.shape[0] == 5
+    # test not overwriting
+    with pytest.raises(FileExistsError):
+        visualize_smpl_data(
+            smpl_data=smpl_data_list[0],
+            body_model=neutral_cfg,
+            cam_param=pinhole_param,
+            output_path=output_frames,
+            overwrite=False,
+            background_dir=img_dir)
+    # skip batch_size=1 until xrprimer release
+    # the fix of images_to_video()
+
+    # # test one frame per batch
+    # visualize_smpl_data(
+    #     smpl_data=smpl_data_list[0],
+    #     body_model=neutral_cfg,
+    #     cam_param=pinhole_param,
+    #     output_path=output_frames,
+    #     overwrite=True,
+    #     background_dir=img_dir,
+    #     batch_size=1
+    # )
     # test multi-person, one gender
     output_frames = os.path.join(output_dir, 'mperson_sgender')
     visualize_smpl_data(
@@ -139,7 +171,7 @@ def test_visualize_smpl_data():
         background_arr=black_background,
     )
     # skip background_video until xrprimer release
-    # the fix of video_to_array()
+    # the fix of array_to_video()
 
     # # test background_video
     # bg_video_path = os.path.join(output_dir, 'black_background.mp4')
