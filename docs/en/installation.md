@@ -28,6 +28,7 @@ Optional:
 | [MMTracking](https://github.com/open-mmlab/mmtracking)   | Multiple object tracking.      | Install `mmcv-full`, instead of `mmcv`.                      |
 | [MMDeploy](https://github.com/open-mmlab/mmdeploy)       | Faster mmdet+mmpose inference. | Install `mmcv-full`, `cudnn` and `TensorRT`.                 |
 | [Aniposelib](https://github.com/google/aistplusplus_api) | Triangulation.                 | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
+| [Minimal Pytorch Rasterizer](https://github.com/rmbashirov/minimal_pytorch_rasterizer) | SMPL mesh fast visualization.                 | Sensitive to pytorch version. |
 
 ## A from-scratch setup script
 

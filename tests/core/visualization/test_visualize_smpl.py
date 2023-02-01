@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pytest
 import shutil
+import torch
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
@@ -24,6 +25,8 @@ def fixture():
     os.makedirs(output_dir, exist_ok=False)
 
 
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason='No GPU device has been found.')
 def test_visualize_smpl_data():
     # load data
     smpl_data_list = []
@@ -63,8 +66,7 @@ def test_visualize_smpl_data():
         cam_param=pinhole_param,
         output_path=output_frames,
         overwrite=True,
-        background_dir=img_dir,
-    )
+        background_dir=img_dir)
     # test one person, one gender, body_model in cfg
     output_frames = os.path.join(output_dir, 'sperson_sgender_cfg.mp4')
     visualize_smpl_data(
