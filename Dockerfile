@@ -64,6 +64,12 @@ RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     cd mmhuman3d && pip install -e . && \
     pip cache purge
 
+# Install mpr for mesh visualization
+RUN . /root/miniconda3/etc/profile.d/conda.sh && \
+    conda activate openxrlab && \
+    pip install git+https://github.com/rmbashirov/minimal_pytorch_rasterizer.git && \
+    pip cache purge
+
 # Clone xrmocap and install
 RUN . /root/miniconda3/etc/profile.d/conda.sh && \
     conda activate openxrlab && \

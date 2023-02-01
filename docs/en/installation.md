@@ -155,22 +155,21 @@ If everything goes well, try to [run unittest](#test-environment) or go back to 
 We provide a [Dockerfile](../../Dockerfile) to build an image. Ensure that you are using [docker version](https://docs.docker.com/engine/install/) >=19.03 and `"default-runtime": "nvidia"` in `daemon.json`.
 
 ```shell
-# build an image with PyTorch 1.8.1, CUDA 10.2
-docker build -t xrmocap .
-```
-
-Run it with
-
-```shell
-docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data xrmocap
+sh scripts/build_docker.sh
 ```
 
 Or pull a built image from docker hub.
 
 ```shell
-docker pull openxrlab/xrmocap_runtime
-docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/xrmocap/data openxrlab/xrmocap_runtime
+docker pull openxrlab/xrmocap_runtime:ubuntu1804_x64_cu114_py38_torch1120_mmcv161
 ```
+
+Run it with:
+
+```shell
+sh scripts/run_docker.sh
+```
+
 
 ### Test environment
 
