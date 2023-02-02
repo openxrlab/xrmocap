@@ -101,11 +101,8 @@ class SMPLXData(SMPLData):
                 A SMPLXData instance load from dict.
         """
         smplx_data_dict = smpl_data_dict
-        assert 'gender' in smplx_data_dict
-        assert 'fullpose' in smplx_data_dict
-        assert 'transl' in smplx_data_dict
-        assert 'betas' in smplx_data_dict
-        assert 'expression' in smplx_data_dict
+        min_keys = {'gender', 'fullpose', 'transl', 'betas', 'expression'}
+        assert min_keys <= smplx_data_dict.keys()
         ret_instance = cls(
             gender=smplx_data_dict['gender'],
             fullpose=smplx_data_dict['fullpose'],

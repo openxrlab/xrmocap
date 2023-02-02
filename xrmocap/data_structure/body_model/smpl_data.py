@@ -118,10 +118,8 @@ class SMPLData(dict):
             SMPLData:
                 A SMPLData instance load from dict.
         """
-        assert 'gender' in smpl_data_dict
-        assert 'fullpose' in smpl_data_dict
-        assert 'transl' in smpl_data_dict
-        assert 'betas' in smpl_data_dict
+        min_keys = {'gender', 'fullpose', 'transl', 'betas'}
+        assert min_keys <= smpl_data_dict.keys()
         ret_instance = cls(
             gender=smpl_data_dict['gender'],
             fullpose=smpl_data_dict['fullpose'],
