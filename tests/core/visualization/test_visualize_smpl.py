@@ -4,9 +4,11 @@ import os
 import pytest
 import shutil
 import torch
+from xrprimer import __version__ as xrprimer_version
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
+from xrprimer.utils.ffmpeg_utils import array_to_video
 
 from xrmocap.core.visualization.visualize_smpl import visualize_smpl_data
 from xrmocap.data_structure.body_model import SMPLData
@@ -123,16 +125,16 @@ def test_visualize_smpl_data():
     # skip batch_size=1 until xrprimer release
     # the fix of images_to_video()
 
-    # # test one frame per batch
-    # visualize_smpl_data(
-    #     smpl_data=smpl_data_list[0],
-    #     body_model=neutral_cfg,
-    #     cam_param=pinhole_param,
-    #     output_path=output_frames,
-    #     overwrite=True,
-    #     background_dir=img_dir,
-    #     batch_size=1
-    # )
+    # test one frame per batch
+    if int(xrprimer_version.split('.')[1]) > 6:
+        visualize_smpl_data(
+            smpl_data=smpl_data_list[0],
+            body_model=neutral_cfg,
+            cam_param=pinhole_param,
+            output_path=output_frames,
+            overwrite=True,
+            background_dir=img_dir,
+            batch_size=1)
     # test multi-person, one gender
     output_frames = os.path.join(output_dir, 'mperson_sgender')
     visualize_smpl_data(
@@ -175,18 +177,19 @@ def test_visualize_smpl_data():
     # skip background_video until xrprimer release
     # the fix of array_to_video()
 
-    # # test background_video
-    # bg_video_path = os.path.join(output_dir, 'black_background.mp4')
-    # array_to_video(image_array=black_background, output_path=bg_video_path)
-    # output_video = os.path.join(output_dir, 'background_video.mp4')
-    # visualize_smpl_data(
-    #     smpl_data=smpl_data_list,
-    #     body_model=neutral_model,
-    #     cam_param=pinhole_param,
-    #     output_path=output_video,
-    #     overwrite=True,
-    #     background_video=bg_video_path,
-    # )
+    # test background_video
+    if int(xrprimer_version.split('.')[1]) > 6:
+        bg_video_path = os.path.join(output_dir, 'black_background.mp4')
+        array_to_video(image_array=black_background, output_path=bg_video_path)
+        output_video = os.path.join(output_dir, 'background_video.mp4')
+        visualize_smpl_data(
+            smpl_data=smpl_data_list,
+            body_model=neutral_model,
+            cam_param=pinhole_param,
+            output_path=output_video,
+            overwrite=True,
+            background_video=bg_video_path,
+        )
 
 
 @pytest.mark.skipif(
