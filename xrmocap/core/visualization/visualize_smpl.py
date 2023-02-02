@@ -106,21 +106,18 @@ def visualize_smpl_data(
     if isinstance(body_model, dict):
         model = build_body_model(body_model).to(device)
         body_model_dict[model.gender] = model
-        default_body_model = model
     elif isinstance(body_model, list):
         body_model_list = body_model
         for body_model in body_model_list:
             if isinstance(body_model, dict):
                 model = build_body_model(body_model).to(device)
-                body_model_dict[model.gender] = model
             else:
                 model = body_model.to(device)
-                body_model_dict[model.gender] = model
-            default_body_model = model
+            body_model_dict[model.gender] = model
     else:
         model = body_model.to(device)
         body_model_dict[model.gender] = model
-        default_body_model = model
+    default_body_model = model
     # prepare smpl_data_list for multi-person
     if not isinstance(smpl_data, dict):
         data_len = smpl_data[0].get_batch_size()
