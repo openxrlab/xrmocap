@@ -56,7 +56,7 @@ class SMPLData(dict):
                 Defaults to None,
                 zero-tensor in shape [n_frame, 10] will be created.
             mask (Union[np.ndarray, torch.Tensor, None], optional):
-                A tensor or ndarray for visibility mask,
+                A tensor or ndarray for framewise visibility mask,
                 in shape [n_frame, ].
                 Defaults to None,
                 one-tensor in shape [n_frame, ] will be created.
@@ -232,7 +232,7 @@ class SMPLData(dict):
         super().__setitem__('betas', betas_np)
 
     def set_mask(self, mask: Union[np.ndarray, torch.Tensor]) -> None:
-        """Set mask data.
+        """Set framewise mask data.
 
         Args:
             mask (Union[np.ndarray, torch.Tensor]):

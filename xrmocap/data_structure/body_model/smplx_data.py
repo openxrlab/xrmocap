@@ -64,7 +64,7 @@ class SMPLXData(SMPLData):
                 Defaults to None,
                 zero-tensor in shape [frame_num, 10] will be created.
             mask (Union[np.ndarray, torch.Tensor, None], optional):
-                A tensor or ndarray for visibility mask,
+                A tensor or ndarray for framewise visibility mask,
                 in shape [n_frame, ].
                 Defaults to None,
                 one-tensor in shape [n_frame, ] will be created.
