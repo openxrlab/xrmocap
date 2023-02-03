@@ -22,27 +22,20 @@ def test_new():
     smpl_data = SMPLData()
     assert hasattr(smpl_data, 'logger')
     assert smpl_data.logger is not None
-    # new from dict
-    smpl_data = SMPLData({'n_frame': 20})
-    assert smpl_data['n_frame'] == 20
     # new with specific value
     smpl_data = SMPLData(
         gender='neutral',
         fullpose=np.zeros(shape=(2, 24, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
+        mask=np.ones(shape=(2, )),
         logger='root')
     assert smpl_data['betas'][0, 0] == 0
-    # new with source dict
-    src_dict = {'n_frame': 2, 'betas': np.ones(shape=(2, 10))}
-    smpl_data = SMPLData(
-        src_dict=src_dict,
-        gender='neutral',
-        fullpose=np.zeros(shape=(2, 24, 3)),
-        transl=np.zeros(shape=(2, 3)),
-        betas=np.zeros(shape=(2, 10)),
-        logger='root')
-    assert smpl_data['betas'][0, 0] == 0
+    # new with smpl_dict
+    smpl_data['betas'][0, 0] = 1
+    smpl_data_dict = dict(smpl_data)
+    smpl_data = SMPLData.from_dict(smpl_data_dict)
+    assert smpl_data['betas'][0, 0] == 1
 
 
 def test_set_gender():

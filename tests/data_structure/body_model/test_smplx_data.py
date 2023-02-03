@@ -23,28 +23,21 @@ def test_new():
     assert hasattr(smplx_data, 'logger')
     assert smplx_data.logger is not None
     assert smplx_data.get_fullpose().shape[1] == 55
-    # new from dict
-    smplx_data = SMPLXData({'frame_num': 20})
-    assert smplx_data['frame_num'] == 20
     # new with specific value
     smplx_data = SMPLXData(
         gender='neutral',
         fullpose=np.zeros(shape=(2, 55, 3)),
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
+        mask=np.ones(shape=(2, )),
         logger='root')
     assert smplx_data['betas'][0, 0] == 0
     assert smplx_data.get_expression().shape == (2, 10)
-    # new with source dict
-    src_dict = {'frame_num': 2, 'betas': np.ones(shape=(2, 10))}
-    smplx_data = SMPLXData(
-        src_dict=src_dict,
-        gender='neutral',
-        fullpose=np.zeros(shape=(2, 55, 3)),
-        transl=np.zeros(shape=(2, 3)),
-        betas=np.zeros(shape=(2, 10)),
-        logger='root')
-    assert smplx_data['betas'][0, 0] == 0
+    # new with smplx_data_dict
+    smplx_data['betas'][0, 0] = 1
+    smplx_data_dict = dict(smplx_data)
+    smplx_data = SMPLXData.from_dict(smplx_data_dict)
+    assert smplx_data['betas'][0, 0] == 1
 
 
 def test_set_gender():

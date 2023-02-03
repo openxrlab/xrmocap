@@ -31,22 +31,17 @@ class SMPLXData(SMPLData):
     }
 
     def __init__(self,
-                 src_dict: dict = None,
                  gender: Union[Literal['female', 'male', 'neutral'],
                                None] = None,
                  fullpose: Union[np.ndarray, torch.Tensor, None] = None,
                  transl: Union[np.ndarray, torch.Tensor, None] = None,
                  betas: Union[np.ndarray, torch.Tensor, None] = None,
                  expression: Union[np.ndarray, torch.Tensor, None] = None,
+                 mask: Union[np.ndarray, torch.Tensor, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
-        """Construct a SMPLXData instance with pre-set values. If any of
-        gender, fullpose, transl, betas is provided, it will override the item
-        in source_dict.
+        """Construct a SMPLXData instance with pre-set values.
 
         Args:
-            src_dict (dict, optional):
-                A dict with items in HumanData fashion.
-                Defaults to None.
             gender (Union[
                     Literal['female', 'male', 'neutral'], None], optional):
                 Gender of the body model.
@@ -68,23 +63,53 @@ class SMPLXData(SMPLData):
                 in shape [frame_num, expression_dim].
                 Defaults to None,
                 zero-tensor in shape [frame_num, 10] will be created.
+            mask (Union[np.ndarray, torch.Tensor, None], optional):
+                A tensor or ndarray for framewise visibility mask,
+                in shape [n_frame, ].
+                Defaults to None,
+                one-tensor in shape [n_frame, ] will be created.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
         SMPLData.__init__(
             self,
-            src_dict=src_dict,
             gender=gender,
             transl=transl,
             fullpose=fullpose,
             betas=betas,
+            mask=mask,
             logger=logger)
         if expression is None and 'expression' not in self:
             expression = np.zeros(shape=(self.get_batch_size(), 10))
         if expression is not None:
             self.set_expression(expression)
         self.body_joints_num = self.__class__.DEFAULT_BODY_JOINTS_NUM
+
+    @classmethod
+    def from_dict(cls, smpl_data_dict: Union['SMPLXData',
+                                             dict]) -> 'SMPLXData':
+        """Construct a body model data structure from a SMPLXData, or a
+        degraded smplx_data in dict type.
+
+        Args:
+            smplx_data_dict (dict):
+                A degraded smplx_data in dict type.
+
+        Returns:
+            SMPLXData:
+                A SMPLXData instance load from dict.
+        """
+        smplx_data_dict = smpl_data_dict
+        min_keys = {'gender', 'fullpose', 'transl', 'betas', 'expression'}
+        assert min_keys <= smplx_data_dict.keys()
+        ret_instance = cls(
+            gender=smplx_data_dict['gender'],
+            fullpose=smplx_data_dict['fullpose'],
+            transl=smplx_data_dict['transl'],
+            betas=smplx_data_dict['betas'],
+            expression=smplx_data_dict['expression'])
+        return ret_instance
 
     @classmethod
     def get_fullpose_dim(cls) -> int:
@@ -160,7 +185,8 @@ class SMPLXData(SMPLData):
             SMPLData.__setitem__(self, __k, __v)
 
     def from_param_dict(self, smplx_dict: dict) -> None:
-        """Load SMPLX parameters from smplx_dict.
+        """Load SMPLX parameters from smplx_dict, which is the output of a body
+        model in most cases.
 
         Args:
             smplx_dict (dict):

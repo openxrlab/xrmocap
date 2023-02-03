@@ -50,7 +50,7 @@ c. New an instance with a dict.
 
 ```python
 smpl_dict = dict(smpl_data)
-another_smpl_data = SMPLData(src_dict=smpl_dict)
+another_smpl_data = SMPLData.from_dict(smpl_dict)
 ```
 
 ### Convert into body_model input
