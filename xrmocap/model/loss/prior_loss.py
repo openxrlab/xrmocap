@@ -287,6 +287,10 @@ class SmoothJointLoss(torch.nn.Module):
             torch.Tensor: The calculated loss
         """
         assert reduction_override in (None, 'none', 'mean', 'sum')
+        # No smooth when there's only one frame
+        if body_pose.shape[0] <= 1:
+            return torch.zeros_like(body_pose[0, 0])
+
         reduction = reduction_override \
             if reduction_override is not None \
             else self.reduction

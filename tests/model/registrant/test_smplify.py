@@ -114,3 +114,46 @@ def test_smplify_keypoints3d():
     assert 'full_pose' in smplify_output
     assert 'joints' in smplify_output
     assert 'total_loss' in smplify_output
+
+
+def test_smplify_1frame_keypoints3d():
+    keypoints3d_path = os.path.join(input_dir, 'human_data_tri.npz')
+    human_data = dict(np.load(keypoints3d_path, allow_pickle=True))
+    keypoints3d, keypoints3d_mask = convert_kps_mm(
+        keypoints=human_data['keypoints3d'][:2, :, :3],
+        src='human_data',
+        dst='smpl',
+        mask=human_data['keypoints3d_mask'])
+    keypoints3d = torch.from_numpy(keypoints3d).to(
+        dtype=torch.float32, device=device)[:1, ...]
+    keypoints3d_conf = torch.from_numpy(np.expand_dims(
+        keypoints3d_mask, 0)).to(
+            dtype=torch.float32, device=device).repeat(keypoints3d.shape[0],
+                                                       1)[:1, ...]
+    # build and run
+    smplify_config = dict(
+        mmcv.Config.fromfile('configs/modules/model/' +
+                             'registrant/smplify_test.py'))
+    smplify_config['device'] = device
+    smplify = build_registrant(smplify_config)
+    #
+    kp3d_mse_input = Keypoint3dMSEInput(
+        keypoints3d=keypoints3d,
+        keypoints3d_conf=keypoints3d_conf,
+        keypoints3d_convention='smpl',
+        handler_key='keypoints3d_mse')
+    kp3d_llen_input = Keypoint3dLimbLenInput(
+        keypoints3d=keypoints3d,
+        keypoints3d_conf=keypoints3d_conf,
+        keypoints3d_convention='smpl',
+        handler_key='keypoints3d_limb_len')
+    smplify_output = smplify(input_list=[kp3d_mse_input, kp3d_llen_input])
+
+    smpl_data = SMPLData()
+    for k, v in smplify_output.items():
+        if isinstance(v, torch.Tensor):
+            np_v = v.detach().cpu().numpy()
+            assert not np.any(np.isnan(np_v)), f'{k} fails.'
+    smpl_data.from_param_dict(smplify_output)
+    result_path = os.path.join(output_dir, 'smpl_result.npz')
+    smpl_data.dump(result_path)

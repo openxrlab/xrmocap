@@ -79,7 +79,11 @@ def main(args):
         keypoints2d_path = os.path.join(
             args.output_dir,
             f'{smc_name}_keypoints2d_' + f'view{index:02d}.npz')
-        keypoints2d.dump(keypoints2d_path)
+        if keypoints2d is not None:
+            keypoints2d.dump(keypoints2d_path)
+        else:
+            logger.warning(
+                f'No keypoints2d has been detected in view{index:02d}.')
     keypoints3d_path = os.path.join(args.output_dir,
                                     f'{smc_name}_keypoints3d.npz')
     keypoints3d.dump(keypoints3d_path)
