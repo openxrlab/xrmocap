@@ -2,10 +2,10 @@ aniposelib @ git+https://github.com/liruilong940607/aniposelib.git
 filterpy
 h5py
 mediapipe
-mmdet @ git+https://github.com/open-mmlab/mmdetection.git@2.27.0
+mmdet @ git+https://github.com/open-mmlab/mmdetection.git@v2.27.0
 mmhuman3d @ git+https://github.com/open-mmlab/mmhuman3d.git
-mmpose @ git+https://github.com/open-mmlab/mmpose.git@0.29.0
-mmtrack @ git+https://github.com/open-mmlab/mmtracking.git@0.14.0
+mmpose @ git+https://github.com/open-mmlab/mmpose.git@v0.29.0
+mmtrack @ git+https://github.com/open-mmlab/mmtracking.git@v0.14.0
 numpy
 pre-commit
 prettytable
