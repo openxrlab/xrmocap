@@ -52,6 +52,9 @@ conda install -y pytorch3d -c pytorch3d
 # install mmcv-full
 pip install mmcv-full==1.6.1 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.0/index.html
 
+# install minimal_pytorch_rasterizer
+pip install git+https://github.com/rmbashirov/minimal_pytorch_rasterizer.git
+
 # install xrprimer
 pip install xrprimer
 
@@ -71,7 +74,9 @@ cd /opt && \
 cd /opt && \
 	conda install cmake && \
     git clone https://github.com/open-mmlab/mmdeploy.git && \
-    cd mmdeploy && pip install -e . && \
+    cd mmdeploy && \
+    git reset --hard 1b048d88ca11782de1e9ebf6f9583259167a1d5b && \
+    pip install -e . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_CXX_COMPILER=g++ -DMMDEPLOY_TARGET_BACKENDS=trt \
         -DTENSORRT_DIR=/opt/TensorRT-8.2.3.0 \
@@ -128,7 +133,15 @@ pip install git+https://github.com/open-mmlab/mmhuman3d.git
 
 **Note3:** Do not install optional requirements of mmhuman3d in this step.
 
-#### c. Install XRPrimer.
+#### c. Install minimal_pytorch_rasterizer.
+
+```shell
+pip install git+https://github.com/rmbashirov/minimal_pytorch_rasterizer.git
+```
+
+**Note1:** CUDA compilation is required. For slurm user, please run pip with GPU resources.
+
+#### d. Install XRPrimer.
 
 ```shell
 pip install xrprimer
@@ -136,7 +149,7 @@ pip install xrprimer
 
 If you want to edit xrprimer, please follow the [official instructions](https://github.com/openxrlab/xrprimer/) to install it from source.
 
-#### d. Install XRMoCap to virtual environment,  in editable mode.
+#### e. Install XRMoCap to virtual environment, in editable mode.
 
 ```shell
 git clone https://github.com/openxrlab/xrmocap.git
@@ -146,7 +159,42 @@ pip install -r requirements/runtime.txt
 pip install -e .
 ```
 
-#### e. Run unittests or demos
+#### f. Install mmdeploy and build ops.
+
+```shell
+# install cudnn for mmdeploy
+apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8=8.2.4.15-1+cuda11.4 \
+    libcudnn8-dev=8.2.4.15-1+cuda11.4 \
+    && apt-mark hold libcudnn8 && \
+    rm -rf /var/lib/apt/lists/*
+# install TensorRT for mmdeploy
+cd /opt && \
+    tar -xzvf TensorRT-8.2.3.0.Linux.x86_64-gnu.cuda-11.4.cudnn8.2.tar.gz && \
+    rm TensorRT-8.2.3.0.Linux.x86_64-gnu.cuda-11.4.cudnn8.2.tar.gz && \
+    cd TensorRT-8.2.3.0/python && \
+    pip install tensorrt-8.2.3.0-cp38-none-linux_x86_64.whl && \
+# install mmdeploy and build ops
+cd /opt && \
+	conda install cmake && \
+    git clone https://github.com/open-mmlab/mmdeploy.git && \
+    cd mmdeploy && \
+    git reset --hard 1b048d88ca11782de1e9ebf6f9583259167a1d5b && \
+    pip install -e . && \
+    mkdir -p build && cd build && \
+    cmake -DCMAKE_CXX_COMPILER=g++ -DMMDEPLOY_TARGET_BACKENDS=trt \
+        -DTENSORRT_DIR=/opt/TensorRT-8.2.3.0 \
+        -DCUDNN_DIR=/usr/lib/x86_64-linux-gnu .. && \
+    make -j$(nproc) && make install && \
+    make clean
+```
+**Note1:** If you have no permission, replace `/opt` with somewhere under your user directory.
+
+**Note2:** Please get TensorRT from nvidia official website, an account is required.
+
+**Note3:** We've only tested mmdeploy 0.12.0, other version may not work as expectation.
+
+#### g. Run unittests or demos
 
 If everything goes well, try to [run unittest](#test-environment) or go back to [run demos](./getting_started.md#inference)
 
@@ -178,3 +226,8 @@ To test whether the environment is well installed, please refer to [test doc](./
 ### Frequently Asked Questions
 
 If your environment fails, check our [FAQ](./faq.md) first, it might be helpful to some typical questions.
+
+### Version list
+
+To check tested version of a specific package, please run our docker image. All unittests have been passed
+before we publishing a new docker image.

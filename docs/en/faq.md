@@ -24,8 +24,24 @@ We list some common troubles faced by many users and their corresponding solutio
 
 - 'BrokenPipeError: ../../lib/python3.8/site-packages/xrprimer/utils/ffmpeg_utils.py:189: BrokenPipeError'
 
-  You've installed a wrong version of ffmpeg. Try to install it by the following command, and do not 	specify any channel:
+  You've installed a wrong version of ffmpeg. Try to install it by the following command, and do not specify any channel:
 
   ```bash
   conda install ffmpeg
+  ```
+
+- 'ImportError:numpy.core.multiarray failed to import'
+
+  Numpy of some versions is not compatible with mmpose, so is scipy. Install a tested version will help:
+
+  ```bash
+  pip install numpy==1.23.5 scipy==1.10.0
+  ```
+
+- 'RuntimeError: nms_impl: implementation for device cuda:0 not found.'
+
+  You have a newer mmcv-full and an older mmdet. Install an older mmcv-full may help. Remember to modify torch and cuda version according to your environment:
+
+  ```bash
+  pip install mmcv-full==1.6.1 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.0/index.html
   ```
