@@ -4,7 +4,7 @@ import pytest
 import shutil
 import torch
 
-from xrmocap.data_structure.body_model import SMPLXData
+from xrmocap.data_structure.body_model import SMPLXData, auto_load_smpl_data
 
 output_dir = 'tests/data/output/data_structure/' +\
     'body_model/test_smplx_data'
@@ -179,3 +179,7 @@ def test_file_io():
     with pytest.raises(FileExistsError):
         smplx_data.dump(npz_path, overwrite=False)
     smplx_data.dump(npz_path, overwrite=True)
+    # test auto load
+    instance, class_name = auto_load_smpl_data(npz_path)
+    assert isinstance(instance, SMPLXData)
+    assert class_name == 'SMPLXData'

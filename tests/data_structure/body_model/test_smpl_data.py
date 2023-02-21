@@ -4,7 +4,7 @@ import pytest
 import shutil
 import torch
 
-from xrmocap.data_structure.body_model import SMPLData
+from xrmocap.data_structure.body_model import SMPLData, auto_load_smpl_data
 
 output_dir = 'tests/data/output/data_structure/' +\
     'body_model/test_smpl_data'
@@ -166,3 +166,13 @@ def test_file_io():
     with pytest.raises(FileExistsError):
         smpl_data.dump(npz_path, overwrite=False)
     smpl_data.dump(npz_path, overwrite=True)
+    # test auto load
+    instance, class_name = auto_load_smpl_data(npz_path)
+    assert isinstance(instance, SMPLData)
+    assert class_name == 'SMPLData'
+    # test wrong type auto load
+    npz_path = os.path.join(output_dir, 'dumped_some_data.npz')
+    dict_to_dump = dict(a='a', b='b')
+    np.savez_compressed(npz_path, **dict_to_dump)
+    with pytest.raises(TypeError):
+        instance, class_name = auto_load_smpl_data(npz_path)
