@@ -2,7 +2,7 @@
 from mmcv.utils import Registry
 from torchvision.transforms import Normalize, Resize, ToTensor
 
-from .color import BGR2RGB
+from .color import BGR2RGB, RGB2BGR
 from .convert import CV2ToPIL
 from .load import LoadImageCV2, LoadImagePIL
 from .shape import WarpAffine
@@ -11,6 +11,7 @@ from .shape import WarpAffine
 
 IMAGE_TRANSFORM = Registry('image_transform')
 IMAGE_TRANSFORM.register_module(name='BGR2RGB', module=BGR2RGB)
+IMAGE_TRANSFORM.register_module(name='RGB2BGR', module=RGB2BGR)
 IMAGE_TRANSFORM.register_module(name='LoadImageCV2', module=LoadImageCV2)
 IMAGE_TRANSFORM.register_module(name='LoadImagePIL', module=LoadImagePIL)
 IMAGE_TRANSFORM.register_module(name='CV2ToPIL', module=CV2ToPIL)

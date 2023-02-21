@@ -40,6 +40,23 @@ class BGR2RGB(BaseImageTransform):
         return bgr2rgb(input, self.color_dim)
 
 
+class RGB2BGR(BGR2RGB):
+
+    def __init__(self,
+                 color_dim: int = -1,
+                 logger: Union[None, str, logging.Logger] = None) -> None:
+        """Convert image array of any shape between BGR and RGB.
+
+        Args:
+            color_dim (int, optional):
+                Which dim is the color channel. Defaults to -1.
+            logger (Union[None, str, logging.Logger], optional):
+                Logger for logging. If None, root logger will be selected.
+                Defaults to None.
+        """
+        BGR2RGB.__init__(self, color_dim=color_dim, logger=logger)
+
+
 def bgr2rgb(input_array: Union[np.ndarray, torch.Tensor],
             color_dim: int = -1) -> Union[np.ndarray, torch.Tensor]:
     """Convert image array of any shape between BGR and RGB.
@@ -71,3 +88,22 @@ def bgr2rgb(input_array: Union[np.ndarray, torch.Tensor],
     input_array[tuple(b_slice_list)] = input_array[tuple(r_slice_list)]
     input_array[tuple(r_slice_list)] = b_backup
     return input_array
+
+
+def rgb2bgr(input_array: Union[np.ndarray, torch.Tensor],
+            color_dim: int = -1) -> Union[np.ndarray, torch.Tensor]:
+    """Convert image array of any shape between BGR and RGB.
+
+    Args:
+        input_array (Union[np.ndarray, torch.Tensor]):
+            An array of images. The shape could be:
+            [h, w, n_ch], [n_frame, h, w, n_ch],
+            [n_view, n_frame, h, w, n_ch], etc.
+        color_dim (int, optional):
+            Which dim is the color channel. Defaults to -1.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]:
+            Same type as the input.
+    """
+    return bgr2rgb(input_array=input_array, color_dim=color_dim)

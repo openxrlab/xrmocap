@@ -4,7 +4,7 @@ img_pipeline = [
     dict(type='LoadImagePIL'),
     dict(type='Resize', size=224),
     dict(type='ToTensor'),
-    dict(type='BGR2RGB'),
+    dict(type='RGB2BGR'),
 ]
 meta_path = 'tests/data/data/test_dataset/Shelf_unittest/' +\
     'xrmocap_meta_perception2d'
