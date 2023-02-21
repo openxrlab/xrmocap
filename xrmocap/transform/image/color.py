@@ -58,7 +58,8 @@ class RGB2BGR(BGR2RGB):
 
 
 def bgr2rgb(input_array: Union[np.ndarray, torch.Tensor],
-            color_dim: int = -1) -> Union[np.ndarray, torch.Tensor]:
+            color_dim: int = -1,
+            inplace: bool = False) -> Union[np.ndarray, torch.Tensor]:
     """Convert image array of any shape between BGR and RGB.
 
     Args:
@@ -68,6 +69,9 @@ def bgr2rgb(input_array: Union[np.ndarray, torch.Tensor],
             [n_view, n_frame, h, w, n_ch], etc.
         color_dim (int, optional):
             Which dim is the color channel. Defaults to -1.
+        inplace (bool, optional):
+            Whether it is an in-place operation.
+            Defaults to False.
 
     Returns:
         Union[np.ndarray, torch.Tensor]:
@@ -83,15 +87,24 @@ def bgr2rgb(input_array: Union[np.ndarray, torch.Tensor],
     b_slice_list[color_dim] = slice(2, 3, 1)
     if isinstance(input_array, torch.Tensor):
         b_backup = input_array[tuple(b_slice_list)].clone()
+        if not inplace:
+            ret_array = input_array.clone()
+        else:
+            ret_array = input_array
     else:
         b_backup = input_array[tuple(b_slice_list)].copy()
-    input_array[tuple(b_slice_list)] = input_array[tuple(r_slice_list)]
-    input_array[tuple(r_slice_list)] = b_backup
-    return input_array
+        if not inplace:
+            ret_array = input_array.copy()
+        else:
+            ret_array = input_array
+    ret_array[tuple(b_slice_list)] = input_array[tuple(r_slice_list)]
+    ret_array[tuple(r_slice_list)] = b_backup
+    return ret_array
 
 
 def rgb2bgr(input_array: Union[np.ndarray, torch.Tensor],
-            color_dim: int = -1) -> Union[np.ndarray, torch.Tensor]:
+            color_dim: int = -1,
+            inplace: bool = False) -> Union[np.ndarray, torch.Tensor]:
     """Convert image array of any shape between BGR and RGB.
 
     Args:
@@ -101,9 +114,13 @@ def rgb2bgr(input_array: Union[np.ndarray, torch.Tensor],
             [n_view, n_frame, h, w, n_ch], etc.
         color_dim (int, optional):
             Which dim is the color channel. Defaults to -1.
+        inplace (bool, optional):
+            Whether it is an in-place operation.
+            Defaults to False.
 
     Returns:
         Union[np.ndarray, torch.Tensor]:
             Same type as the input.
     """
-    return bgr2rgb(input_array=input_array, color_dim=color_dim)
+    return bgr2rgb(
+        input_array=input_array, color_dim=color_dim, inplace=inplace)

@@ -52,3 +52,12 @@ def test_bgr2rgb():
     bgr_image = bgr2rgb(rgb_image, color_dim=-1)
     assert bgr_image[0, 0, 0, 0] == 2
     assert bgr_image[0, 0, 0, 2] == 0
+    # test in-place
+    rgb_image = np.zeros(shape=(3, 1920, 1080))
+    rgb_image[2, ...] = 2
+    rgb2bgr(rgb_image, color_dim=0, inplace=True)
+    assert rgb_image[0, 0, 0] == 2
+    rgb_image = torch.zeros(size=(3, 1920, 1080))
+    rgb_image[2, ...] = 2
+    rgb2bgr(rgb_image, color_dim=0, inplace=True)
+    assert rgb_image[0, 0, 0] == 2
