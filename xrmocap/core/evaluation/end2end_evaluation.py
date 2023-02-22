@@ -243,7 +243,15 @@ class End2EndEvaluation(BaseEvaluation):
             table_str = '\n' + table.get_string()
             self.logger.info(table_str)
             
-            accuracy = full_results[self.checkpoint_select]
+            if self.checkpoint_select in full_results:
+                accuracy = full_results[self.checkpoint_select]
+            else:
+                self.logger.warning("Metric for checkpoint selection "
+                  f"{self.checkpoint_select} is not available, "
+                  "This may cause troubles in training,"
+                  "please check the config.")
+                if is_train:
+                    raise KeyError
             
             # save and visualize when it is not train
             if not is_train:
