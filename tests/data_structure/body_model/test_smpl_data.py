@@ -170,6 +170,8 @@ def test_file_io():
     instance, class_name = auto_load_smpl_data(npz_path)
     assert isinstance(instance, SMPLData)
     assert class_name == 'SMPLData'
+    assert instance.get_fullpose().shape[1] == SMPLData.get_fullpose_dim()
+    assert 'expression' not in instance
     # test wrong type auto load
     npz_path = os.path.join(output_dir, 'dumped_some_data.npz')
     dict_to_dump = dict(a='a', b='b')

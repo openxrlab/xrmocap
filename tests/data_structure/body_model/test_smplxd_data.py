@@ -185,3 +185,6 @@ def test_file_io():
     instance, class_name = auto_load_smpl_data(npz_path)
     assert isinstance(instance, SMPLXDData)
     assert class_name == 'SMPLXDData'
+    assert instance.get_fullpose().shape[1] == SMPLXDData.get_fullpose_dim()
+    assert 'expression' in instance
+    assert 'displacement' in instance
