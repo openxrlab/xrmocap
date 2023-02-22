@@ -263,3 +263,46 @@ def get_keypoint_names(
     """
     keypoints = keypoints_factory[convention]
     return keypoints
+
+def get_intersection_mask(
+        convention_a: str,
+        convention_b: str,
+        dst_convention: str = 'human_data') -> np.ndarray:
+    """Get a intersection mask of two different conventions.
+
+    Args:
+        convention_a (str): 
+            First convention name.
+        convention_b (str): 
+            Second convention name.
+        dst_convention (str): 
+            Destination convention name.
+            Defaults to human_data.
+
+    Returns:
+        np.ndarray: 
+            Intersection mask in the format of 
+            destination convention. [1, 1, n_kps]
+    """
+    def get_converted_mask(src_convention, dst_convention):
+        n_kps = get_keypoint_num(src_convention)
+        dummy_kps3d = np.ones((1,1,n_kps,4))
+        dummy_keypoints3d = Keypoints(
+            dtype='numpy',
+            kps=dummy_kps3d,
+            mask=dummy_kps3d[..., -1] > 0,
+            convention=src_convention)
+
+        dummy_keypoints3d_converted = convert_keypoints(
+            dummy_keypoints3d,
+            dst=dst_convention,
+            approximate=True)
+        converted_mask = dummy_keypoints3d_converted.get_mask()
+        return converted_mask
+
+    converted_mask_a = get_converted_mask(convention_a, dst_convention)
+    converted_mask_b = get_converted_mask(convention_b, dst_convention)
+    intersection_mask = np.multiply(converted_mask_a, converted_mask_b)
+
+    return intersection_mask
+
