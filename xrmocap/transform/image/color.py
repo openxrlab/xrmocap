@@ -87,9 +87,9 @@ def switch_channel(input_array: Union[np.ndarray, torch.Tensor],
     ] * len(input_array.shape)
     r_slice_list[color_dim] = slice(0, 1, 1)
     b_slice_list[color_dim] = slice(2, 3, 1)
+    b_idxs = tuple(b_slice_list)
+    r_idxs = tuple(r_slice_list)
     if isinstance(input_array, torch.Tensor):
-        b_idxs = tuple(b_slice_list)
-        r_idxs = tuple(r_slice_list)
         b_backup = input_array[b_idxs].clone()
         if not inplace:
             ret_array = input_array.clone()
