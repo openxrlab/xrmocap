@@ -55,7 +55,7 @@ class End2EndEvaluation(BaseEvaluation):
             metric_list (List[Union[dict, BaseMetric]]): 
                 A list of metrics to be evaluated.
             trans_matrix (Union[List[List[float]], None], optional): 
-                A rotation matrix to trasform the ground truth world 
+                A rotation matrix to transform the ground truth world 
                 coordinate to align with prediction world coordinate.
             checkpoint_select (str, optional): 
                 Name of metric in the matric list to be used for 
@@ -228,13 +228,6 @@ class End2EndEvaluation(BaseEvaluation):
                     dst=self.eval_kps3d_convention,
                     approximate=True)
             
-            # gt_keypoints3d = Keypoints.fromfile(
-            #     '/mnt/cache/yinwanqi/01-project/xrmocap_dev/output/panoptic/multi_view_pose_transformer_50/mvp_panoptic_20230221192601/gt_keypoints3d.npz'
-            # )
-            # pred_keypoints3d = Keypoints.fromfile(
-            #     '/mnt/cache/yinwanqi/01-project/xrmocap_dev/output/panoptic/multi_view_pose_transformer_50/mvp_panoptic_20230221192601/pred_keypoints3d.npz'
-            # )
-
             # evaluate and print results
             # convert pred and gt to the same convention before passing
             # to metric manager, human_data recommended

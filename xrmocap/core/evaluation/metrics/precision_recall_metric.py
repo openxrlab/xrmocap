@@ -11,10 +11,10 @@ from xrmocap.data_structure.keypoints import Keypoints
 
 
 class PrecisionRecallMetric(BaseMetric):
-    """Precision and reall with given thrsholds.
+    """Precision and recall with given thrsholds.
     If the number of prediction does not align with 
     the number of ground truth, this metric will evaluate
-    based on the ground truth mathed to the predictions.
+    based on the ground truth matched to the predictions.
 
     This is a rank-2 metric It depends on rank-1 metric MPJPE.
     """

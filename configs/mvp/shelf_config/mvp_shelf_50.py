@@ -188,7 +188,7 @@ trainer_setup = dict(
                 additional_limbs_names=[['jaw', 'headtop']],),
             dict(type='PrecisionRecallMetric',
                  name='precision_recall',
-                 show_table=True,
+                 show_table=False,
                  threshold=list(range(25,155,25))+[500],
                  )
             ],
