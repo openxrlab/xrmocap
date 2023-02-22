@@ -19,7 +19,9 @@ class PCPMetric(BaseMetric):
     """Percentage of Correct Parts (PCP) metric measures percentage of the
     corrected predicted limbs.
 
-    This is a rank-0 metric.
+    This is a rank-1 metric, depends on rank-0 metric PredictionMatcher.
+    If thenumber of prediction does not align with the number of ground 
+    truth, this metric will evaluate predictions matched to the ground truth.
     """
     RANK = 0
 
@@ -72,7 +74,23 @@ class PCPMetric(BaseMetric):
         else:
             self.convention = gt_kps3d_convention
 
-        limbs = self.get_limbs(pred_keypoints3d, gt_keypoints3d,
+        gt_n_frame = gt_keypoints3d.get_keypoints().shape[0]
+        pred_n_frame = pred_keypoints3d.get_keypoints().shape[0]
+        if gt_n_frame == pred_n_frame:
+            self.n_frame = gt_n_frame
+        else:
+            self.logger.error('Prediction and ground-truth does not match in '
+                              'the number of frame.')
+            raise ValueError
+
+        if 'match_matrix_gt2pred' in kwargs:
+            self.match_matrix_gt2pred = kwargs['match_matrix_gt2pred']
+        else:
+            self.logger.error('No matching matric found. '
+                              'Please add PredictionMatcher in the config.')
+            raise KeyError
+
+        limbs = self.get_limbs(pred_keypoints3d,
                                self.selected_limbs_names,
                                self.additional_limbs_names)
 
@@ -85,7 +103,7 @@ class PCPMetric(BaseMetric):
 
         return dict(pcp_total_mean=pcp_mean)
 
-    def get_limbs(self, pred_keypoints3d: Keypoints, gt_keypoints3d: Keypoints,
+    def get_limbs(self, pred_keypoints3d: Keypoints,
                   selected_limbs_name: List[List[str]],
                   additional_limbs_names: List[List[str]]):
         """align keypoints convention.
@@ -107,9 +125,9 @@ class PCPMetric(BaseMetric):
             limb_name_list.append(limb_name)
             conn_list.append(conn)
 
-        for idx, limb_name in enumerate(limb_name_list):
+        for frame_idx, limb_name in enumerate(limb_name_list):
             if limb_name in selected_limbs_name:
-                ret_limbs.append(conn_list[idx])
+                ret_limbs.append(conn_list[frame_idx])
 
         for conn_names in additional_limbs_names:
             kps_idx_0 = get_keypoint_idx(
@@ -141,30 +159,27 @@ class PCPMetric(BaseMetric):
                 Accuracy and table of detailed results.
         """
 
-        n_frame = gt_keypoints3d.get_frame_number()
         n_gt_person = gt_keypoints3d.get_person_number()
         gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
         gt_kps3d_mask = gt_keypoints3d.get_mask()
         pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
-        pred_kps3d_mask = pred_keypoints3d.get_mask()
-        check_result = np.zeros((n_frame, n_gt_person, len(limbs) + 1),
+        check_result = np.zeros((self.n_frame, n_gt_person, len(limbs) + 1),
                                 dtype=np.int32)
         accuracy_cnt = 0
         error_cnt = 0
 
-        for idx in range(n_frame):
-            if not gt_kps3d_mask[idx].any():
+        for frame_idx in range(self.n_frame):
+            if not gt_kps3d_mask[frame_idx].any():
                 continue
-            gt_kps3d_idxs = np.where(np.sum(gt_kps3d_mask[idx], axis=1) > 0)[0]
+            gt_kps3d_idxs = np.where(np.sum(gt_kps3d_mask[frame_idx], axis=1) > 0)[0]
             for gt_kps3d_idx in gt_kps3d_idxs:
-                f_gt_kps3d = gt_kps3d[idx][gt_kps3d_idx]
-                f_pred_kps3d = pred_kps3d[idx][
-                    np.sum(pred_kps3d_mask[idx], axis=1) > 0]
+                f_gt_kps3d = gt_kps3d[frame_idx][gt_kps3d_idx]
+                f_pred_kps3d = pred_kps3d[frame_idx]
+                f_pred_kps3d_idx = self.match_matrix_gt2pred[frame_idx][gt_kps3d_idx]
                 if len(f_pred_kps3d) == 0:
                     continue
 
-                dist = vectorize_distance(f_gt_kps3d[np.newaxis], f_pred_kps3d)
-                f_pred_kps3d = f_pred_kps3d[np.argmin(dist[0])]
+                f_pred_kps3d = f_pred_kps3d[f_pred_kps3d_idx]
 
                 for i, limb in enumerate(limbs):
                     start_point, end_point = limb
@@ -173,19 +188,19 @@ class PCPMetric(BaseMetric):
                                              f_gt_kps3d[start_point],
                                              f_gt_kps3d[end_point],
                                              self.threshold):
-                        check_result[idx, gt_kps3d_idx, i] = 1
+                        check_result[frame_idx, gt_kps3d_idx, i] = 1
                         accuracy_cnt += 1
                     else:
-                        check_result[idx, gt_kps3d_idx, i] = -1
+                        check_result[frame_idx, gt_kps3d_idx, i] = -1
                         error_cnt += 1
                 gt_hip = (f_gt_kps3d[2] + f_gt_kps3d[3]) / 2
                 pred_hip = (f_pred_kps3d[2] + f_pred_kps3d[3]) / 2
                 if check_limb_is_correct(pred_hip, f_pred_kps3d[12], gt_hip,
                                          f_gt_kps3d[12], self.threshold):
-                    check_result[idx, gt_kps3d_idx, -1] = 1
+                    check_result[frame_idx, gt_kps3d_idx, -1] = 1
                     accuracy_cnt += 1
                 else:
-                    check_result[idx, gt_kps3d_idx, -1] = -1
+                    check_result[frame_idx, gt_kps3d_idx, -1] = -1
                     error_cnt += 1
         bone_group = dict([('Torso', np.array([len(limbs) - 1])),
                            ('Upper arms', np.array([5, 6])),

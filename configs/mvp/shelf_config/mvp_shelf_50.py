@@ -162,17 +162,14 @@ trainer_setup = dict(
             dict(
                 type='PredictionMatcher',
                 name='matching',
-                align_kps_name='right_ankle',
             ),
             dict(
                 type='MPJPEMetric',
                 name='mpjpe',
-                # align_kps_name='right_ankle',
                 unit_scale=1),
             dict(
                 type='PAMPJPEMetric',
                 name='pa_mpjpe',
-                # align_kps_name='right_ankle',
                 unit_scale=1),
             dict(
                 type='PCKMetric',

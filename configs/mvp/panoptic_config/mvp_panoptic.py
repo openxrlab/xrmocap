@@ -179,7 +179,6 @@ trainer_setup = dict(
             dict(
                 type='PredictionMatcher',
                 name='matching',
-                align_kps_name='right_ankle',
             ),
             dict(
                 type='MPJPEMetric',
