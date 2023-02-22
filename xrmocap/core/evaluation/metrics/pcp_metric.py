@@ -23,7 +23,7 @@ class PCPMetric(BaseMetric):
     If thenumber of prediction does not align with the number of ground 
     truth, this metric will evaluate predictions matched to the ground truth.
     """
-    RANK = 0
+    RANK = 1
 
     def __init__(
         self,
