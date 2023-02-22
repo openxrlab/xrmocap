@@ -7,9 +7,7 @@ from typing import List, Tuple, Union
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from xrmocap.transform.limbs import get_limbs_from_keypoints
-from xrmocap.utils.mvpose_utils import (
-    check_limb_is_correct, vectorize_distance,
-)
+from xrmocap.utils.mvpose_utils import check_limb_is_correct
 from .base_metric import BaseMetric
 
 # yapf: enable
@@ -19,9 +17,9 @@ class PCPMetric(BaseMetric):
     """Percentage of Correct Parts (PCP) metric measures percentage of the
     corrected predicted limbs.
 
-    This is a rank-1 metric, depends on rank-0 metric PredictionMatcher.
-    If thenumber of prediction does not align with the number of ground 
-    truth, this metric will evaluate predictions matched to the ground truth.
+    This is a rank-1 metric, depends on rank-0 metric PredictionMatcher. If
+    thenumber of prediction does not align with the number of ground truth,
+    this metric will evaluate predictions matched to the ground truth.
     """
     RANK = 1
 
@@ -90,8 +88,7 @@ class PCPMetric(BaseMetric):
                               'Please add PredictionMatcher in the config.')
             raise KeyError
 
-        limbs = self.get_limbs(pred_keypoints3d,
-                               self.selected_limbs_names,
+        limbs = self.get_limbs(pred_keypoints3d, self.selected_limbs_names,
                                self.additional_limbs_names)
 
         pcp_mean, eval_table = \
@@ -171,11 +168,13 @@ class PCPMetric(BaseMetric):
         for frame_idx in range(self.n_frame):
             if not gt_kps3d_mask[frame_idx].any():
                 continue
-            gt_kps3d_idxs = np.where(np.sum(gt_kps3d_mask[frame_idx], axis=1) > 0)[0]
+            gt_kps3d_idxs = np.where(
+                np.sum(gt_kps3d_mask[frame_idx], axis=1) > 0)[0]
             for gt_kps3d_idx in gt_kps3d_idxs:
                 f_gt_kps3d = gt_kps3d[frame_idx][gt_kps3d_idx]
                 f_pred_kps3d = pred_kps3d[frame_idx]
-                f_pred_kps3d_idx = self.match_matrix_gt2pred[frame_idx][gt_kps3d_idx]
+                f_pred_kps3d_idx = self.match_matrix_gt2pred[frame_idx][
+                    gt_kps3d_idx]
                 if len(f_pred_kps3d) == 0:
                     continue
 

@@ -183,14 +183,8 @@ trainer_setup = dict(
                 type='PredictionMatcher',
                 name='matching',
             ),
-            dict(
-                type='MPJPEMetric',
-                name='mpjpe',
-                unit_scale=1),
-            dict(
-                type='PAMPJPEMetric',
-                name='pa_mpjpe',
-                unit_scale=1),
+            dict(type='MPJPEMetric', name='mpjpe', unit_scale=1),
+            dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1),
             dict(
                 type='PCKMetric',
                 name='pck',
