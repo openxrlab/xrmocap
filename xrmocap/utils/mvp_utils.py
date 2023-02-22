@@ -5,9 +5,9 @@ import time
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
+from datetime import datetime
 from pathlib import Path
 from typing import Union
-from datetime import datetime
 
 from xrmocap.utils.distribute_utils import is_main_process
 
@@ -73,11 +73,11 @@ def get_directory(state: str = 'train',
     model = get_model_name(model, resnet_layer)
     cfg_name = os.path.basename(cfg_name).split('.')[0]
     now = datetime.now()
-    time_stamp = now.strftime("%Y%m%d%H%M%S")
+    time_stamp = now.strftime('%Y%m%d%H%M%S')
 
     # get final output dir
-    final_output_dir = os.path.join(root_output_dir, dataset, model, 
-                                    cfg_name+"_"+time_stamp)
+    final_output_dir = os.path.join(root_output_dir, dataset, model,
+                                    cfg_name + '_' + time_stamp)
 
     os.makedirs(final_output_dir, exist_ok=True)
 

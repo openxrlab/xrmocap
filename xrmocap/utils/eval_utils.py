@@ -12,14 +12,15 @@ def align_by_keypoint(keypoints: Keypoints, keypoint_name='right_ankle'):
     # kps = keypoints.get_keypoints()[0, 0, :, :3]
     # root = kps[index, :]
     # return kps - root
-    
+
     kps = keypoints.get_keypoints()
     aligned_kps = np.zeros_like(kps)
     n_frame, n_person = kps.shape[:2]
     for frame_idx in range(n_frame):
         for person_idx in range(n_person):
             aligned_kps[frame_idx, person_idx, ...] = \
-                kps[frame_idx, person_idx, :] - kps[frame_idx, person_idx, index, :]
+                kps[frame_idx, person_idx, :] - \
+                kps[frame_idx, person_idx, index, :]
     return aligned_kps
 
 
