@@ -95,7 +95,7 @@ class MetricManager:
                     manager_ret_dict[name] = dict()
                     for key in selections:
                         manager_ret_dict[name][key] = metric_ret_dict[key]
-        return manager_ret_dict
+        return manager_ret_dict, accumulate_kwargs
 
 
 def _sort_metrics_by_rank(unsorted_list: List[BaseMetric]) -> List[BaseMetric]:

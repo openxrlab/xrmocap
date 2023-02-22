@@ -19,6 +19,7 @@ from .paf import ALL_PAF_MAPPING
 if isinstance(KEYPOINTS_FACTORY, dict):
     KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
     KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
+    KEYPOINTS_FACTORY['panoptic_15'] = panoptic.PANOPTIC15_KEYPOINTS
     KEYPOINTS_FACTORY['fourdag_19'] = fourdag_19.FOURDAG19_KEYPOINTS
 
 

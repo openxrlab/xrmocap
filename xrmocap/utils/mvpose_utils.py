@@ -303,7 +303,7 @@ def vectorize_distance(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     b2 = np.tile(np.sum(b**2, axis=1), (N, 1))
     dist = a2 + b2 - 2 * (a @ b.T)
     dist = np.sqrt(dist)
-    dist[np.where(np.isnan(dist))] = 1000
+    dist[np.where(np.isnan(dist))] = 1e8
     return dist
 
 

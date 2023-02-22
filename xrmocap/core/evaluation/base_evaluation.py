@@ -1,5 +1,6 @@
 # yapf: disable
 import logging
+import os
 from typing import List, Union
 from xrprimer.utils.log_utils import get_logger
 from xrprimer.utils.path_utils import prepare_output_path
@@ -46,9 +47,10 @@ class BaseEvaluation:
             self.dataset_visualization = dataset_visualization
 
     def run(self, overwrite: bool = False):
-        prepare_output_path(
-            output_path=self.output_dir,
-            allowed_suffix='',
-            path_type='dir',
-            overwrite=overwrite,
-            logger=self.logger)
+        if not os.path.exists(self.output_dir):
+            prepare_output_path(
+                output_path=self.output_dir,
+                allowed_suffix='',
+                path_type='dir',
+                overwrite=overwrite,
+                logger=self.logger)
