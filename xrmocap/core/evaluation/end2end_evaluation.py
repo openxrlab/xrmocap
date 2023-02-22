@@ -12,7 +12,7 @@ from xrmocap.data.data_visualization.builder import BaseDataVisualization
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.base_architecture import BaseArchitecture
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_intersection_mask
+    convert_keypoints, get_intersection_mask,
 )
 from xrmocap.utils.distribute_utils import collect_results, is_main_process
 from xrmocap.utils.mvp_utils import (
@@ -72,7 +72,7 @@ class End2EndEvaluation(BaseEvaluation):
                 Defaults to 'coco'.
             eval_kps3d_convention (str, optional):
                 A keypoint convention used for evaluation.
-                It is recommeded to use human_data if pred_kps3d_convention
+                It is recommended to use human_data if pred_kps3d_convention
                 and gt_kps3d_convention are different.
                 Defaults to 'human_data'.
             pick_dict (Union[dict, None], optional):
@@ -212,7 +212,7 @@ class End2EndEvaluation(BaseEvaluation):
                     pred_keypoints3d_raw,
                     dst=self.eval_kps3d_convention,
                     approximate=True)
-            else: 
+            else:
                 pred_keypoints3d = pred_keypoints3d_raw
 
             if self.gt_kps3d_convention != self.eval_kps3d_convention:
@@ -227,17 +227,16 @@ class End2EndEvaluation(BaseEvaluation):
             # are different
             if self.pred_kps3d_convention != self.gt_kps3d_convention:
                 if self.eval_kps3d_convention != 'human_data':
-                    self.logger.warning("Predicion and ground truth is having"
-                        "different convention. It is recommended to set "
-                        "eval_kps3d_convention to human_data to avoid error.")
+                    self.logger.warning(
+                        'Predicion and ground truth is having'
+                        'different convention. It is recommended to set '
+                        'eval_kps3d_convention to human_data to avoid error.')
 
                 intersection_mask = get_intersection_mask(
-                    self.pred_kps3d_convention,
-                    self.gt_kps3d_convention,
-                    self.eval_kps3d_convention
-                )
-                gt_intersection_mask = np.multiply(
-                    gt_keypoints3d.get_mask(), intersection_mask)
+                    self.pred_kps3d_convention, self.gt_kps3d_convention,
+                    self.eval_kps3d_convention)
+                gt_intersection_mask = np.multiply(gt_keypoints3d.get_mask(),
+                                                   intersection_mask)
                 pred_intersection_mask = np.multiply(
                     pred_keypoints3d.get_mask(), intersection_mask)
                 gt_keypoints3d.set_mask(gt_intersection_mask)
