@@ -9,9 +9,6 @@ def align_by_keypoint(keypoints: Keypoints, keypoint_name='right_ankle'):
     index = get_keypoint_idx(name=keypoint_name, convention=convention)
     if index == -1:
         raise ValueError('Check the convention of kps3d!')
-    # kps = keypoints.get_keypoints()[0, 0, :, :3]
-    # root = kps[index, :]
-    # return kps - root
 
     kps = keypoints.get_keypoints()
     aligned_kps = np.zeros_like(kps)
