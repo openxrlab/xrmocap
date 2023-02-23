@@ -20,7 +20,7 @@ from xrmocap.core.estimation.builder import build_estimator
 from xrmocap.data_structure.body_model import SMPLXData
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.io.camera import get_all_color_kinect_parameter_from_smc
-from xrmocap.transform.image.color import bgr2rgb
+from xrmocap.transform.image.color import rgb2bgr
 
 # yapf: enable
 
@@ -70,7 +70,7 @@ def main(args):
     for kinect_index in range(smc_reader.num_kinects):
         if args.frame_file == 'none':
             sv_img_array = smc_reader.get_kinect_color(kinect_id=kinect_index)
-            sv_img_array = bgr2rgb(sv_img_array)
+            sv_img_array = rgb2bgr(sv_img_array)
             sv_img_array = np.expand_dims(sv_img_array, 0)
             sv_keypoints2d_list = mview_sp_smpl_estimator.estimate_keypoints2d(
                 img_arr=sv_img_array)
@@ -83,7 +83,7 @@ def main(args):
                     and temp_dir_exist == Existence.DirectoryExistNotEmpty):
                 sv_img_array = smc_reader.get_kinect_color(
                     kinect_id=kinect_index)
-                sv_img_array = bgr2rgb(sv_img_array)
+                sv_img_array = rgb2bgr(sv_img_array)
                 array_to_images(sv_img_array, view_temp_dir, logger=logger)
             sview_img_list = sorted(
                 glob.glob(os.path.join(view_temp_dir, '*.png')))
@@ -141,7 +141,7 @@ def main(args):
             for view_idx in range(0, len(mview_kps2d), 3):
                 sview_kps2d = mview_kps2d[view_idx]
                 image_array = smc_reader.get_kinect_color(kinect_id=view_idx)
-                image_array = bgr2rgb(image_array)
+                image_array = rgb2bgr(image_array)
                 visualize_kp2d(
                     kp2d=sview_kps2d,
                     image_array=image_array,
@@ -178,7 +178,7 @@ def main(args):
                 cam_param.inverse_extrinsic()
             image_array = smc_reader.get_kinect_color(
                 kinect_id=selected_kinect)
-            image_array = bgr2rgb(image_array)
+            image_array = rgb2bgr(image_array)
             motion_len = smpl_data['fullpose'].shape[0]
             visualize_smpl_calibration(
                 poses=smpl_data['fullpose'].reshape(motion_len, -1),
