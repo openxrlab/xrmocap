@@ -68,6 +68,7 @@ def test_call():
     manager = MetricManager(
         metric_list=METRIC_LIST,
         pick_dict=dict(
+            matching='all',
             pck_50='pck_value',
             mpjpe='mpjpe_value',
             pa_mpjpe='pa_mpjpe_value'),
