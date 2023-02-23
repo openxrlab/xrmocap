@@ -24,7 +24,7 @@ class PAMPJPEMetric(BaseMetric):
     def __init__(
         self,
         name: str,
-        unit_scale: int,
+        unit_scale: Union[None, int] = None,
         align_kps_name: Union[None, str] = None,
         outlier_threshold: Union[float, int, None] = None,
         logger: Union[None, str, logging.Logger] = None,

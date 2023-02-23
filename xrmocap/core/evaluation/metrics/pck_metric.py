@@ -19,7 +19,7 @@ class PCKMetric(BaseMetric):
     def __init__(
         self,
         name: str,
-        threshold: Union[List[int], List[float]],
+        threshold: Union[List[int], List[float]] = [50, 100],
         use_pa_mpjpe: bool = False,
         logger: Union[None, str, logging.Logger] = None,
     ) -> None:
