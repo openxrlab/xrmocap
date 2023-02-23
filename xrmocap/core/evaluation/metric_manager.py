@@ -89,7 +89,7 @@ class MetricManager:
             # record return keys and values
             if name in self.pick_dict:
                 selections = self.pick_dict[name]
-                if name == 'all':
+                if selections == 'all':
                     manager_ret_dict[name] = metric_ret_dict
                 else:
                     manager_ret_dict[name] = dict()
