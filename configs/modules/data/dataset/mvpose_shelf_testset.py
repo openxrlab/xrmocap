@@ -4,7 +4,7 @@ img_pipeline = [
     dict(type='LoadImagePIL'),
     dict(type='Resize', size=224),
     dict(type='ToTensor'),
-    dict(type='BGR2RGB'),
+    dict(type='RGB2BGR'),
 ]
 meta_path = 'xrmocap_meta_testset'
 test_mode = True

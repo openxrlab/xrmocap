@@ -59,7 +59,7 @@ dataset = dict(
     img_pipeline=[
         dict(type='LoadImagePIL'),
         dict(type='ToTensor'),
-        dict(type='BGR2RGB'),
+        dict(type='RGB2BGR'),
     ],
     meta_path=__meta_path__,
     test_mode=True,

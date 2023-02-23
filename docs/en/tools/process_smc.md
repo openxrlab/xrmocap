@@ -25,6 +25,13 @@ Also, you can find our prepared config files at `config/estimation/mview_sperson
 
 By default, disable_log_file is False and a log file named `{smc_file_name}_{time_str}.txt` will be written. Add `--disable_log_file` makes it True and the tool will only print log to console.
 
+### Argument: frame_file
+
+By default, frame_file is `'none'` frames in SMC will not be saved in file system, the tool fetches frames of one view
+each time, loads them into memory and runs human perception. If the SMC is too long or your have a poor RAM,
+`frame_file='temp'` will help you save the frames as image files in output_dir, and remove the temporary files at the
+end of this tool. If you need the frames for further usage, set `frame_file='keep'` and the files won't be removed.
+
 ### Argument: visualize
 
 By default, visualize is False. Add `--visualize` makes it True and the tool will visualize keypoints3d with an orbit camera, overlay projected keypoints3d on some views, and overlay SMPL meshes on one view.

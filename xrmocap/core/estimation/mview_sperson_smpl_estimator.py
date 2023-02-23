@@ -235,60 +235,31 @@ class MultiViewSinglePersonSMPLEstimator(BaseEstimator):
             keypoints3d=keypoints3d, init_smpl_data=init_smpl_data)
         return keypoints2d_list, keypoints3d, smpl_data
 
-    def estimate_keypoints2d(
-        self,
-        img_arr: Union[None, np.ndarray] = None,
-        img_paths: Union[None, List[List[str]]] = None,
-    ) -> List[Keypoints]:
+    def estimate_keypoints2d(self, img_arr: np.ndarray) -> List[Keypoints]:
         """Estimate keypoints2d in a top-down way.
 
         Args:
-            img_arr (Union[None, np.ndarray], optional):
+            img_arr (np.ndarray):
                 A multi-view image array, in shape
-                [n_view, n_frame, h, w, c]. Defaults to None.
-            img_paths (Union[None, List[List[str]]], optional):
-                A nested list of image paths, in shape
-                [n_view, n_frame]. Defaults to None.
+                [n_view, n_frame, h, w, c].
 
         Returns:
             List[Keypoints]:
                 A list of keypoints2d instances.
         """
         self.logger.info('Estimating keypoints2d.')
-        input_list = [img_arr, img_paths]
-        input_count = 0
-        for input_instance in input_list:
-            if input_instance is not None:
-                input_count += 1
-        if input_count > 1:
-            self.logger.error('Redundant input!\n' +
-                              'Please offer only one between' +
-                              ' img_arr, img_paths.')
-            raise ValueError
         ret_list = []
         for view_index in range(img_arr.shape[0]):
-            if img_arr is not None:
-                view_img_arr = img_arr[view_index]
-                bbox_list = self.bbox_detector.infer_array(
-                    image_array=view_img_arr,
-                    disable_tqdm=(not self.verbose),
-                    multi_person=False)
-                kps2d_list, _, _ = self.kps2d_estimator.infer_array(
-                    image_array=view_img_arr,
-                    bbox_list=bbox_list,
-                    disable_tqdm=(not self.verbose),
-                )
-            else:
-                bbox_list = self.bbox_detector.infer_frames(
-                    frame_path_list=img_paths,
-                    disable_tqdm=(not self.verbose),
-                    multi_person=True,
-                    load_batch_size=self.load_batch_size)
-                kps2d_list, _, _ = self.kps2d_estimator.infer_frames(
-                    frame_path_list=img_paths,
-                    bbox_list=bbox_list,
-                    disable_tqdm=(not self.verbose),
-                    load_batch_size=self.load_batch_size)
+            view_img_arr = img_arr[view_index]
+            bbox_list = self.bbox_detector.infer_array(
+                image_array=view_img_arr,
+                disable_tqdm=(not self.verbose),
+                multi_person=False)
+            kps2d_list, _, _ = self.kps2d_estimator.infer_array(
+                image_array=view_img_arr,
+                bbox_list=bbox_list,
+                disable_tqdm=(not self.verbose),
+            )
             if len(kps2d_list) == 1 and \
                     len(kps2d_list[0]) == 1 and \
                     kps2d_list[0][0] is None:

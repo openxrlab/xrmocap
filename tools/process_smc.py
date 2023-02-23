@@ -20,7 +20,7 @@ from xrmocap.core.estimation.builder import build_estimator
 from xrmocap.data_structure.body_model import SMPLXData
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.io.camera import get_all_color_kinect_parameter_from_smc
-from xrmocap.transform.image.color import bgr2rgb
+from xrmocap.transform.image.color import rgb2bgr
 
 # yapf: enable
 
@@ -53,33 +53,58 @@ def main(args):
     # load camera parameter and images
     cam_param_list = get_all_color_kinect_parameter_from_smc(
         smc_reader=smc_reader, align_floor=True, logger=logger)
-    mview_img_list = []
-    frame_temp_dir = os.path.join(args.output_dir, f'{smc_name}_temp_frames')
-    prepare_output_path(
-        output_path=frame_temp_dir,
-        tag='Temp dir for smc frames',
-        path_type='dir',
-        overwrite=True,
-        logger=logger)
+    # use frames in file system
+    if args.frame_file != 'none':
+        frame_temp_dir = os.path.join(args.output_dir,
+                                      f'{smc_name}_temp_frames')
+        prepare_output_path(
+            output_path=frame_temp_dir,
+            tag='Temp dir for smc frames',
+            path_type='dir',
+            overwrite=True,
+            logger=logger)
+        mview_img_list = []
+    # use frames in smc
+    else:
+        keypoints2d_list = []
     for kinect_index in range(smc_reader.num_kinects):
-        view_temp_dir = os.path.join(frame_temp_dir,
-                                     f'view_{kinect_index:02d}')
-        temp_dir_exist = check_path_existence(view_temp_dir, 'dir')
-        if not (args.keep_frames
-                and temp_dir_exist == Existence.DirectoryExistNotEmpty):
+        if args.frame_file == 'none':
             sv_img_array = smc_reader.get_kinect_color(kinect_id=kinect_index)
-            sv_img_array = bgr2rgb(sv_img_array)
-            array_to_images(sv_img_array, view_temp_dir, logger=logger)
-        sview_img_list = sorted(
-            glob.glob(os.path.join(view_temp_dir, '*.png')))
-        mview_img_list.append(sview_img_list)
-    keypoints2d_list, keypoints3d, smpl_data = mview_sp_smpl_estimator.run(
-        cam_param=cam_param_list, img_paths=mview_img_list)
+            sv_img_array = rgb2bgr(sv_img_array)
+            sv_img_array = np.expand_dims(sv_img_array, 0)
+            sv_keypoints2d_list = mview_sp_smpl_estimator.estimate_keypoints2d(
+                img_arr=sv_img_array)
+            keypoints2d_list += sv_keypoints2d_list
+        else:
+            view_temp_dir = os.path.join(frame_temp_dir,
+                                         f'view_{kinect_index:02d}')
+            temp_dir_exist = check_path_existence(view_temp_dir, 'dir')
+            if not (args.frame_file == 'keep'
+                    and temp_dir_exist == Existence.DirectoryExistNotEmpty):
+                sv_img_array = smc_reader.get_kinect_color(
+                    kinect_id=kinect_index)
+                sv_img_array = rgb2bgr(sv_img_array)
+                array_to_images(sv_img_array, view_temp_dir, logger=logger)
+            sview_img_list = sorted(
+                glob.glob(os.path.join(view_temp_dir, '*.png')))
+            mview_img_list.append(sview_img_list)
+    if args.frame_file != 'none':
+        keypoints2d_list, keypoints3d, smpl_data = mview_sp_smpl_estimator.run(
+            cam_param=cam_param_list, img_paths=mview_img_list)
+    else:
+        keypoints3d = mview_sp_smpl_estimator.estimate_keypoints3d(
+            cam_param=cam_param_list, keypoints2d_list=keypoints2d_list)
+        smpl_data = mview_sp_smpl_estimator.estimate_smpl(
+            keypoints3d=keypoints3d, init_smpl_data=None)
     for index, keypoints2d in enumerate(keypoints2d_list):
         keypoints2d_path = os.path.join(
             args.output_dir,
             f'{smc_name}_keypoints2d_' + f'view{index:02d}.npz')
-        keypoints2d.dump(keypoints2d_path)
+        if keypoints2d is not None:
+            keypoints2d.dump(keypoints2d_path)
+        else:
+            logger.warning(
+                f'No keypoints2d has been detected in view{index:02d}.')
     keypoints3d_path = os.path.join(args.output_dir,
                                     f'{smc_name}_keypoints3d.npz')
     keypoints3d.dump(keypoints3d_path)
@@ -90,7 +115,7 @@ def main(args):
     smpl_path = os.path.join(args.output_dir,
                              f'{smc_name}_{smpl_type}_data.npz')
     smpl_data.dump(smpl_path)
-    if not args.keep_frames:
+    if args.frame_file == 'temp':
         shutil.rmtree(frame_temp_dir)
     # write results to the output smc
 
@@ -116,7 +141,7 @@ def main(args):
             for view_idx in range(0, len(mview_kps2d), 3):
                 sview_kps2d = mview_kps2d[view_idx]
                 image_array = smc_reader.get_kinect_color(kinect_id=view_idx)
-                image_array = bgr2rgb(image_array)
+                image_array = rgb2bgr(image_array)
                 visualize_kp2d(
                     kp2d=sview_kps2d,
                     image_array=image_array,
@@ -153,7 +178,7 @@ def main(args):
                 cam_param.inverse_extrinsic()
             image_array = smc_reader.get_kinect_color(
                 kinect_id=selected_kinect)
-            image_array = bgr2rgb(image_array)
+            image_array = rgb2bgr(image_array)
             motion_len = smpl_data['fullpose'].shape[0]
             visualize_smpl_calibration(
                 poses=smpl_data['fullpose'].reshape(motion_len, -1),
@@ -194,11 +219,13 @@ def setup_parser():
         help='If checked, visualize result.',
         default=False)
     parser.add_argument(
-        '--keep_frames',
-        action='store_true',
-        help='If checked, frames extracted from SMC' +
-        ' will be kept in file system.',
-        default=False)
+        '--frame_file',
+        type=str,
+        help='Whether to extract frames' + ' and save them in file system.' +
+        ' `none` for not saving,' + ' `temp` for save temporarily,' +
+        ' `keep` for save without deleting.',
+        choices=['none', 'temp', 'keep'],
+        default='none')
     # log args
     parser.add_argument(
         '--disable_log_file',

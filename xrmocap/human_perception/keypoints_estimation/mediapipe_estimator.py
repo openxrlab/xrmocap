@@ -1,6 +1,5 @@
 import cv2
 import logging
-import mediapipe as mp
 import numpy as np
 from tqdm import tqdm
 from typing import List, Tuple, Union
@@ -9,6 +8,20 @@ from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
+
+try:
+    import mediapipe as mp
+    has_mediapipe = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_mediapipe = False
+    import traceback
+    stack_str = ''
+    for line in traceback.format_stack():
+        if 'frozen' not in line:
+            stack_str += line + '\n'
+    import_exception = traceback.format_exc() + '\n'
+    import_exception = stack_str + import_exception
 
 
 class MediapipeEstimator():
@@ -32,6 +45,10 @@ class MediapipeEstimator():
                 Defaults to None.
         """
         # build the pose model
+        if not has_mediapipe:
+            self.logger.error(import_exception)
+            raise ModuleNotFoundError(
+                'Please install mediapipe by `pip install mediapipe`.')
         mp_pose = mp.solutions.pose
         self.pose_model = mp_pose.Pose(**mediapipe_kwargs)
         self.bbox_thr = bbox_thr
