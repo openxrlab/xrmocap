@@ -133,3 +133,5 @@ We wish that the toolbox and benchmark could serve the growing research communit
 - [XRMoCap](https://github.com/openxrlab/xrmocap): OpenXRLab Multi-view Motion Capture Toolbox and Benchmark.
 - [XRMoGen](https://github.com/openxrlab/xrmogen): OpenXRLab Human Motion Generation Toolbox and Benchmark.
 - [XRNeRF](https://github.com/openxrlab/xrnerf): OpenXRLab Neural Radiance Field (NeRF) Toolbox and Benchmark.
+Welcome to join our XR Technical Community to promote the development of XR together!
+![wecom-temp-209006-a7c241362b14d0dfcbeb3bc547ade3e2](https://user-images.githubusercontent.com/86729039/221091561-1024ae5d-9509-48d2-b5e9-cbc023b2e1dc.jpg)
