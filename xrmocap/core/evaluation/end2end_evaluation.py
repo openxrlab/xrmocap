@@ -57,7 +57,7 @@ class End2EndEvaluation(BaseEvaluation):
                 A rotation matrix to transform the ground truth world
                 coordinate to align with prediction world coordinate.
             checkpoint_select (str, optional):
-                Name of metric in the matric list to be used for
+                Name of metric in the metric list to be used for
                 checkpoint selection. Defaults to 'pcp_total_mean'.
             n_max_person (int, optional):
                 Number of maximum person the model can predict.

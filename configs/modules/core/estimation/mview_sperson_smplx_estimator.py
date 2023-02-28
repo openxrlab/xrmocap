@@ -2,26 +2,11 @@ type = 'MultiViewSinglePersonSMPLEstimator'
 work_dir = './temp'
 verbose = True
 logger = None
-bbox_detector = dict(
-    type='MMdetDetector',
-    mmdet_kwargs=dict(
-        checkpoint='weight/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
-        config='configs/modules/human_perception/' +
-        'mmdet_faster_rcnn_r50_fpn_coco.py',
-        device='cuda'),
-    batch_size=10)
-kps2d_estimator = dict(
-    type='MMposeTopDownEstimator',
-    mmpose_kwargs=dict(
-        checkpoint='weight/hrnet_w48_coco_wholebody' +
-        '_384x288_dark-f5726563_20200918.pth',
-        config='configs/modules/human_perception/mmpose_hrnet_w48_' +
-        'coco_wholebody_384x288_dark_plus.py',
-        device='cuda'),
-    bbox_thr=0.95)
-triangulator = dict(type='AniposelibTriangulator', camera_parameters=[])
+bbox_detector = None
+kps2d_estimator = None
+
 smplify = dict(
-    type='SMPLify',
+    type='SMPLifyX',
     verbose=verbose,
     info_level='stage',
     n_epochs=1,
@@ -29,20 +14,24 @@ smplify = dict(
     hooks=[
         dict(type='SMPLifyVerboseHook'),
     ],
+    grad_clip=3.0,
     logger=logger,
     body_model=dict(
-        type='SMPL',
+        type='SMPLX',
         gender='neutral',
         num_betas=10,
-        keypoint_convention='smpl_45',
-        model_path='xrmocap_data/body_models/smpl',
+        keypoint_convention='smplx',
+        model_path='mmhuman3d/data/body_models/smplx',
         batch_size=1,
+        use_face_contour=True,
+        use_pca=False,
+        num_pca_comps=24,
+        flat_hand_mean=False,
         logger=logger),
     optimizer=dict(
         type='LBFGS', max_iter=20, lr=1.0, line_search_fn='strong_wolfe'),
     ignore_keypoints=[
-        'neck_openpose', 'right_hip_openpose', 'left_hip_openpose',
-        'right_hip_extra', 'left_hip_extra'
+        'right_smalltoe', 'right_bigtoe', 'left_smalltoe', 'left_bigtoe'
     ],
     handlers=[
         dict(
@@ -74,11 +63,15 @@ smplify = dict(
             type='BodyPosePriorHandler',
             prior_loss=dict(
                 type='JointPriorLoss',
-                loss_weight=20.0,
-                reduction='sum',
-                smooth_spine=True,
-                smooth_spine_loss_weight=20,
-                use_full_body=True),
+                loss_weight=1.0,
+                reduction='mean',
+                use_full_body=True,
+                smooth_spine=False,
+                smooth_spine_loss_weight=0.0,
+                lock_foot=False,
+                lock_foot_loss_weight=1.0,
+                lock_apose_spine=False,
+                lock_apose_spine_loss_weight=1.0),
             logger=logger),
         dict(
             handler_key='smooth_joint',
@@ -88,16 +81,6 @@ smplify = dict(
                 loss_weight=1.0,
                 reduction='mean',
                 loss_func='L2'),
-            logger=logger),
-        dict(
-            handler_key='pose_prior',
-            type='BodyPosePriorHandler',
-            prior_loss=dict(
-                type='MaxMixturePriorLoss',
-                prior_folder='xrmocap_data/body_models',
-                num_gaussians=8,
-                loss_weight=4.78**2,
-                reduction='sum'),
             logger=logger),
         dict(
             handler_key='pose_reg',
@@ -110,13 +93,13 @@ smplify = dict(
             type='Keypoint3dLimbLenHandler',
             loss=dict(
                 type='LimbLengthLoss',
-                convention='smpl',
+                convention='smplx',
                 loss_weight=1.0,
                 reduction='mean'),
             logger=logger),
     ],
     stages=[
-        # stage 0
+        # stage 0 betas
         dict(
             n_iter=10,
             ftol=1e-4,
@@ -124,15 +107,21 @@ smplify = dict(
             fit_transl=False,
             fit_body_pose=False,
             fit_betas=True,
+            fit_left_hand_pose=False,
+            fit_right_hand_pose=False,
+            fit_expression=False,
+            fit_jaw_pose=False,
+            fit_leye_pose=False,
+            fit_reye_pose=False,
             keypoints3d_mse_weight=0.0,
             keypoints2d_mse_weight=0.0,
-            keypoints3d_limb_len_weight=1.0,
+            keypoints3d_limb_len_weight=0.5,
             shape_prior_weight=5e-3,
             joint_prior_weight=0.0,
             smooth_joint_weight=0.0,
             pose_reg_weight=0.0,
             pose_prior_weight=0.0),
-        # stage 1
+        # stage 1 global orient, transl, betas
         dict(
             n_iter=50,
             ftol=1e-4,
@@ -140,61 +129,63 @@ smplify = dict(
             fit_transl=True,
             fit_body_pose=False,
             fit_betas=False,
+            fit_left_hand_pose=False,
+            fit_right_hand_pose=False,
+            fit_expression=False,
+            fit_jaw_pose=False,
+            fit_leye_pose=False,
+            fit_reye_pose=False,
             keypoints3d_mse_weight=1.0,
-            keypoints2d_mse_weight=1.0,
+            keypoints2d_mse_weight=0.0,
             keypoints3d_limb_len_weight=0.0,
             shape_prior_weight=0.0,
             joint_prior_weight=0.0,
             smooth_joint_weight=0.0,
             pose_reg_weight=0.0,
             pose_prior_weight=0.0,
-            body_weight=0.0,
-            face_weight=0.0,
-            hand_weight=0.0,
             shoulder_weight=1.0,
             hip_weight=1.0,
-            use_shoulder_hip_only=True),
-        # stage 2
+            body_weight=0.0,
+            hand_weight=0.0,
+            face_weight=0.0,
+            foot_weight=0.0),
+        # stage 2 pose: fit pose based on kps
         dict(
-            n_iter=120,
+            n_iter=40,
             ftol=1e-4,
             fit_global_orient=True,
             fit_transl=True,
             fit_body_pose=True,
             fit_betas=False,
-            keypoints3d_mse_weight=10.0,
+            fit_left_hand_pose=False,
+            fit_right_hand_pose=False,
+            fit_expression=False,
+            fit_jaw_pose=False,
+            fit_leye_pose=False,
+            fit_reye_pose=False,
+            keypoints3d_mse_weight=1.0,
             keypoints2d_mse_weight=0.0,
             keypoints3d_limb_len_weight=0.0,
-            shape_prior_weight=0.0,
+            shape_prior_weight=0.1,
             joint_prior_weight=0.0,
-            smooth_joint_weight=1.0,
+            smooth_joint_weight=0.1,
             pose_reg_weight=0.001,
             pose_prior_weight=0.0,
+            shoulder_weight=2.0,
+            hip_weight=1.0,
             body_weight=1.0,
-            use_shoulder_hip_only=False),
+            hand_weight=0.5,
+            face_weight=0.5,
+            foot_weight=1.0),
     ],
 )
-cam_pre_selector = dict(
-    type='ManualThresholdSelector', threshold=0.4, verbose=verbose)
-cam_selector = dict(
-    type='CameraErrorSelector',
-    target_camera_number=6,
-    triangulator=dict(type='AniposelibTriangulator', camera_parameters=[]),
-    verbose=verbose)
-final_selectors = [
-    # use ManualThresholdSelector to set a lower bound
-    dict(type='ManualThresholdSelector', threshold=0.4, verbose=verbose),
-    dict(
-        type='AutoThresholdSelector',
-        start=0.95,
-        stride=-0.025,
-        verbose=verbose)
-]
+
+triangulator = None
+cam_pre_selector = None
+cam_selector = None
+final_selectors = None
+kps3d_optimizers = None
+
 kps3d_optimizers = [
-    dict(type='NanInterpolation', verbose=verbose),
-    dict(
-        type='AniposelibOptimizer',
-        triangulator=dict(type='AniposelibTriangulator', camera_parameters=[]),
-        smooth_weight=2.0,
-        verbose=verbose)
+    dict(type='NanInterpolation', verbose=verbose, logger=logger),
 ]

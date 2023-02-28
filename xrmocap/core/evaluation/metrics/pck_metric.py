@@ -48,7 +48,7 @@ class PCKMetric(BaseMetric):
         elif not self.use_pa_mpjpe and 'mpjpe_value' in kwargs:
             raw_mpjpe_value = kwargs['mpjpe_value']
         else:
-            self.logger.error('No mpjpe matric found. '
+            self.logger.error('No mpjpe metric found. '
                               'Please add MPJPEMetric or PAMPJPEMetric '
                               'in the config.')
             raise KeyError

@@ -84,7 +84,7 @@ class PCPMetric(BaseMetric):
         if 'match_matrix_gt2pred' in kwargs:
             self.match_matrix_gt2pred = kwargs['match_matrix_gt2pred']
         else:
-            self.logger.error('No matching matric found. '
+            self.logger.error('No matching metric found. '
                               'Please add PredictionMatcher in the config.')
             raise KeyError
 

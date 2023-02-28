@@ -13,7 +13,7 @@ from .base_metric import BaseMetric
 class MPJPEMetric(BaseMetric):
     """Mean per-joint position error(MPJPE).
 
-    This is a rank-1 matric, depends on rank-0 matric PredictionMatcher. If the
+    This is a rank-1 metric, depends on rank-0 metric PredictionMatcher. If the
     number of prediction does not align with the number of ground truth, this
     metric will evaluate predictions matched to the ground truth.
     """

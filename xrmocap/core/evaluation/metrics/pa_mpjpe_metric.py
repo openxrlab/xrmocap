@@ -15,7 +15,7 @@ from .base_metric import BaseMetric
 class PAMPJPEMetric(BaseMetric):
     """MPJPE after further alignment(Procrustes analysis (PA)).
 
-    This is a rank-1 matric, depends on rank-0 matric PredictionMatcher. If the
+    This is a rank-1 metric, depends on rank-0 metric PredictionMatcher. If the
     number of prediction does not align with the number of ground truth, this
     metric will evaluate predictions matched to the ground truth.
     """
@@ -82,7 +82,7 @@ class PAMPJPEMetric(BaseMetric):
         if 'match_matrix_gt2pred' in kwargs:
             match_matrix_gt2pred = kwargs['match_matrix_gt2pred']
         else:
-            self.logger.error('No matching matric found. '
+            self.logger.error('No matching metric found. '
                               'Please add PredictionMatcher in the config.')
             raise KeyError
 
