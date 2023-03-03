@@ -2,16 +2,13 @@
 import cv2
 import numpy as np
 import os
-import shutil
 import torch
 from tqdm import tqdm
 from typing import List, Union
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
-from xrprimer.utils.ffmpeg_utils import (
-    VideoWriter, array_to_video, video_to_array,
-)
+from xrprimer.utils.ffmpeg_utils import VideoWriter, video_to_array
 from xrprimer.utils.log_utils import get_logger, logging
 from xrprimer.utils.path_utils import (
     Existence, check_path_existence, check_path_suffix,
@@ -146,8 +143,8 @@ def visualize_smpl_data(
         device=device,
         logger=logger)
     # check whether to write video or write images
-    write_video, write_img = (True, False)  \
-                    if check_path_suffix(output_path, '.mp4') else(False, True)
+    write_video, write_img = (True, False) \
+        if check_path_suffix(output_path, '.mp4') else (False, True)
     if write_video:
         xrprimer_video_writer = VideoWriter(
             output_path, [cam_param.height, cam_param.width])
