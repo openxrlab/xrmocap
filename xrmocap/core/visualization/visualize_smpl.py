@@ -145,31 +145,16 @@ def visualize_smpl_data(
         camera_parameter=cam_param,
         device=device,
         logger=logger)
+    # check whether to write video or write images
     write_video, write_img = (True, False)  \
                     if check_path_suffix(output_path, '.mp4') else(False, True)
     if write_video:
         xrprimer_video_writer = VideoWriter(
             output_path, [cam_param.height, cam_param.width])
 
-    # check whether to write video directly or write images first
-    # if check_path_suffix(output_path, '.mp4'):
-    #     write_video = True
-    #     if batch_size < data_len:
-    #         output_dir = f'{output_path}_temp'
-    #         os.makedirs(output_dir, exist_ok=True)
-    #         write_img = True
-    #         remove_output_dir = True
-    #     else:
-    #         write_img = False
-    #         remove_output_dir = False
-    # else:
-    #     write_video = False
-    #     output_dir = output_path
-    #     write_img = True
-    #     remove_output_dir = False
     total_iter = data_len // batch_size + 1
     curr_iter = 0
-    print(total_iter)
+
     while (curr_iter < total_iter):
 
         mperson_verts = None
@@ -195,7 +180,6 @@ def visualize_smpl_data(
                         dtype=torch.float32)
 
             model = body_model_dict[smpl_data['gender']]
-            # model = body_model_dict['neutral']
             with torch.no_grad():
                 body_model_output = model(**param_dict_input)
             verts = body_model_output['vertices']  # n_batch, n_verts, 3
