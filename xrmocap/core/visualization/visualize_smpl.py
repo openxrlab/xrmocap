@@ -210,8 +210,7 @@ def visualize_smpl_data(
                 background_video, start=start_idx, end=end_idx)
         else:
             background_arr_batch = np.zeros(
-                shape=(end_idx - start_idx, cam_param.height, cam_param.width,
-                       3),
+                (end_idx - start_idx, cam_param.height, cam_param.width, 3),
                 dtype=np.uint8)
         batch_results = []
 
