@@ -265,10 +265,9 @@ class MVPTrainer():
         model = build_architecture(mvp_cfg)
 
         eval_cfg = dict(
-            type='MVPEvaluation',
             test_loader=test_loader,
             print_freq=self.print_freq,
-            final_output_dir=self.final_output_dir,
+            output_dir=self.final_output_dir,
             logger=self.logger)
         eval_cfg.update(self.evaluation_setup)
         evaluation = build_evaluation(eval_cfg)
@@ -441,10 +440,9 @@ class MVPTrainer():
         model = build_architecture(mvp_cfg)
 
         eval_cfg = dict(
-            type='MVPEvaluation',
             test_loader=test_loader,
             print_freq=self.print_freq,
-            final_output_dir=self.final_output_dir,
+            output_dir=self.final_output_dir,
             logger=self.logger)
         eval_cfg.update(self.evaluation_setup)
         evaluation = build_evaluation(eval_cfg)

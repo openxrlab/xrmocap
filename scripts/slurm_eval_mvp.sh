@@ -25,11 +25,12 @@ CPUS_PER_TASK=1
 srun -p ${PARTITION} \
     --job-name=${JOB_NAME} \
     --gres=gpu:${GPUS_PER_NODE} \
-    --ntasks=1 \
+    --ntasks-per-node=1 \
     --cpus-per-task=${CPUS_PER_TASK} \
     --kill-on-bad-exit=1 \
     python -m torch.distributed.launch \
         --nproc_per_node=${GPUS_PER_NODE} \
+        --master_port 44145 \
         --use_env tools/eval_model.py \
         --cfg ${CFG_FILE} \
         --model_path ${MODEL_PATH}
