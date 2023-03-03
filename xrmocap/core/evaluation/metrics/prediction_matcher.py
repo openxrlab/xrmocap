@@ -17,7 +17,7 @@ class PredictionMatcher(BaseMetric):
     metric will return pred2gt match and gt2pred matching for various metric
     usage.
 
-    This is a rank-0 metric.
+    This is a rank-0 module.
     """
     RANK = 0
 
