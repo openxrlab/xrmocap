@@ -11,8 +11,8 @@ from typing import List, Union
 from xrmocap.data.data_visualization.builder import BaseDataVisualization
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.base_architecture import BaseArchitecture
-from xrmocap.utils.eval_utils import align_convention_mask
 from xrmocap.utils.distribute_utils import collect_results, is_main_process
+from xrmocap.utils.eval_utils import align_convention_mask
 from xrmocap.utils.mvp_utils import (
     AverageMeter, convert_result_to_kps, norm2absolute,
 )
@@ -206,10 +206,12 @@ class End2EndEvaluation(BaseEvaluation):
             # convert pred and gt to the same convention before passing
             # to metric manager, human_data recommended
             gt_keypoints3d, pred_keypoints3d = \
-                align_convention_mask(pred_keypoints3d_raw, gt_keypoints3d_raw, 
-                          self.pred_kps3d_convention, self.gt_kps3d_convention,
-                          self.eval_kps3d_convention,
-                          self.logger)
+                align_convention_mask(pred_keypoints3d_raw,
+                                      gt_keypoints3d_raw,
+                                      self.pred_kps3d_convention,
+                                      self.gt_kps3d_convention,
+                                      self.eval_kps3d_convention,
+                                      self.logger)
 
             # evaluate and print results
             eval_results, full_results = self.metric_manager(

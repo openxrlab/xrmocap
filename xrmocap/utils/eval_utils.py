@@ -1,13 +1,15 @@
-import numpy as np
+# yapf: disable
 import logging
+import numpy as np
 from typing import Union
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_intersection_mask,
+    convert_keypoints, get_intersection_mask, get_keypoint_idx,
 )
+
+# yapf: enable
 
 
 def align_by_keypoint(keypoints: Keypoints, keypoint_name='right_ankle'):
@@ -91,55 +93,49 @@ def compute_similarity_transform(X: np.ndarray,
     return d, Z, T, b, c
 
 
-def align_convention_mask(pred_keypoints3d_raw: Keypoints, 
-                          gt_keypoints3d_raw: Keypoints, 
-                          pred_kps3d_convention: str, 
+def align_convention_mask(pred_keypoints3d_raw: Keypoints,
+                          gt_keypoints3d_raw: Keypoints,
+                          pred_kps3d_convention: str,
                           gt_kps3d_convention: str,
                           eval_kps3d_convention: str,
                           logger: Union[None, str, logging.Logger] = None):
-    """Convert pred and gt to the same convention before passing
-    to metric manager, human_data as eval convention is recommended. 
-    Set mask to intersection mask if pred and gt convention
-    are in different convention.
+    """Convert pred and gt to the same convention before passing to metric
+    manager, human_data as eval convention is recommended. Set mask to
+    intersection mask if pred and gt convention are in different convention.
 
     Args:
-        pred_keypoints3d_raw (Keypoints): 
+        pred_keypoints3d_raw (Keypoints):
             Predicted 3D keypoints in original convention.
-        gt_keypoints3d_raw (Keypoints): 
+        gt_keypoints3d_raw (Keypoints):
             Ground-truth 3D keypoints in original convention.
-        pred_kps3d_convention (str): 
+        pred_kps3d_convention (str):
             Original convention of predicted 3D keypoints.
-        gt_kps3d_convention (str): 
+        gt_kps3d_convention (str):
             Original convention of ground-truth 3D keypoints.
-        eval_kps3d_convention (str): 
+        eval_kps3d_convention (str):
             Convention used for alignment and evaluation.
         logger (Union[None, str, logging.Logger], optional):
             Logger for logging. If None, root logger will be
             selected. Defaults to None.
 
     Returns:
-        Keypoints: 
-            Aligned predicted 3D keyopints and 
+        Keypoints:
+            Aligned predicted 3D keyopints and
             ground-truth 3D keypoints
     """
-    
+
     logger = get_logger(logger)
     if pred_kps3d_convention != eval_kps3d_convention:
         pred_keypoints3d = convert_keypoints(
-            pred_keypoints3d_raw,
-            dst=eval_kps3d_convention,
-            approximate=True)
+            pred_keypoints3d_raw, dst=eval_kps3d_convention, approximate=True)
     else:
         pred_keypoints3d = pred_keypoints3d_raw
 
     if gt_kps3d_convention != eval_kps3d_convention:
         gt_keypoints3d = convert_keypoints(
-            gt_keypoints3d_raw,
-            dst=eval_kps3d_convention,
-            approximate=True)
+            gt_keypoints3d_raw, dst=eval_kps3d_convention, approximate=True)
     else:
         gt_keypoints3d = gt_keypoints3d_raw
-
 
     if pred_kps3d_convention != gt_kps3d_convention:
         if eval_kps3d_convention != 'human_data':
@@ -148,14 +144,14 @@ def align_convention_mask(pred_keypoints3d_raw: Keypoints,
                 'different convention. It is recommended to set '
                 'eval_kps3d_convention to human_data to avoid error.')
 
-        intersection_mask = get_intersection_mask(
-            pred_kps3d_convention, gt_kps3d_convention,
-            eval_kps3d_convention)
+        intersection_mask = get_intersection_mask(pred_kps3d_convention,
+                                                  gt_kps3d_convention,
+                                                  eval_kps3d_convention)
         gt_intersection_mask = np.multiply(gt_keypoints3d.get_mask(),
-                                            intersection_mask)
-        pred_intersection_mask = np.multiply(
-            pred_keypoints3d.get_mask(), intersection_mask)
+                                           intersection_mask)
+        pred_intersection_mask = np.multiply(pred_keypoints3d.get_mask(),
+                                             intersection_mask)
         gt_keypoints3d.set_mask(gt_intersection_mask)
         pred_keypoints3d.set_mask(pred_intersection_mask)
-    
+
     return gt_keypoints3d, pred_keypoints3d
