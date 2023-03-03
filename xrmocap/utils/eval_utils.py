@@ -1,4 +1,7 @@
 import numpy as np
+import logging
+from typing import Union
+from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
@@ -88,10 +91,39 @@ def compute_similarity_transform(X: np.ndarray,
     return d, Z, T, b, c
 
 
-def align_convention_mask(pred_keypoints3d_raw, gt_keypoints3d_raw, 
-                          pred_kps3d_convention, gt_kps3d_convention,
-                          eval_kps3d_convention,
-                          logger):
+def align_convention_mask(pred_keypoints3d_raw: Keypoints, 
+                          gt_keypoints3d_raw: Keypoints, 
+                          pred_kps3d_convention: str, 
+                          gt_kps3d_convention: str,
+                          eval_kps3d_convention: str,
+                          logger: Union[None, str, logging.Logger] = None):
+    """Convert pred and gt to the same convention before passing
+    to metric manager, human_data as eval convention is recommended. 
+    Set mask to intersection mask if pred and gt convention
+    are in different convention.
+
+    Args:
+        pred_keypoints3d_raw (Keypoints): 
+            Predicted 3D keypoints in original convention.
+        gt_keypoints3d_raw (Keypoints): 
+            Ground-truth 3D keypoints in original convention.
+        pred_kps3d_convention (str): 
+            Original convention of predicted 3D keypoints.
+        gt_kps3d_convention (str): 
+            Original convention of ground-truth 3D keypoints.
+        eval_kps3d_convention (str): 
+            Convention used for alignment and evaluation.
+        logger (Union[None, str, logging.Logger], optional):
+            Logger for logging. If None, root logger will be
+            selected. Defaults to None.
+
+    Returns:
+        Keypoints: 
+            Aligned predicted 3D keyopints and 
+            ground-truth 3D keypoints
+    """
+    
+    logger = get_logger(logger)
     if pred_kps3d_convention != eval_kps3d_convention:
         pred_keypoints3d = convert_keypoints(
             pred_keypoints3d_raw,
@@ -108,8 +140,7 @@ def align_convention_mask(pred_keypoints3d_raw, gt_keypoints3d_raw,
     else:
         gt_keypoints3d = gt_keypoints3d_raw
 
-    # set mask to intersection mask if pred and gt convention
-    # are different
+
     if pred_kps3d_convention != gt_kps3d_convention:
         if eval_kps3d_convention != 'human_data':
             logger.warning(
