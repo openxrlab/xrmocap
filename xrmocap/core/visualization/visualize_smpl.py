@@ -232,11 +232,11 @@ def visualize_smpl_data(
                 shape=(end_idx - start_idx, cam_param.height, cam_param.width,
                        3),
                 dtype=np.uint8)
-        # batch_results = []
+        batch_results = []
 
         start_idx = 0
         end_idx = min(data_len - curr_iter * batch_size, batch_size)
-        for frame_idx in tqdm(range(start_idx, end_idx)):
+        for frame_idx in tqdm(range(start_idx, end_idx), disable=disable_tqdm):
             sframe_mperson_verts = mperson_verts[frame_idx]
             sframe_background = background_arr_batch[frame_idx - start_idx]
             for person_idx in range(n_person):
@@ -248,85 +248,24 @@ def visualize_smpl_data(
                     background=sframe_background)
             else:
                 img = sframe_background
-            #save data
+
             if write_img:
                 cv2.imwrite(
                     filename=os.path.join(output_path, f'{frame_idx:06d}.png'),
                     img=img)
             if write_video:
                 xrprimer_video_writer.write(image_array=img)
-            # batch_results.append(img)
+            batch_results.append(img)
 
-        # if return_array or write_video:
-        #     output_img_list += batch_results
+        if return_array:
+            output_img_list += batch_results
         curr_iter += 1
 
-    return None
-    # if return_array or write_video:
-    #     img_arr = np.asarray(output_img_list)
+    # return None
+    if return_array:
+        img_arr = np.asarray(output_img_list)
 
-    # return img_arr if return_array else None
-
-    # for start_idx in tqdm(
-    #         range(0, data_len, batch_size), disable=disable_tqdm):
-    #     end_idx = min(start_idx + batch_size, data_len)
-    #     # prepare background array for this batch
-    #     if background_arr is not None:
-    #         background_arr_batch = background_arr[start_idx:end_idx].copy()
-    #     elif background_dir is not None:
-    #         file_names_cache = file_names_cache \
-    #             if file_names_cache is not None \
-    #             else sorted(os.listdir(background_dir))
-    #         file_names_batch = file_names_cache[start_idx:end_idx]
-    #         background_list_batch = []
-    #         for file_name in file_names_batch:
-    #             background_list_batch.append(
-    #                 np.expand_dims(
-    #                     cv2.imread(os.path.join(background_dir, file_name)),
-    #                     axis=0))
-    #         background_arr_batch = np.concatenate(
-    #             background_list_batch, axis=0)
-    #     elif background_video is not None:
-    #         background_arr_batch = video_to_array(
-    #             background_video, start=start_idx, end=end_idx)
-    #     else:
-    #         background_arr_batch = np.zeros(
-    #             shape=(end_idx - start_idx, cam_param.height, cam_param.width,
-    #                    3),
-    #             dtype=np.uint8)
-    #     batch_results = []
-
-    #     for frame_idx in range(start_idx, end_idx):
-    #         sframe_mperson_verts = mperson_verts[frame_idx]
-    #         sframe_background = background_arr_batch[frame_idx - start_idx]
-    #         for person_idx in range(n_person):
-    #             mask_value = smpl_data_list[person_idx].get_mask()[frame_idx]
-    #             sframe_mperson_verts[person_idx] *= mask_value
-    #         if sframe_mperson_verts.square().sum() > 0:
-    #             img = renderer(
-    #                 vertices=sframe_mperson_verts.reshape(-1, 3),
-    #                 background=sframe_background)
-    #         else:
-    #             img = sframe_background
-    #         if write_img:
-    #             cv2.imwrite(
-    #                 filename=os.path.join(output_dir, f'{frame_idx:06d}.png'),
-    #                 img=img)
-    #         batch_results.append(img)
-    #     if return_array or write_video:
-    #         output_img_list += batch_results
-    # if return_array or write_video:
-    #     img_arr = np.asarray(output_img_list)
-    # if write_video:
-    #     if write_img:
-    #         logger.error('Function images_to_video() in ' +
-    #                      'the latest xrprimer release is ' + 'not correct.')
-    #         raise NotImplementedError
-    #     else:
-    #         array_to_video(image_array=img_arr, output_path=output_path)
-    #     if remove_output_dir:
-    #         shutil.rmtree(output_dir)
-    # return img_arr if return_array else None
+    return img_arr if return_array else None
 
 
 def _check_output_path(output_path: str, overwrite: bool,
