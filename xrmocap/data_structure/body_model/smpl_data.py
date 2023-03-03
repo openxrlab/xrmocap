@@ -126,6 +126,7 @@ class SMPLData(dict):
             transl=smpl_data_dict['transl'],
             betas=smpl_data_dict['betas'],
         )
+
         return ret_instance
 
     @classmethod
@@ -476,7 +477,7 @@ class SMPLData(dict):
             self.set_transl(smpl_dict['transl'])
         if 'betas' in smpl_dict:
             self.set_betas(smpl_dict['betas'])
-        # reset mask
+        # reset mask to make sure correnspondence
         self.set_mask(np.ones(shape=(self.get_batch_size())))
 
     def load(self, npz_path: str):

@@ -237,10 +237,9 @@ def visualize_smpl_data(
             if write_video:
                 xrprimer_video_writer.write(image_array=img)
             batch_results.append(img)
-
+        curr_iter += 1
         if return_array:
             output_img_list += batch_results
-        curr_iter += 1
 
     # return None
     if return_array:
