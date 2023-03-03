@@ -476,6 +476,8 @@ class SMPLData(dict):
             self.set_transl(smpl_dict['transl'])
         if 'betas' in smpl_dict:
             self.set_betas(smpl_dict['betas'])
+        # reset mask
+        self.set_mask(np.ones(shape=(self.get_batch_size())))
 
     def load(self, npz_path: str):
         """Load data from npz_path and update them to self.
@@ -486,6 +488,7 @@ class SMPLData(dict):
         """
         with np.load(npz_path, allow_pickle=True) as npz_file:
             tmp_data_dict = dict(npz_file)
+
             for key, value in tmp_data_dict.items():
                 if isinstance(value, np.ndarray) and\
                         len(value.shape) == 0:
