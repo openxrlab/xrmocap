@@ -11,9 +11,10 @@ from typing import List, Union
 from xrmocap.data.data_visualization.builder import BaseDataVisualization
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.base_architecture import BaseArchitecture
-from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_intersection_mask,
-)
+# from xrmocap.transform.convention.keypoints_convention import (
+#     convert_keypoints, get_intersection_mask,
+# )
+from xrmocap.utils.eval_utils import align_convention_mask
 from xrmocap.utils.distribute_utils import collect_results, is_main_process
 from xrmocap.utils.mvp_utils import (
     AverageMeter, convert_result_to_kps, norm2absolute,
@@ -207,40 +208,45 @@ class End2EndEvaluation(BaseEvaluation):
 
             # convert pred and gt to the same convention before passing
             # to metric manager, human_data recommended
-            if self.pred_kps3d_convention != self.eval_kps3d_convention:
-                pred_keypoints3d = convert_keypoints(
-                    pred_keypoints3d_raw,
-                    dst=self.eval_kps3d_convention,
-                    approximate=True)
-            else:
-                pred_keypoints3d = pred_keypoints3d_raw
+            gt_keypoints3d, pred_keypoints3d = \
+                align_convention_mask(pred_keypoints3d_raw, gt_keypoints3d_raw, 
+                          self.pred_kps3d_convention, self.gt_kps3d_convention,
+                          self.eval_kps3d_convention,
+                          self.logger)
+            # if self.pred_kps3d_convention != self.eval_kps3d_convention:
+            #     pred_keypoints3d = convert_keypoints(
+            #         pred_keypoints3d_raw,
+            #         dst=self.eval_kps3d_convention,
+            #         approximate=True)
+            # else:
+            #     pred_keypoints3d = pred_keypoints3d_raw
 
-            if self.gt_kps3d_convention != self.eval_kps3d_convention:
-                gt_keypoints3d = convert_keypoints(
-                    gt_keypoints3d_raw,
-                    dst=self.eval_kps3d_convention,
-                    approximate=True)
-            else:
-                gt_keypoints3d = gt_keypoints3d_raw
+            # if self.gt_kps3d_convention != self.eval_kps3d_convention:
+            #     gt_keypoints3d = convert_keypoints(
+            #         gt_keypoints3d_raw,
+            #         dst=self.eval_kps3d_convention,
+            #         approximate=True)
+            # else:
+            #     gt_keypoints3d = gt_keypoints3d_raw
 
-            # set mask to intersection mask if pred and gt convention
-            # are different
-            if self.pred_kps3d_convention != self.gt_kps3d_convention:
-                if self.eval_kps3d_convention != 'human_data':
-                    self.logger.warning(
-                        'Predicion and ground truth is having'
-                        'different convention. It is recommended to set '
-                        'eval_kps3d_convention to human_data to avoid error.')
+            # # set mask to intersection mask if pred and gt convention
+            # # are different
+            # if self.pred_kps3d_convention != self.gt_kps3d_convention:
+            #     if self.eval_kps3d_convention != 'human_data':
+            #         self.logger.warning(
+            #             'Predicion and ground truth is having'
+            #             'different convention. It is recommended to set '
+            #             'eval_kps3d_convention to human_data to avoid error.')
 
-                intersection_mask = get_intersection_mask(
-                    self.pred_kps3d_convention, self.gt_kps3d_convention,
-                    self.eval_kps3d_convention)
-                gt_intersection_mask = np.multiply(gt_keypoints3d.get_mask(),
-                                                   intersection_mask)
-                pred_intersection_mask = np.multiply(
-                    pred_keypoints3d.get_mask(), intersection_mask)
-                gt_keypoints3d.set_mask(gt_intersection_mask)
-                pred_keypoints3d.set_mask(pred_intersection_mask)
+            #     intersection_mask = get_intersection_mask(
+            #         self.pred_kps3d_convention, self.gt_kps3d_convention,
+            #         self.eval_kps3d_convention)
+            #     gt_intersection_mask = np.multiply(gt_keypoints3d.get_mask(),
+            #                                        intersection_mask)
+            #     pred_intersection_mask = np.multiply(
+            #         pred_keypoints3d.get_mask(), intersection_mask)
+            #     gt_keypoints3d.set_mask(gt_intersection_mask)
+            #     pred_keypoints3d.set_mask(pred_intersection_mask)
 
             # evaluate and print results
             eval_results, full_results = self.metric_manager(

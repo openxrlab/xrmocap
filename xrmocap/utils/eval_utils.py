@@ -2,6 +2,9 @@ import numpy as np
 
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
+from xrmocap.transform.convention.keypoints_convention import (
+    convert_keypoints, get_intersection_mask,
+)
 
 
 def align_by_keypoint(keypoints: Keypoints, keypoint_name='right_ankle'):
@@ -83,3 +86,45 @@ def compute_similarity_transform(X: np.ndarray,
 
     c = muX - b * np.dot(muY, T)
     return d, Z, T, b, c
+
+
+def align_convention_mask(pred_keypoints3d_raw, gt_keypoints3d_raw, 
+                          pred_kps3d_convention, gt_kps3d_convention,
+                          eval_kps3d_convention,
+                          logger):
+    if pred_kps3d_convention != eval_kps3d_convention:
+        pred_keypoints3d = convert_keypoints(
+            pred_keypoints3d_raw,
+            dst=eval_kps3d_convention,
+            approximate=True)
+    else:
+        pred_keypoints3d = pred_keypoints3d_raw
+
+    if gt_kps3d_convention != eval_kps3d_convention:
+        gt_keypoints3d = convert_keypoints(
+            gt_keypoints3d_raw,
+            dst=eval_kps3d_convention,
+            approximate=True)
+    else:
+        gt_keypoints3d = gt_keypoints3d_raw
+
+    # set mask to intersection mask if pred and gt convention
+    # are different
+    if pred_kps3d_convention != gt_kps3d_convention:
+        if eval_kps3d_convention != 'human_data':
+            logger.warning(
+                'Predicion and ground truth is having'
+                'different convention. It is recommended to set '
+                'eval_kps3d_convention to human_data to avoid error.')
+
+        intersection_mask = get_intersection_mask(
+            pred_kps3d_convention, gt_kps3d_convention,
+            eval_kps3d_convention)
+        gt_intersection_mask = np.multiply(gt_keypoints3d.get_mask(),
+                                            intersection_mask)
+        pred_intersection_mask = np.multiply(
+            pred_keypoints3d.get_mask(), intersection_mask)
+        gt_keypoints3d.set_mask(gt_intersection_mask)
+        pred_keypoints3d.set_mask(pred_intersection_mask)
+    
+    return gt_keypoints3d, pred_keypoints3d
