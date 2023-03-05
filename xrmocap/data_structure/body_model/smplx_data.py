@@ -316,10 +316,11 @@ class SMPLXData(SMPLData):
             self, repeat_betas=repeat_betas)
         dict_to_return.pop('body_pose')
         fullpose = self.get_fullpose()
+        batch_size = self.get_batch_size()
         start_idx = 1
         body_pose = fullpose[:, start_idx:start_idx +
                              self.__class__.BODY_POSE_LEN].reshape(
-                                 self.get_batch_size(), -1)
+                                 batch_size, -1)
         start_idx += self.__class__.BODY_POSE_LEN
         jaw_pose = fullpose[:, start_idx:start_idx +
                             self.__class__.JAW_POSE_LEN].reshape(-1, 3)
@@ -331,11 +332,12 @@ class SMPLXData(SMPLData):
                              self.__class__.EYE_POSE_LEN].reshape(-1, 3)
         start_idx += self.__class__.EYE_POSE_LEN
         left_hand_pose = fullpose[:, start_idx:start_idx +
-                                  self.__class__.HAND_POSE_LEN].reshape(-1, 3)
+                                  self.__class__.HAND_POSE_LEN].reshape(
+                                      batch_size, -1)
         start_idx += self.__class__.HAND_POSE_LEN
         right_hand_pose = fullpose[:, start_idx:start_idx +
                                    self.__class__.HAND_POSE_LEN].reshape(
-                                       -1, 3)
+                                       batch_size, -1)
         expression = self.get_expression(repeat_expression=repeat_expression)
         dict_to_return.update({
             'body_pose': body_pose,
