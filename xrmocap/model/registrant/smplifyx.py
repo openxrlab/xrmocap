@@ -132,7 +132,7 @@ class SMPLifyX(SMPLify):
             weight = torch.zeros([n_keypoints]).to(self.device)
             weight[self.shoulder_hip_keypoint_idxs] = 1.0
             if shoulder_weight is not None and hip_weight is not None and \
-                    body_weight * face_weight * hand_weight == 0.0:
+                    body_weight + face_weight + hand_weight == 0.0:
                 weight[self.shoulder_keypoint_idxs] = \
                     weight[self.shoulder_keypoint_idxs] * shoulder_weight
                 weight[self.hip_keypoint_idxs] = \

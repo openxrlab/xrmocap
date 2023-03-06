@@ -5,6 +5,7 @@ import time
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -71,12 +72,14 @@ def get_directory(state: str = 'train',
 
     model = get_model_name(model, resnet_layer)
     cfg_name = os.path.basename(cfg_name).split('.')[0]
+    now = datetime.now()
+    time_stamp = now.strftime('%Y%m%d%H%M%S')
 
     # get final output dir
-    final_output_dir = os.path.join(root_output_dir, dataset, model, cfg_name)
+    final_output_dir = os.path.join(root_output_dir, dataset, model,
+                                    cfg_name + '_' + time_stamp)
 
-    if (not os.path.exists(final_output_dir)):
-        os.makedirs(final_output_dir)
+    os.makedirs(final_output_dir, exist_ok=True)
 
     # get logger file under final output dir
     time_str = time.strftime('%Y-%m-%d-%H-%M')

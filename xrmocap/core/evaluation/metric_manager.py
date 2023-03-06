@@ -89,13 +89,13 @@ class MetricManager:
             # record return keys and values
             if name in self.pick_dict:
                 selections = self.pick_dict[name]
-                if name == 'all':
+                if selections == 'all':
                     manager_ret_dict[name] = metric_ret_dict
                 else:
                     manager_ret_dict[name] = dict()
                     for key in selections:
                         manager_ret_dict[name][key] = metric_ret_dict[key]
-        return manager_ret_dict
+        return manager_ret_dict, accumulate_kwargs
 
 
 def _sort_metrics_by_rank(unsorted_list: List[BaseMetric]) -> List[BaseMetric]:

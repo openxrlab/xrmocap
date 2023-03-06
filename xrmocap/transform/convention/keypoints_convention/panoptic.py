@@ -19,3 +19,21 @@ PANOPTIC_KEYPOINTS = [
     'right_eye_openpose',
     'right_ear_openpose',
 ]
+
+PANOPTIC15_KEYPOINTS = [
+    'neck_openpose',
+    'nose_openpose',
+    'pelvis_openpose',
+    'left_shoulder_openpose',
+    'left_elbow_openpose',
+    'left_wrist_openpose',
+    'left_hip_openpose',
+    'left_knee_openpose',
+    'left_ankle_openpose',
+    'right_shoulder_openpose',
+    'right_elbow_openpose',
+    'right_wrist_openpose',
+    'right_hip_openpose',
+    'right_knee_openpose',
+    'right_ankle_openpose',
+]

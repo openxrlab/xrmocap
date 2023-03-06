@@ -51,16 +51,16 @@ trainer_setup = dict(
             type='MVPDataset',
             test_mode=False,
             meta_path=  # noqa E251
-            './xrmocap_data/panoptic/xrmocap_meta_trainset_5cam',
+            './xrmocap_data/panoptic-toolbox/xrmocap_meta_trainset',
         ),
         test_dataset_setup=dict(
             type='MVPDataset',
             test_mode=True,
-            meta_path='./xrmocap_data/panoptic/xrmocap_meta_testset_5cam',
+            meta_path='./xrmocap_data/panoptic-toolbox/xrmocap_meta_testset',
         ),
         base_dataset_setup=dict(
             dataset=__dataset__,
-            data_root='./xrmocap_data/panoptic',
+            data_root='./xrmocap_data/panoptic-toolbox',
             img_pipeline=[
                 dict(type='LoadImageCV2'),
                 dict(type='BGR2RGB'),
@@ -167,9 +167,56 @@ trainer_setup = dict(
         ),
     ),
     evaluation_setup=dict(
-        type='MVPEvaluation',
+        type='End2EndEvaluation',
         dataset_name=__test_dataset__,
-        pred_kps3d_convention='panoptic',
+        pred_kps3d_convention='panoptic_15',
+        gt_kps3d_convention='panoptic',
+        eval_kps3d_convention='human_data',
+        trans_matrix=[[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]],
         n_max_person=__n_instance__,
+        checkpoint_select='ap@25',
+        metric_list=[
+            dict(
+                type='PredictionMatcher',
+                name='matching',
+            ),
+            dict(
+                type='MPJPEMetric',
+                name='mpjpe',
+                outlier_threshold=500,
+                unit_scale=1),
+            dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1),
+            dict(
+                type='PCKMetric',
+                name='pck',
+                use_pa_mpjpe=False,
+                threshold=[50, 100],
+            ),
+            dict(
+                type='PCPMetric',
+                name='pcp',
+                threshold=0.5,
+                show_table=True,
+                selected_limbs_names=[
+                    'left_lower_leg', 'right_lower_leg', 'left_upperarm',
+                    'right_upperarm', 'left_forearm', 'right_forearm',
+                    'left_thigh', 'right_thigh'
+                ],
+                additional_limbs_names=[['jaw', 'headtop']],
+            ),
+            dict(
+                type='PrecisionRecallMetric',
+                name='precision_recall',
+                show_table=True,
+                threshold=list(range(25, 155, 25)) + [500],
+            )
+        ],
+        pick_dict=dict(
+            mpjpe=['mpjpe_mean', 'mpjpe_std'],
+            pa_mpjpe=['pa_mpjpe_mean', 'pa_mpjpe_std'],
+            pck=['pck@50', 'pck@100'],
+            pcp=['pcp_total_mean'],
+            precision_recall=['recall@500'],
+        ),
     ),
 )
