@@ -1,15 +1,15 @@
 # yapf: disable
 import cv2
+import math
 import numpy as np
 import os
-import shutil
 import torch
 from tqdm import tqdm
 from typing import List, Union
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
-from xrprimer.utils.ffmpeg_utils import array_to_video, video_to_array
+from xrprimer.utils.ffmpeg_utils import VideoWriter, video_to_array
 from xrprimer.utils.log_utils import get_logger, logging
 from xrprimer.utils.path_utils import (
     Existence, check_path_existence, check_path_suffix,
@@ -125,7 +125,9 @@ def visualize_smpl_data(
     else:
         data_len = smpl_data.get_batch_size()
         smpl_data_list = [smpl_data]
+
     n_person = len(smpl_data_list)
+
     # prepare faces for multi-person
     sperson_faces = default_body_model.faces_tensor.clone().detach()
     sperson_n_verts = default_body_model.get_num_verts()
@@ -141,41 +143,41 @@ def visualize_smpl_data(
         camera_parameter=cam_param,
         device=device,
         logger=logger)
-    # check whether to write video directly or write images first
-    if check_path_suffix(output_path, '.mp4'):
-        write_video = True
-        if batch_size < data_len:
-            output_dir = f'{output_path}_temp'
-            os.makedirs(output_dir, exist_ok=True)
-            write_img = True
-            remove_output_dir = True
-        else:
-            write_img = False
-            remove_output_dir = False
-    else:
-        write_video = False
-        output_dir = output_path
-        write_img = True
-        remove_output_dir = False
-    mperson_verts = None
-    for person_idx in range(n_person):
-        smpl_data = smpl_data_list[person_idx]
-        param_dict = smpl_data.to_tensor_dict(device=device)
-        model = body_model_dict[smpl_data['gender']]
-        body_model_output = model(**param_dict)
-        verts = body_model_output['vertices']  # n_batch, n_verts, 3
-        sperson_verts = torch.unsqueeze(verts, dim=1)
-        # sperson_verts.shape: n_batch, n_person, n_verts, 3
-        if mperson_verts is None:
-            mperson_verts = sperson_verts
-        else:
-            mperson_verts = torch.cat((mperson_verts, sperson_verts), dim=1)
+    # check whether to write video or write images
+    write_video, write_img = (True, False) \
+        if check_path_suffix(output_path, '.mp4') else (False, True)
+    if write_video:
+        xrprimer_video_writer = VideoWriter(
+            output_path, [cam_param.height, cam_param.width])
+
+    total_iter = math.ceil(data_len / batch_size)
+    curr_iter = 0
     file_names_cache = None
     output_img_list = []
-    for start_idx in tqdm(
-            range(0, data_len, batch_size), disable=disable_tqdm):
-        end_idx = min(start_idx + batch_size, data_len)
-        # prepare background array for this batch
+    while (curr_iter < total_iter):
+
+        mperson_verts = None
+        start_idx = curr_iter * batch_size
+        end_idx = min(data_len, start_idx + batch_size)
+        for person_idx in range(n_person):
+            smpl_data = smpl_data_list[person_idx]
+            param_dict = smpl_data.to_tensor_dict(device=device)
+            param_dict_input = dict()
+            for key, value in param_dict.items():
+                param_dict_input[key] = value[start_idx:end_idx, :]
+
+            model = body_model_dict[smpl_data['gender']]
+            with torch.no_grad():
+                body_model_output = model(**param_dict_input)
+            verts = body_model_output['vertices']  # n_batch, n_verts, 3
+            sperson_verts = torch.unsqueeze(verts, dim=1)
+            # sperson_verts.shape: n_batch, n_person, n_verts, 3
+            if mperson_verts is None:
+                mperson_verts = sperson_verts
+            else:
+                mperson_verts = torch.cat((mperson_verts, sperson_verts),
+                                          dim=1)
+
         if background_arr is not None:
             background_arr_batch = background_arr[start_idx:end_idx].copy()
         elif background_dir is not None:
@@ -196,13 +198,14 @@ def visualize_smpl_data(
                 background_video, start=start_idx, end=end_idx)
         else:
             background_arr_batch = np.zeros(
-                shape=(end_idx - start_idx, cam_param.height, cam_param.width,
-                       3),
+                (end_idx - start_idx, cam_param.height, cam_param.width, 3),
                 dtype=np.uint8)
         batch_results = []
-        for frame_idx in range(start_idx, end_idx):
+
+        iter_batch_len = min(data_len - start_idx, batch_size)
+        for frame_idx in tqdm(range(0, iter_batch_len), disable=disable_tqdm):
             sframe_mperson_verts = mperson_verts[frame_idx]
-            sframe_background = background_arr_batch[frame_idx - start_idx]
+            sframe_background = background_arr_batch[frame_idx]
             for person_idx in range(n_person):
                 mask_value = smpl_data_list[person_idx].get_mask()[frame_idx]
                 sframe_mperson_verts[person_idx] *= mask_value
@@ -212,24 +215,23 @@ def visualize_smpl_data(
                     background=sframe_background)
             else:
                 img = sframe_background
+
             if write_img:
                 cv2.imwrite(
-                    filename=os.path.join(output_dir, f'{frame_idx:06d}.png'),
+                    filename=os.path.join(output_path,
+                                          f'{frame_idx + start_idx:06d}.png'),
                     img=img)
+            if write_video:
+                xrprimer_video_writer.write(image_array=img)
             batch_results.append(img)
-        if return_array or write_video:
+        curr_iter += 1
+        if return_array:
             output_img_list += batch_results
-    if return_array or write_video:
+
+    # return None
+    if return_array:
         img_arr = np.asarray(output_img_list)
-    if write_video:
-        if write_img:
-            logger.error('Function images_to_video() in ' +
-                         'the latest xrprimer release is ' + 'not correct.')
-            raise NotImplementedError
-        else:
-            array_to_video(image_array=img_arr, output_path=output_path)
-        if remove_output_dir:
-            shutil.rmtree(output_dir)
+
     return img_arr if return_array else None
 
 
