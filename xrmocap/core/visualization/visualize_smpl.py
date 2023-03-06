@@ -202,7 +202,7 @@ def visualize_smpl_data(
                 dtype=np.uint8)
         batch_results = []
 
-        iter_batch_len = min(data_len - curr_iter * batch_size, batch_size)
+        iter_batch_len = min(data_len - start_idx, batch_size)
         for frame_idx in tqdm(range(0, iter_batch_len), disable=disable_tqdm):
             sframe_mperson_verts = mperson_verts[frame_idx]
             sframe_background = background_arr_batch[frame_idx]
@@ -218,9 +218,8 @@ def visualize_smpl_data(
 
             if write_img:
                 cv2.imwrite(
-                    filename=os.path.join(
-                        output_path,
-                        f'{frame_idx + curr_iter* batch_size:06d}.png'),
+                    filename=os.path.join(output_path,
+                                          f'{frame_idx + start_idx:06d}.png'),
                     img=img)
             if write_video:
                 xrprimer_video_writer.write(image_array=img)
