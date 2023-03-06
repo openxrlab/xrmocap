@@ -1,5 +1,6 @@
 # yapf: disable
 import cv2
+import math
 import numpy as np
 import os
 import torch
@@ -149,9 +150,10 @@ def visualize_smpl_data(
         xrprimer_video_writer = VideoWriter(
             output_path, [cam_param.height, cam_param.width])
 
-    total_iter = data_len // batch_size + 1
+    total_iter = math.ceil(data_len / batch_size)
     curr_iter = 0
-
+    file_names_cache = None
+    output_img_list = []
     while (curr_iter < total_iter):
 
         mperson_verts = None
@@ -160,21 +162,9 @@ def visualize_smpl_data(
         for person_idx in range(n_person):
             smpl_data = smpl_data_list[person_idx]
             param_dict = smpl_data.to_tensor_dict(device=device)
-
             param_dict_input = dict()
             for key, value in param_dict.items():
-                if key not in ['right_hand_pose', 'left_hand_pose']:
-                    param_dict_input[key] = torch.tensor(
-                        value[start_idx:end_idx, :],
-                        device=device,
-                        dtype=torch.float32)
-                else:
-                    param_dict_input[key] = torch.tensor(
-                        value[(value.shape[0] * start_idx //
-                               data_len):(value.shape[0] * end_idx //
-                                          data_len), :],
-                        device=device,
-                        dtype=torch.float32)
+                param_dict_input[key] = value[start_idx:end_idx, :]
 
             model = body_model_dict[smpl_data['gender']]
             with torch.no_grad():
@@ -187,8 +177,6 @@ def visualize_smpl_data(
             else:
                 mperson_verts = torch.cat((mperson_verts, sperson_verts),
                                           dim=1)
-        file_names_cache = None
-        output_img_list = []
 
         if background_arr is not None:
             background_arr_batch = background_arr[start_idx:end_idx].copy()
@@ -214,11 +202,11 @@ def visualize_smpl_data(
                 dtype=np.uint8)
         batch_results = []
 
-        start_idx = 0
+        # re-assign values of end_idx to write files
         end_idx = min(data_len - curr_iter * batch_size, batch_size)
-        for frame_idx in tqdm(range(start_idx, end_idx), disable=disable_tqdm):
+        for frame_idx in tqdm(range(0, end_idx), disable=disable_tqdm):
             sframe_mperson_verts = mperson_verts[frame_idx]
-            sframe_background = background_arr_batch[frame_idx - start_idx]
+            sframe_background = background_arr_batch[frame_idx]
             for person_idx in range(n_person):
                 mask_value = smpl_data_list[person_idx].get_mask()[frame_idx]
                 sframe_mperson_verts[person_idx] *= mask_value

@@ -489,7 +489,6 @@ class SMPLData(dict):
         """
         with np.load(npz_path, allow_pickle=True) as npz_file:
             tmp_data_dict = dict(npz_file)
-
             for key, value in tmp_data_dict.items():
                 if isinstance(value, np.ndarray) and\
                         len(value.shape) == 0:
