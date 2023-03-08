@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import time
 
@@ -65,9 +64,15 @@ def test_timer():
 
     # undo_last_stop "if" test
     timer_test.reset()
-    num_undo_last_stop = np.random.randint(low, high)
     for num_undo_last_stop in range(low, high):
         for i in range(high):
             if i == num_undo_last_stop:
                 with pytest.raises(ValueError):
                     timer_test.undo_last_stop()
+    # test stop
+    timer_test.reset()
+    for num_stop in range(low, high):
+        for i in range(high):
+            if i == num_stop:
+                with pytest.raises(ValueError):
+                    timer_test.stop()
