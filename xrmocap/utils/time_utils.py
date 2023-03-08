@@ -1,17 +1,19 @@
 import time
+from typing import Union
 from xrprimer.utils.log_utils import get_logger, logging
 
 
 class Timer:
 
-    def __init__(self, name: str, logger: logging.Logger = None) -> None:
-        """Timer initialization.
+    def __init__(self,
+                 name: str,
+                 logger: Union[None, str, logging.Logger] = None) -> None:
+        """Initialize Timer.
 
         Args:
-            name (str): id information of this class
-            logger (logging.Logger, optional): Save information for
-            data recording and error reporting
-            Defaults to None.
+            name (str): Id information of this class
+            logger (Union[None, str, logging.Logger], optional):
+                Defaults to None.
         """
         self.name = name
         self.logger = get_logger(logger)
@@ -27,10 +29,10 @@ class Timer:
         forward process.
 
         Raises:
-            ValueError: start_time has not been assigned
+            ValueError: You have to start the timer first before stopping it
         """
         if self.start_time is None:
-            self.logger.error(f'Timer {self.name} has not been started.',
+            self.logger.error(f'Timer {self.name} has not been started.' +
                               ' Please call start() before stop().')
             raise ValueError
         self.end_time = time.time()
@@ -44,11 +46,12 @@ class Timer:
         whether to reset Timer according to reset.
 
         Args:
-            reset (bool, optional): whether to reset Timer.
-            Defaults to True.
+            reset (bool, optional): Whether to reset Timer. If true,
+                records before will not impact the next average value.
+                Defaults to True.
 
         Returns:
-            float: average time consumption for process already finished
+            float: Average time consumption for process already finished
         """
         avg_time = self.total_time / self.count
 
@@ -57,15 +60,7 @@ class Timer:
         return avg_time
 
     def reset(self) -> None:
-        """Timer initialization This function could be used to restared Timer
-        in get_average function.
-
-        count: number of process already finished.
-        total_time: time consumption of process already finished.
-        start_time: the specific time when one process starts.
-        end_time:the specific time when one process finishses.
-        last_measured: time consumption of running last process.
-        """
+        """Restart Timer in get_average function."""
         self.count = 0.0
         self.total_time = 0.0
         self.start_time = None
@@ -73,12 +68,13 @@ class Timer:
         self.last_measure = None
 
     def undo_last_stop(self) -> None:
-        """Go back to data which records data before this process starts. This
-        function could be used when data for this process is not well or this
-        process is interrupted Unexpectedly.
+        """Reverse the previous actions you have taken during this progress
+        and restore the data to its previous state. Useful for occasions below:
+        1. data for current process is not reliable
+        2. current process crashes Unexpectedly.
 
         Raises:
-            ValueError: Only Timer has started but not ended yet
+            ValueError: You have to stop the timer first before restarting it
         """
         if self.end_time is None:
             self.start_time = None
