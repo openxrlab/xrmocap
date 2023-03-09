@@ -208,8 +208,6 @@ class End2EndEvaluation(BaseEvaluation):
             gt_keypoints3d, pred_keypoints3d = \
                 align_convention_mask(pred_keypoints3d_raw,
                                       gt_keypoints3d_raw,
-                                      self.pred_kps3d_convention,
-                                      self.gt_kps3d_convention,
                                       self.eval_kps3d_convention,
                                       self.logger)
 

@@ -11,7 +11,6 @@ selected_limbs_name = [
     'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
     'left_forearm', 'right_forearm', 'left_thigh', 'right_thigh'
 ]
-# additional_limbs_names = [['jaw', 'headtop']]
 
 associator = dict(
     type='FourDAGAssociator',
@@ -60,7 +59,44 @@ associator = dict(
     ),
     logger=logger,
 )
-
+metric_list = [
+    dict(
+        type='PredictionMatcher',
+        name='matching',
+    ),
+    dict(type='MPJPEMetric', name='mpjpe', unit_scale=1),
+    dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1),
+    dict(
+        type='PCKMetric',
+        name='pck',
+        use_pa_mpjpe=True,
+        threshold=[50, 100],
+    ),
+    dict(
+        type='PCPMetric',
+        name='pcp',
+        threshold=0.5,
+        show_table=True,
+        selected_limbs_names=[
+            'left_lower_leg', 'right_lower_leg', 'left_upperarm',
+            'right_upperarm', 'left_forearm', 'right_forearm', 'left_thigh',
+            'right_thigh'
+        ],
+    ),
+    dict(
+        type='PrecisionRecallMetric',
+        name='precision_recall',
+        show_table=False,
+        threshold=list(range(25, 155, 25)) + [500],
+    )
+]
+pick_dict = dict(
+    mpjpe=['mpjpe_mean', 'mpjpe_std'],
+    pa_mpjpe=['pa_mpjpe_mean', 'pa_mpjpe_std'],
+    pck=['pck@50', 'pck@100'],
+    pcp=['pcp_total_mean'],
+    precision_recall=['recall@500'],
+)
 dataset = dict(
     type='BottomUpMviewMpersonDataset',
     data_root=__data_root__,
