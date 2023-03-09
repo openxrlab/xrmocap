@@ -311,22 +311,13 @@ def add_campus_jaw_headtop(nose, kps3d_campus):
     for frame_idx in range(nose.shape[0]):
         for i, kps3d in enumerate(kps3d_campus[frame_idx]):
             add_kps3d = np.zeros((2, 3))
-
-            hip_center = (kps3d[2] + kps3d[3]) / 2
-            shouler_cneter = (kps3d[8] + kps3d[9]) / 2
-            head_center = nose[frame_idx][i]
-            add_kps3d[0] = shouler_cneter + (head_center -
-                                             shouler_cneter) * 0.5
-            face_dir = np.cross(shouler_cneter - hip_center,
-                                kps3d[8] - kps3d[9])
-            if np.isnan(face_dir).any():
-                add_kps3d[1] = shouler_cneter + (
-                    head_center - shouler_cneter) * np.array([0.75, 0.75, 1.5])
-            else:
-                face_dir = face_dir / np.linalg.norm(face_dir)
-                z_dir = np.array([0., 0., 1.], dtype=np.float32)
-                add_kps3d[1] = add_kps3d[0] + face_dir * 0.125 + z_dir * 0.145
-
+            add_kps3d[0] = (kps3d[8] + kps3d[9]) / 2  # Use middle of shoulder
+            add_kps3d[1] = nose[frame_idx][i]  # use nose
+            add_kps3d[1] = add_kps3d[0] + (
+                add_kps3d[1] - add_kps3d[0]) * np.array([0.75, 0.75, 1.5])
+            add_kps3d[0] = add_kps3d[0] + (nose[frame_idx][i] -
+                                           add_kps3d[0]) * np.array(
+                                               [1. / 2., 1. / 2., 1. / 2.])
             kps3d[-2:] = add_kps3d
     return kps3d_campus
 

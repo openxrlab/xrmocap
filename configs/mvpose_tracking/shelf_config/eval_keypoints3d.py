@@ -8,11 +8,41 @@ logger = None
 output_dir = './output/mvpose_tracking/shelf/fasterrcnn'
 pred_kps3d_convention = 'coco'
 eval_kps3d_convention = 'campus'
-selected_limbs_name = [
-    'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
-    'left_forearm', 'right_forearm', 'left_thigh', 'right_thigh'
+
+metric_list = [
+    dict(
+        type='PredictionMatcher',
+        name='matching',
+        # align_kps_name='right_ankle',
+    ),
+    dict(type='MPJPEMetric', name='mpjpe', unit_scale=1000),
+    dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1000),
+    dict(
+        type='PCKMetric',
+        name='pck',
+        use_pa_mpjpe=True,
+        threshold=[50, 100],
+    ),
+    dict(
+        type='PCPMetric',
+        name='pcp',
+        threshold=0.5,
+        show_table=True,
+        selected_limbs_names=[
+            'left_lower_leg', 'right_lower_leg', 'left_upperarm',
+            'right_upperarm', 'left_forearm', 'right_forearm', 'left_thigh',
+            'right_thigh'
+        ],
+        additional_limbs_names=[['jaw', 'headtop']],
+    ),
 ]
-additional_limbs_names = [['jaw', 'headtop']]
+
+pick_dict = dict(
+    mpjpe=['mpjpe_mean', 'mpjpe_std'],
+    pa_mpjpe=['pa_mpjpe_mean', 'pa_mpjpe_std'],
+    pck=['pck@50', 'pck@100'],
+    pcp=['pcp_total_mean'],
+)
 
 associator = dict(
     type='MvposeAssociator',
