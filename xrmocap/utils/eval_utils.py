@@ -163,13 +163,13 @@ def align_convention_mask(pred_keypoints3d_raw: Keypoints,
 
     pred_kps3d_mask = pred_keypoints3d.get_mask()
     pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
-    if pred_nose is not None:
+    if pred_nose is not None and eval_kps3d_convention == 'campus':
         pred_kps3d = add_campus_jaw_headtop(pred_nose, pred_kps3d)
         pred_kps3d_mask = add_campus_jaw_headtop_mask(pred_kps3d_mask)
 
     gt_kps3d_mask = gt_keypoints3d.get_mask()
     gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
-    if gt_nose is not None:
+    if gt_nose is not None and eval_kps3d_convention == 'campus':
         gt_kps3d = add_campus_jaw_headtop(gt_nose, gt_kps3d)
         gt_kps3d_mask = add_campus_jaw_headtop_mask(gt_kps3d_mask)
 
@@ -183,12 +183,6 @@ def align_convention_mask(pred_keypoints3d_raw: Keypoints,
         kps=gt_kps3d, mask=gt_kps3d_mask, convention=eval_kps3d_convention)
 
     if pred_kps3d_convention != gt_kps3d_convention:
-        if eval_kps3d_convention != 'human_data':
-            logger.warning(
-                'Predicion and ground truth is having'
-                'different convention. It is recommended to set '
-                'eval_kps3d_convention to human_data to avoid error.')
-
         intersection_mask = get_intersection_mask(pred_kps3d_convention,
                                                   gt_kps3d_convention,
                                                   eval_kps3d_convention)

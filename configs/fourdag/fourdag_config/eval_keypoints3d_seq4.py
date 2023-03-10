@@ -7,10 +7,6 @@ logger = None
 output_dir = './output/fourdag/fourdag_fourdag_19_FourDAGOptimization/'
 pred_kps3d_convention = 'fourdag_19'
 eval_kps3d_convention = 'campus'
-selected_limbs_name = [
-    'left_lower_leg', 'right_lower_leg', 'left_upperarm', 'right_upperarm',
-    'left_forearm', 'right_forearm', 'left_thigh', 'right_thigh'
-]
 
 associator = dict(
     type='FourDAGAssociator',

@@ -39,12 +39,10 @@ class BottomUpAssociationEvaluation(BaseEvaluation):
 
         Args:
             output_dir (str): The path to save results.
-            selected_limbs_name (List[List[str]]): The name of selected
-                limbs in evaluation.
-            additional_limbs_names (List[List[str]]):
-                Names at both ends of the limb.
             dataset (Union[dict, MviewMpersonDataset])
             associator (Union[dict, MvposeAssociator])
+            metric_list (List[Union[dict, BaseMetric]]):
+                A list of metrics to be evaluated.
             dataset_visualization
                 (Union[None, dict, BaseDataVisualization], optional):
                 Defaults to None.
@@ -52,6 +50,9 @@ class BottomUpAssociationEvaluation(BaseEvaluation):
                 keypoints3d, Defaults to 'coco'.
             eval_kps3d_convention (str, optional): the convention of
                 keypoints3d for evaluation, Defaults to 'campus'.
+            pick_dict (Union[dict, None], optional):
+                Selected metrics to be printed in the final table.
+                Defaults to None.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
