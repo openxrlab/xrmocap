@@ -201,7 +201,7 @@ class PCPMetric(BaseMetric):
                 else:
                     check_result[frame_idx, gt_kps3d_idx, -1] = -1
                     error_cnt += 1
-        bone_group = dict([('Torso', np.array([len(limbs) - 1])),
+        bone_group = dict([('Torso', np.array([len(limbs)])),
                            ('Upper arms', np.array([5, 6])),
                            ('Lower arms', np.array([4, 7])),
                            ('Upper legs', np.array([1, 2])),
