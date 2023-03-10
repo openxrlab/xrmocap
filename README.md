@@ -6,7 +6,7 @@
 
 <br/>
 
-<div align="left">
+<div align="center">
 
 [![Documentation](https://readthedocs.org/projects/xrmocap/badge/?version=latest)](https://xrmocap.readthedocs.io/en/latest/?badge=latest)
 [![actions](https://github.com/openxrlab/xrmocap/workflows/build/badge.svg)](https://github.com/openxrlab/xrmocap/actions)
