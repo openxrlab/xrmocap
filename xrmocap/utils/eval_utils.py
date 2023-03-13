@@ -8,9 +8,6 @@ from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import (
     convert_keypoints, get_intersection_mask, get_keypoint_idx,
 )
-from xrmocap.utils.mvpose_utils import (
-    add_campus_jaw_headtop, add_campus_jaw_headtop_mask,
-)
 
 # yapf: enable
 
@@ -98,6 +95,8 @@ def compute_similarity_transform(X: np.ndarray,
 
 def align_convention_mask(pred_keypoints3d_raw: Keypoints,
                           gt_keypoints3d_raw: Keypoints,
+                          pred_kps3d_convention: str,
+                          gt_kps3d_convention: str,
                           eval_kps3d_convention: str,
                           logger: Union[None, str, logging.Logger] = None):
     """Convert pred and gt to the same convention before passing to metric
@@ -109,6 +108,10 @@ def align_convention_mask(pred_keypoints3d_raw: Keypoints,
             Predicted 3D keypoints in original convention.
         gt_keypoints3d_raw (Keypoints):
             Ground-truth 3D keypoints in original convention.
+        pred_kps3d_convention (str):
+            Original convention of predicted 3D keypoints.
+        gt_kps3d_convention (str):
+            Original convention of ground-truth 3D keypoints.
         eval_kps3d_convention (str):
             Convention used for alignment and evaluation.
         logger (Union[None, str, logging.Logger], optional):
@@ -122,33 +125,6 @@ def align_convention_mask(pred_keypoints3d_raw: Keypoints,
     """
 
     logger = get_logger(logger)
-    gt_nose = None
-    pred_nose = None
-    pred_kps3d_convention = pred_keypoints3d_raw.get_convention()
-    gt_kps3d_convention = gt_keypoints3d_raw.get_convention()
-    if gt_kps3d_convention == 'panoptic':
-        gt_nose_index = get_keypoint_idx(
-            name='nose_openpose', convention=gt_kps3d_convention)
-        gt_nose = gt_keypoints3d_raw.get_keypoints()[:, :, gt_nose_index, :3]
-
-    if pred_kps3d_convention == 'coco':
-        pred_nose_index = get_keypoint_idx(
-            name='nose', convention=pred_kps3d_convention)
-        pred_nose = pred_keypoints3d_raw.get_keypoints()[:, :,
-                                                         pred_nose_index, :3]
-
-    if pred_kps3d_convention == 'fourdag_19' or\
-            pred_kps3d_convention == 'openpose_25':
-        pred_leftear_index = get_keypoint_idx(
-            name='left_ear_openpose', convention=pred_kps3d_convention)
-        pre_rightear_index = get_keypoint_idx(
-            name='right_ear_openpose', convention=pred_kps3d_convention)
-        head_center = (
-            pred_keypoints3d_raw.get_keypoints()[:, :, pred_leftear_index, :3]
-            + pred_keypoints3d_raw.get_keypoints()[:, :,
-                                                   pre_rightear_index, :3]) / 2
-        pred_nose = head_center
-
     if pred_kps3d_convention != eval_kps3d_convention:
         pred_keypoints3d = convert_keypoints(
             pred_keypoints3d_raw, dst=eval_kps3d_convention, approximate=True)
@@ -161,28 +137,13 @@ def align_convention_mask(pred_keypoints3d_raw: Keypoints,
     else:
         gt_keypoints3d = gt_keypoints3d_raw
 
-    pred_kps3d_mask = pred_keypoints3d.get_mask()
-    pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
-    if pred_nose is not None and eval_kps3d_convention == 'campus':
-        pred_kps3d = add_campus_jaw_headtop(pred_nose, pred_kps3d)
-        pred_kps3d_mask = add_campus_jaw_headtop_mask(pred_kps3d_mask)
-
-    gt_kps3d_mask = gt_keypoints3d.get_mask()
-    gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
-    if gt_nose is not None and eval_kps3d_convention == 'campus':
-        gt_kps3d = add_campus_jaw_headtop(gt_nose, gt_kps3d)
-        gt_kps3d_mask = add_campus_jaw_headtop_mask(gt_kps3d_mask)
-
-    pred_kps3d = np.concatenate((pred_kps3d, pred_kps3d_mask[..., np.newaxis]),
-                                axis=-1)
-    pred_keypoints3d = Keypoints(
-        kps=pred_kps3d, mask=pred_kps3d_mask, convention=eval_kps3d_convention)
-    gt_kps3d = np.concatenate((gt_kps3d, gt_kps3d_mask[..., np.newaxis]),
-                              axis=-1)
-    gt_keypoints3d = Keypoints(
-        kps=gt_kps3d, mask=gt_kps3d_mask, convention=eval_kps3d_convention)
-
     if pred_kps3d_convention != gt_kps3d_convention:
+        if eval_kps3d_convention != 'human_data':
+            logger.warning(
+                'Predicion and ground truth is having'
+                'different convention. It is recommended to set '
+                'eval_kps3d_convention to human_data to avoid error.')
+
         intersection_mask = get_intersection_mask(pred_kps3d_convention,
                                                   gt_kps3d_convention,
                                                   eval_kps3d_convention)

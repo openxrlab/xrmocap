@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import os.path as osp
 import prettytable
+import string
 from tqdm import tqdm
 from typing import List, Union
 from xrprimer.utils.path_utils import prepare_output_path
@@ -13,8 +14,12 @@ from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.ops.bottom_up_association.builder import (
     FourDAGAssociator, build_bottom_up_associator,
 )
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
-from xrmocap.utils.eval_utils import align_convention_mask
+from xrmocap.transform.convention.keypoints_convention import (
+    convert_keypoints, get_keypoint_idx, get_keypoint_num,
+)
+from xrmocap.utils.mvpose_utils import (
+    add_campus_jaw_headtop, add_campus_jaw_headtop_mask,
+)
 from .base_evaluation import BaseEvaluation
 from .metrics.base_metric import BaseMetric
 
@@ -168,11 +173,9 @@ class BottomUpAssociationEvaluation(BaseEvaluation):
 
             scene_start_idx = scene_end_idx + 1
 
-        # convert pred and gt to the same convention before passing
-        # to metric manager, human_data recommended
-        gt_keypoints3d, pred_keypoints3d = align_convention_mask(
+        pred_keypoints3d, gt_keypoints3d = self.align_keypoints3d(
             pred_keypoints3d_raw, gt_keypoints3d_raw,
-            self.eval_kps3d_convention, self.logger)
+            self.eval_kps3d_convention)
         # evaluate and print results
         eval_results, full_results = self.metric_manager(
             pred_keypoints3d=pred_keypoints3d, gt_keypoints3d=gt_keypoints3d)
@@ -190,3 +193,76 @@ class BottomUpAssociationEvaluation(BaseEvaluation):
             self.dataset_visualization.pred_kps3d_paths = \
                 mscene_keypoints_paths
             self.dataset_visualization.run(overwrite=overwrite)
+
+    def align_keypoints3d(self, pred_keypoints3d: Keypoints,
+                          gt_keypoints3d: Keypoints,
+                          eval_kps3d_convention: string):
+        """align keypoints convention.
+
+        Args:
+            pred_keypoints3d (Keypoints): prediction of keypoints
+            gt_keypoints3d (Keypoints): ground true of keypoints
+            eval_kps3d_convention (string): keypoints convention to align
+        """
+        gt_nose = None
+        pred_nose = None
+        pred_kps3d_convention = pred_keypoints3d.get_convention()
+        gt_kps3d_convention = gt_keypoints3d.get_convention()
+        if gt_kps3d_convention == 'panoptic':
+            gt_nose_index = get_keypoint_idx(
+                name='nose_openpose', convention=gt_kps3d_convention)
+            gt_nose = gt_keypoints3d.get_keypoints()[:, :, gt_nose_index, :3]
+
+        if pred_kps3d_convention == 'coco':
+            pred_nose_index = get_keypoint_idx(
+                name='nose', convention=pred_kps3d_convention)
+            pred_nose = pred_keypoints3d.get_keypoints()[:, :,
+                                                         pred_nose_index, :3]
+
+        if pred_kps3d_convention == 'fourdag_19' or\
+                pred_kps3d_convention == 'openpose_25':
+            pred_leftear_index = get_keypoint_idx(
+                name='left_ear_openpose', convention=pred_kps3d_convention)
+            pre_rightear_index = get_keypoint_idx(
+                name='right_ear_openpose', convention=pred_kps3d_convention)
+            head_center = (
+                pred_keypoints3d.get_keypoints()[:, :, pred_leftear_index, :3]
+                + pred_keypoints3d.get_keypoints()[:, :,
+                                                   pre_rightear_index, :3]) / 2
+            pred_nose = head_center
+
+        if pred_kps3d_convention != eval_kps3d_convention:
+            pred_keypoints3d = convert_keypoints(
+                keypoints=pred_keypoints3d,
+                dst=eval_kps3d_convention,
+                approximate=True)
+        if gt_kps3d_convention != eval_kps3d_convention:
+            gt_keypoints3d = convert_keypoints(
+                keypoints=gt_keypoints3d,
+                dst=eval_kps3d_convention,
+                approximate=True)
+
+        pred_kps3d_mask = pred_keypoints3d.get_mask()
+        pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
+        if pred_nose is not None:
+            pred_kps3d = add_campus_jaw_headtop(pred_nose, pred_kps3d)
+            pred_kps3d_mask = add_campus_jaw_headtop_mask(pred_kps3d_mask)
+
+        gt_kps3d_mask = gt_keypoints3d.get_mask()
+        gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
+        if gt_nose is not None:
+            gt_kps3d = add_campus_jaw_headtop(gt_nose, gt_kps3d)
+            gt_kps3d_mask = add_campus_jaw_headtop_mask(gt_kps3d_mask)
+
+        pred_kps3d = np.concatenate(
+            (pred_kps3d, pred_kps3d_mask[..., np.newaxis]), axis=-1)
+        pred_keypoints3d = Keypoints(
+            kps=pred_kps3d,
+            mask=pred_kps3d_mask,
+            convention=eval_kps3d_convention)
+        gt_kps3d = np.concatenate((gt_kps3d, gt_kps3d_mask[..., np.newaxis]),
+                                  axis=-1)
+        gt_keypoints3d = Keypoints(
+            kps=gt_kps3d, mask=gt_kps3d_mask, convention=eval_kps3d_convention)
+
+        return pred_keypoints3d, gt_keypoints3d
