@@ -127,7 +127,7 @@ class PCPMetric(BaseMetric):
                 ret_limbs.append(conn_list[frame_idx])
                 ret_limb_name.append(limb_name)
             else:
-                self.logger.error(f'Wrong bone name: {limb_name}')
+                self.logger.info(f'{limb_name.title()} is not selected!')
 
         for conn_names in additional_limbs_names:
             kps_idx_0 = get_keypoint_idx(
