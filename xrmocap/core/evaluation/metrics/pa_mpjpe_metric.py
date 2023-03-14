@@ -127,7 +127,7 @@ class PAMPJPEMetric(BaseMetric):
             gt_kps3d - sort_pred_kps3d_pa, ord=2, axis=-1)
 
         if self.unit_scale is not None:
-            pred_kps3d_pa = pred_kps3d_pa * self.unit_scale
+            pa_mpjpe_value = pa_mpjpe_value * self.unit_scale
 
         masked_pa_mpjpe_value = pa_mpjpe_value[np.where(gt_mask > 0)]
         if self.outlier_threshold is not None:

@@ -88,12 +88,13 @@ class PCPMetric(BaseMetric):
                               'Please add PredictionMatcher in the config.')
             raise KeyError
 
-        limbs = self.get_limbs(pred_keypoints3d, self.selected_limbs_names,
-                               self.additional_limbs_names)
+        limbs, limb_name = self.get_limbs(pred_keypoints3d,
+                                          self.selected_limbs_names,
+                                          self.additional_limbs_names)
 
         pcp_mean, eval_table = \
             self.calc_limbs_accuracy(pred_keypoints3d, gt_keypoints3d,
-                                     limbs)
+                                     limbs, limb_name)
         if self.show_table:
             self.logger.info('Detailed table for PCPMetric\n' +
                              eval_table.get_string())
@@ -107,12 +108,11 @@ class PCPMetric(BaseMetric):
 
         Args:
             pred_keypoints3d (Keypoints): prediction of keypoints
-            gt_keypoints3d (Keypoints): ground true of keypoints
-            eval_kps3d_convention (string): keypoints convention to align
             selected_limbs_name (List): selected limbs to be evaluated
             additional_limbs_names (List): additional limbs to be evaluated
         """
         ret_limbs = []
+        ret_limb_name = []
         limb_name_list = []
         conn_list = []
 
@@ -125,6 +125,9 @@ class PCPMetric(BaseMetric):
         for frame_idx, limb_name in enumerate(limb_name_list):
             if limb_name in selected_limbs_name:
                 ret_limbs.append(conn_list[frame_idx])
+                ret_limb_name.append(limb_name)
+            else:
+                self.logger.info(f'{limb_name.title()} is not selected!')
 
         for conn_names in additional_limbs_names:
             kps_idx_0 = get_keypoint_idx(
@@ -132,14 +135,16 @@ class PCPMetric(BaseMetric):
             kps_idx_1 = get_keypoint_idx(
                 name=conn_names[1], convention=self.convention)
             ret_limbs.append(np.array([kps_idx_0, kps_idx_1], dtype=np.int32))
+            ret_limb_name.append(f'{conn_names[0]}-{conn_names[1]}')
 
-        return ret_limbs
+        return ret_limbs, ret_limb_name
 
     def calc_limbs_accuracy(
         self,
         pred_keypoints3d: Keypoints,
         gt_keypoints3d: Keypoints,
         limbs: List[List[int]],
+        limb_name: List[str],
     ) -> Tuple[float, PrettyTable]:
         """Calculate accuracy of given list of limbs.
 
@@ -150,6 +155,8 @@ class PCPMetric(BaseMetric):
                 Ground-truth keypoints3d.
             limbs (List[List[int]]):
                 List of limbs connection.
+            limb_name (List[str]):
+                List of limbs name.
 
         Returns:
             Tuple[float, PrettyTable]:
@@ -160,7 +167,7 @@ class PCPMetric(BaseMetric):
         gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
         gt_kps3d_mask = gt_keypoints3d.get_mask()
         pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
-        check_result = np.zeros((self.n_frame, n_gt_person, len(limbs) + 1),
+        check_result = np.zeros((self.n_frame, n_gt_person, len(limbs)),
                                 dtype=np.int32)
         accuracy_cnt = 0
         error_cnt = 0
@@ -192,23 +199,10 @@ class PCPMetric(BaseMetric):
                     else:
                         check_result[frame_idx, gt_kps3d_idx, i] = -1
                         error_cnt += 1
-                gt_hip = (f_gt_kps3d[2] + f_gt_kps3d[3]) / 2
-                pred_hip = (f_pred_kps3d[2] + f_pred_kps3d[3]) / 2
-                if check_limb_is_correct(pred_hip, f_pred_kps3d[12], gt_hip,
-                                         f_gt_kps3d[12], self.threshold):
-                    check_result[frame_idx, gt_kps3d_idx, -1] = 1
-                    accuracy_cnt += 1
-                else:
-                    check_result[frame_idx, gt_kps3d_idx, -1] = -1
-                    error_cnt += 1
-        bone_group = dict([('Torso', np.array([len(limbs) - 1])),
-                           ('Upper arms', np.array([5, 6])),
-                           ('Lower arms', np.array([4, 7])),
-                           ('Upper legs', np.array([1, 2])),
-                           ('Lower legs', np.array([0, 3]))])
-        if len(limbs) > 8:
-            # head is absent in some dataset
-            bone_group['Head'] = np.array([8])
+
+        bone_group = dict()
+        for i, name in enumerate(limb_name):
+            bone_group[name] = np.array([i])
 
         person_wise_avg = np.sum(
             check_result > 0, axis=(0, 2)) / np.sum(
@@ -226,15 +220,13 @@ class PCPMetric(BaseMetric):
 
         tb = PrettyTable()
         tb.field_names = ['Bone Group'] + \
-            [f'Actor {i}' for i in
-                range(bone_person_wise_result['Torso'].shape[0])] + \
-            ['Average']
+            [f'Actor {i}' for i in range(n_gt_person)] + ['Average']
         for k, v in bone_person_wise_result.items():
             this_row = [k] + [np.char.mod('%.2f', i * 100) for i in v] + [
                 np.char.mod('%.2f', (np.sum(v) / len(v)) * 100)
             ]
             tb.add_row(this_row)
-        this_row = ['Total'] + [
+        this_row = ['total'] + [
             np.char.mod('%.2f', i * 100) for i in person_wise_avg
         ] + [np.char.mod('%.2f', total_mean * 100)]
         tb.add_row(this_row)

@@ -19,8 +19,6 @@ def main(args):
     if not args.disable_log_file:
         time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
         log_path = os.path.join('logs', f'visualization_log_{time_str}.txt')
-        import pdb
-        pdb.set_trace()
         logger = setup_logger(logger_name=__name__, logger_path=log_path)
     else:
         logger = setup_logger(logger_name=__name__)
