@@ -2,50 +2,52 @@
 import logging
 import numpy as np
 import os.path as osp
+import prettytable
+import string
 from tqdm import tqdm
 from typing import List, Union
-from xrprimer.utils.log_utils import get_logger
 from xrprimer.utils.path_utils import prepare_output_path
 
-from xrmocap.core.evaluation.align_keypoints3d import align_keypoints3d
-from xrmocap.core.evaluation.metric import calc_limbs_accuracy, evaluate
-from xrmocap.data.data_visualization.builder import (
-    BaseDataVisualization, build_data_visualization,
-)
-from xrmocap.data.dataset.builder import MviewMpersonDataset, build_dataset
+from xrmocap.data.data_visualization.builder import BaseDataVisualization
+from xrmocap.data.dataset.builder import MviewMpersonDataset
 from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.ops.bottom_up_association.builder import (
     FourDAGAssociator, build_bottom_up_associator,
 )
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
+from xrmocap.transform.convention.keypoints_convention import (
+    convert_keypoints, get_keypoint_idx, get_keypoint_num,
+)
+from xrmocap.utils.mvpose_utils import (
+    add_campus_jaw_headtop, add_campus_jaw_headtop_mask,
+)
+from .base_evaluation import BaseEvaluation
+from .metrics.base_metric import BaseMetric
 
 # yapf: enable
 
 
-class BottomUpAssociationEvaluation:
+class BottomUpAssociationEvaluation(BaseEvaluation):
     """Bottom-up association evaluation."""
 
     def __init__(self,
                  output_dir: str,
-                 selected_limbs_name: List[List[str]],
                  dataset: Union[dict, MviewMpersonDataset],
                  associator: Union[dict, FourDAGAssociator],
-                 additional_limbs_names: List[List[str]] = [],
+                 metric_list: List[Union[dict, BaseMetric]],
                  dataset_visualization: Union[None, dict,
                                               BaseDataVisualization] = None,
                  pred_kps3d_convention: str = 'coco',
                  eval_kps3d_convention: str = 'campus',
+                 pick_dict: Union[dict, None] = None,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """Initialization for the class.
 
         Args:
             output_dir (str): The path to save results.
-            selected_limbs_name (List[List[str]]): The name of selected
-                limbs in evaluation.
-            additional_limbs_names (List[List[str]]):
-                Names at both ends of the limb.
             dataset (Union[dict, MviewMpersonDataset])
             associator (Union[dict, MvposeAssociator])
+            metric_list (List[Union[dict, BaseMetric]]):
+                A list of metrics to be evaluated.
             dataset_visualization
                 (Union[None, dict, BaseDataVisualization], optional):
                 Defaults to None.
@@ -53,37 +55,33 @@ class BottomUpAssociationEvaluation:
                 keypoints3d, Defaults to 'coco'.
             eval_kps3d_convention (str, optional): the convention of
                 keypoints3d for evaluation, Defaults to 'campus'.
+            pick_dict (Union[dict, None], optional):
+                Selected metrics to be printed in the final table.
+                Defaults to None.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
         """
 
-        self.output_dir = output_dir
-        self.pred_kps3d_convention = pred_kps3d_convention
-        self.eval_kps3d_convention = eval_kps3d_convention
-        self.additional_limbs_names = additional_limbs_names
-        self.selected_limbs_name = selected_limbs_name
-        self.logger = get_logger(logger)
+        BaseEvaluation.__init__(
+            self,
+            dataset=dataset,
+            output_dir=output_dir,
+            metric_list=metric_list,
+            pick_dict=pick_dict,
+            dataset_visualization=dataset_visualization,
+            eval_kps3d_convention=eval_kps3d_convention,
+            logger=logger)
 
-        if isinstance(dataset, dict):
-            dataset['logger'] = self.logger
-            self.dataset = build_dataset(dataset)
-        else:
-            self.dataset = dataset
+        self.pred_kps3d_convention = pred_kps3d_convention
         self.n_views = self.dataset.n_views
+
         if isinstance(associator, dict):
             associator['logger'] = self.logger
             associator['n_views'] = self.n_views
             self.associator = build_bottom_up_associator(associator)
         else:
             self.associator = associator
-
-        if isinstance(dataset_visualization, dict):
-            dataset_visualization['logger'] = self.logger
-            self.dataset_visualization = build_data_visualization(
-                dataset_visualization)
-        else:
-            self.dataset_visualization = dataset_visualization
 
     def run(self, overwrite: bool = False):
         prepare_output_path(
@@ -138,13 +136,13 @@ class BottomUpAssociationEvaluation:
                 gt_kps3d = np.concatenate(
                     (gt_kps3d, kps3d.numpy()[np.newaxis]), axis=0)
 
-        pred_keypoints3d = Keypoints(
+        pred_keypoints3d_raw = Keypoints(
             dtype='numpy',
             kps=pred_kps3d,
             mask=pred_kps3d[..., -1] > 0,
             convention=self.pred_kps3d_convention,
             logger=self.logger)
-        gt_keypoints3d = Keypoints(
+        gt_keypoints3d_raw = Keypoints(
             dtype='numpy',
             kps=gt_kps3d,
             mask=gt_kps3d[..., -1] > 0,
@@ -155,7 +153,7 @@ class BottomUpAssociationEvaluation:
         # prepare result
         scene_start_idx = 0
         for scene_idx, scene_end_idx in enumerate(end_of_clip_idxs):
-            scene_keypoints = pred_keypoints3d.clone()
+            scene_keypoints = pred_keypoints3d_raw.clone()
             kps3d = scene_keypoints.get_keypoints()[
                 scene_start_idx:scene_end_idx + 1, ...]
             mask = scene_keypoints.get_mask()[scene_start_idx:scene_end_idx +
@@ -175,27 +173,96 @@ class BottomUpAssociationEvaluation:
 
             scene_start_idx = scene_end_idx + 1
 
-        # evaluation
-        pred_keypoints3d_, gt_keypoints3d_, limbs = align_keypoints3d(
-            pred_keypoints3d, gt_keypoints3d, self.eval_kps3d_convention,
-            self.selected_limbs_name, self.additional_limbs_names)
-        _, eval_table = calc_limbs_accuracy(
-            pred_keypoints3d_, gt_keypoints3d_, limbs, logger=self.logger)
-        self.logger.info('\n' + eval_table.get_string())
-        evel_dict = evaluate(
-            pred_keypoints3d_,
-            gt_keypoints3d_,
-            pck_thres=[100, 200],
-            logger=self.logger)
-        self.logger.info('MPJPE: {:.2f} ± {:.2f} mm'.format(
-            evel_dict['mpjpe_mean'], evel_dict['mpjpe_std']))
-        self.logger.info(f'PA-MPJPE: {evel_dict["pa_mpjpe_mean"]:.2f} ±'
-                         f'{evel_dict["pa_mpjpe_std"]:.2f} mm')
-        self.logger.info(f'PCK@100mm: {evel_dict["pck"][100]:.2f} %')
-        self.logger.info(f'PCK@200mm: {evel_dict["pck"][200]:.2f} %')
+        pred_keypoints3d, gt_keypoints3d = self.align_keypoints3d(
+            pred_keypoints3d_raw, gt_keypoints3d_raw,
+            self.eval_kps3d_convention)
+        # evaluate and print results
+        eval_results, full_results = self.metric_manager(
+            pred_keypoints3d=pred_keypoints3d, gt_keypoints3d=gt_keypoints3d)
+
+        table = prettytable.PrettyTable()
+        table.field_names = ['Metric name', 'Value']
+        for metric_name, metric_dict in eval_results.items():
+            for key, value in metric_dict.items():
+                table.add_row([f'{metric_name}: {key}', f'{value:.2f}'])
+        table_str = '\n' + table.get_string()
+        self.logger.info(table_str)
 
         # visualization
         if self.dataset_visualization is not None:
             self.dataset_visualization.pred_kps3d_paths = \
                 mscene_keypoints_paths
             self.dataset_visualization.run(overwrite=overwrite)
+
+    def align_keypoints3d(self, pred_keypoints3d: Keypoints,
+                          gt_keypoints3d: Keypoints,
+                          eval_kps3d_convention: string):
+        """align keypoints convention.
+
+        Args:
+            pred_keypoints3d (Keypoints): prediction of keypoints
+            gt_keypoints3d (Keypoints): ground true of keypoints
+            eval_kps3d_convention (string): keypoints convention to align
+        """
+        gt_nose = None
+        pred_nose = None
+        pred_kps3d_convention = pred_keypoints3d.get_convention()
+        gt_kps3d_convention = gt_keypoints3d.get_convention()
+        if gt_kps3d_convention == 'panoptic':
+            gt_nose_index = get_keypoint_idx(
+                name='nose_openpose', convention=gt_kps3d_convention)
+            gt_nose = gt_keypoints3d.get_keypoints()[:, :, gt_nose_index, :3]
+
+        if pred_kps3d_convention == 'coco':
+            pred_nose_index = get_keypoint_idx(
+                name='nose', convention=pred_kps3d_convention)
+            pred_nose = pred_keypoints3d.get_keypoints()[:, :,
+                                                         pred_nose_index, :3]
+
+        if pred_kps3d_convention == 'fourdag_19' or\
+                pred_kps3d_convention == 'openpose_25':
+            pred_leftear_index = get_keypoint_idx(
+                name='left_ear_openpose', convention=pred_kps3d_convention)
+            pre_rightear_index = get_keypoint_idx(
+                name='right_ear_openpose', convention=pred_kps3d_convention)
+            head_center = (
+                pred_keypoints3d.get_keypoints()[:, :, pred_leftear_index, :3]
+                + pred_keypoints3d.get_keypoints()[:, :,
+                                                   pre_rightear_index, :3]) / 2
+            pred_nose = head_center
+
+        if pred_kps3d_convention != eval_kps3d_convention:
+            pred_keypoints3d = convert_keypoints(
+                keypoints=pred_keypoints3d,
+                dst=eval_kps3d_convention,
+                approximate=True)
+        if gt_kps3d_convention != eval_kps3d_convention:
+            gt_keypoints3d = convert_keypoints(
+                keypoints=gt_keypoints3d,
+                dst=eval_kps3d_convention,
+                approximate=True)
+
+        pred_kps3d_mask = pred_keypoints3d.get_mask()
+        pred_kps3d = pred_keypoints3d.get_keypoints()[..., :3]
+        if pred_nose is not None:
+            pred_kps3d = add_campus_jaw_headtop(pred_nose, pred_kps3d)
+            pred_kps3d_mask = add_campus_jaw_headtop_mask(pred_kps3d_mask)
+
+        gt_kps3d_mask = gt_keypoints3d.get_mask()
+        gt_kps3d = gt_keypoints3d.get_keypoints()[..., :3]
+        if gt_nose is not None:
+            gt_kps3d = add_campus_jaw_headtop(gt_nose, gt_kps3d)
+            gt_kps3d_mask = add_campus_jaw_headtop_mask(gt_kps3d_mask)
+
+        pred_kps3d = np.concatenate(
+            (pred_kps3d, pred_kps3d_mask[..., np.newaxis]), axis=-1)
+        pred_keypoints3d = Keypoints(
+            kps=pred_kps3d,
+            mask=pred_kps3d_mask,
+            convention=eval_kps3d_convention)
+        gt_kps3d = np.concatenate((gt_kps3d, gt_kps3d_mask[..., np.newaxis]),
+                                  axis=-1)
+        gt_keypoints3d = Keypoints(
+            kps=gt_kps3d, mask=gt_kps3d_mask, convention=eval_kps3d_convention)
+
+        return pred_keypoints3d, gt_keypoints3d

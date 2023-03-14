@@ -180,7 +180,7 @@ class FourDAGAssociator:
                 mask_arr[0, index, :] = multi_kps3d[person_id][3, :self.n_kps]
             keypoints3d = Keypoints(
                 kps=kps_arr, mask=mask_arr, convention=self.kps_convention)
-            identities = multi_kps3d.keys()
+            identities = list(multi_kps3d.keys())
         elif self.triangulator is not None:
             multi_kps3d = []
             identities = []
