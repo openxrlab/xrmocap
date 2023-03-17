@@ -181,9 +181,12 @@ class SMPLify(object):
                 default_param=getattr(self.body_model, key),
                 batch_size=batch_size)
             ret_dict[key] = ret_param
-        if self.use_one_betas_per_video and 'betas' not in init_dict:
-            betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
-                self.device)
+        if self.use_one_betas_per_video:
+            if 'betas' not in init_dict:
+                betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
+                    self.device)
+            else:
+                betas = init_dict['betas'].mean(dim=0, keepdim=True)
             ret_dict['betas'] = betas
         return ret_dict
 
