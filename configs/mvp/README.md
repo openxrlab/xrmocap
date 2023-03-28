@@ -19,7 +19,7 @@ We provide the config files for MvP: [Direct multi-view multi-person 3d pose est
 
 ## Results and Models
 
-We evaluate MvP on 3 popular benchmarks, report the Percentage of Correct Parts (PCP), Mean Per Joint Position Error (MPJPE), MPJPE with Procrustes Analysis (PA) as PA-MPJPE, Probability of Correct Keypoint (PCK), mAP and recall on Campu, Shelf and CMU Panoptic dataset.
+We evaluate MvP on 3 popular benchmarks, report the Percentage of Correct Parts (PCP), Mean Per Joint Position Error (MPJPE), MPJPE with Procrustes Analysis (PA) as PA-MPJPE, Probability of Correct Keypoint (PCK), mAP and recall on Campus, Shelf and CMU Panoptic dataset.
 
 To be more fair in evaluation, some modifications are made compared to the evaluations in the original work. For PCP, instead of by body parts, we evaluate by the limbs defined in `selected_limbs_names` and `additional_limbs_names`. We remove the root alignment in MPJPE and provide PA-MPJPE instead. Thresholds for outliers are removed as well.
 
