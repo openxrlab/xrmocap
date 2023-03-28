@@ -56,7 +56,8 @@ trainer_setup = dict(
         test_dataset_setup=dict(
             type='MVPDataset',
             test_mode=True,
-            meta_path='./xrmocap_data/panoptic-toolbox/xrmocap_meta_testset_3cam',
+            meta_path=  # noqa E251
+            './xrmocap_data/panoptic-toolbox/xrmocap_meta_testset_3cam',
         ),
         base_dataset_setup=dict(
             dataset=__dataset__,
