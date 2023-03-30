@@ -78,6 +78,7 @@ metric_list = [
             'right_upperarm', 'left_forearm', 'right_forearm', 'left_thigh',
             'right_thigh'
         ],
+        additional_limbs_names=[['jaw', 'headtop']],
     ),
     dict(
         type='PrecisionRecallMetric',

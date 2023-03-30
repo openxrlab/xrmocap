@@ -66,7 +66,7 @@ metric_list = [
         type='PCKMetric',
         name='pck',
         use_pa_mpjpe=True,
-        threshold=[50, 100],
+        threshold=[100, 200],
     ),
     dict(
         type='PCPMetric',
@@ -78,6 +78,7 @@ metric_list = [
             'right_upperarm', 'left_forearm', 'right_forearm', 'left_thigh',
             'right_thigh'
         ],
+        # additional_limbs_names=[['jaw', 'headtop']],
     ),
     dict(
         type='PrecisionRecallMetric',
