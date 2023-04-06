@@ -183,7 +183,7 @@ trainer_setup = dict(
             dict(
                 type='MPJPEMetric',
                 name='mpjpe',
-                outlier_threshold=500,
+                # outlier_threshold=500,
                 unit_scale=1),
             dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1),
             dict(
