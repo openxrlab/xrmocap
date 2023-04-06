@@ -176,6 +176,8 @@ class BottomUpAssociationEvaluation(BaseEvaluation):
         pred_keypoints3d, gt_keypoints3d = self.align_keypoints3d(
             pred_keypoints3d_raw, gt_keypoints3d_raw,
             self.eval_kps3d_convention)
+        import pdb
+        pdb.set_trace()
         # evaluate and print results
         eval_results, full_results = self.metric_manager(
             pred_keypoints3d=pred_keypoints3d, gt_keypoints3d=gt_keypoints3d)
