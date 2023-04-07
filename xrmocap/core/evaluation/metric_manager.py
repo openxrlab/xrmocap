@@ -39,6 +39,7 @@ class MetricManager:
         unsorted_list = []
         for metric in metric_list:
             if isinstance(metric, dict):
+                metric['logger'] = self.logger
                 metric = build_metric(metric)
             unsorted_list.append(metric)
         # sort metrics by RANK
