@@ -102,6 +102,9 @@ class PAMPJPEMetric(BaseMetric):
                 masked_sorted_pred_kps3d = sort_pred_kps3d[
                     frame_idx, person_idx,
                     np.where(person_mask > 0), :].reshape(-1, 3)
+                if np.all((masked_sorted_pred_kps3d
+                           == 0)) or len(masked_sorted_pred_kps3d) == 0:
+                    continue
                 _, _, rotation, scaling, transl = compute_similarity_transform(
                     masked_gt_kps3d,
                     masked_sorted_pred_kps3d,
