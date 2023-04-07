@@ -60,13 +60,13 @@ metric_list = [
         type='PredictionMatcher',
         name='matching',
     ),
-    dict(type='MPJPEMetric', name='mpjpe', unit_scale=1),
-    dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1),
+    dict(type='MPJPEMetric', name='mpjpe', unit_scale=1000),
+    dict(type='PAMPJPEMetric', name='pa_mpjpe', unit_scale=1000),
     dict(
         type='PCKMetric',
         name='pck',
         use_pa_mpjpe=True,
-        threshold=[50, 100],
+        threshold=[100, 200],
     ),
     dict(
         type='PCPMetric',
@@ -78,6 +78,7 @@ metric_list = [
             'right_upperarm', 'left_forearm', 'right_forearm', 'left_thigh',
             'right_thigh'
         ],
+        # additional_limbs_names=[['jaw', 'headtop']],
     ),
     dict(
         type='PrecisionRecallMetric',
@@ -89,7 +90,7 @@ metric_list = [
 pick_dict = dict(
     mpjpe=['mpjpe_mean', 'mpjpe_std'],
     pa_mpjpe=['pa_mpjpe_mean', 'pa_mpjpe_std'],
-    pck=['pck@50', 'pck@100'],
+    pck=['pck@100', 'pck@200'],
     pcp=['pcp_total_mean'],
     precision_recall=['recall@500'],
 )

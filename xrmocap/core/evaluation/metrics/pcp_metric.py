@@ -129,13 +129,15 @@ class PCPMetric(BaseMetric):
             else:
                 self.logger.info(f'{limb_name.title()} is not selected!')
 
-        for conn_names in additional_limbs_names:
-            kps_idx_0 = get_keypoint_idx(
-                name=conn_names[0], convention=self.convention)
-            kps_idx_1 = get_keypoint_idx(
-                name=conn_names[1], convention=self.convention)
-            ret_limbs.append(np.array([kps_idx_0, kps_idx_1], dtype=np.int32))
-            ret_limb_name.append(f'{conn_names[0]}-{conn_names[1]}')
+        if additional_limbs_names is not None:
+            for conn_names in additional_limbs_names:
+                kps_idx_0 = get_keypoint_idx(
+                    name=conn_names[0], convention=self.convention)
+                kps_idx_1 = get_keypoint_idx(
+                    name=conn_names[1], convention=self.convention)
+                ret_limbs.append(
+                    np.array([kps_idx_0, kps_idx_1], dtype=np.int32))
+                ret_limb_name.append(f'{conn_names[0]}-{conn_names[1]}')
 
         return ret_limbs, ret_limb_name
 
