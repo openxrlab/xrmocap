@@ -599,6 +599,8 @@ class GraphAssociate():
         return cnt
 
     def check_kps_compatibility(self, view, kps_id, candidate, pid):
+        if pid not in self.mpersons_map:
+            return -1
         person = self.mpersons_map[pid]
         check_cnt = 0
         if person[kps_id][view] != -1 and person[kps_id][view] != candidate:
