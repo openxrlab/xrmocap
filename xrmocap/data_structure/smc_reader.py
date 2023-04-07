@@ -1,8 +1,21 @@
 import cv2
-import h5py
 import json
 import numpy as np
 import tqdm
+
+try:
+    import h5py
+    has_h5py = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_h5py = False
+    import traceback
+    stack_str = ''
+    for line in traceback.format_stack():
+        if 'frozen' not in line:
+            stack_str += line + '\n'
+    import_exception = traceback.format_exc() + '\n'
+    import_exception = stack_str + import_exception
 
 
 class SMCReader:
@@ -18,6 +31,8 @@ class SMCReader:
                 if nn.Module: a body_model instance
                 if dict: a body_model config
         """
+        if not has_h5py:
+            raise ImportError(import_exception)
         self.smc = h5py.File(file_path, 'r')
         self.__calibration_dict__ = None
         self.action_id = self.smc.attrs['action_id']
