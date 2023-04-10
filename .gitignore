@@ -117,6 +117,7 @@ weight
 xrmocap/model/deformable
 output/
 xrprimer/
+mmhuman3d/
 
 # data for pytest moved to http server
 .vscode
