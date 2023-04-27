@@ -134,7 +134,7 @@ class SMPLXDData(SMPLXData):
             raise ValueError
         elif len(displacement.shape) == 2:
             displacement = displacement[np.newaxis, ...]
-        displacement_dim = displacement.shape[-1]
+        displacement_dim = displacement.shape[-2]
         displacement_np = displacement.reshape(-1, displacement_dim, 3)
         dict.__setitem__(self, 'displacement', displacement_np)
 
