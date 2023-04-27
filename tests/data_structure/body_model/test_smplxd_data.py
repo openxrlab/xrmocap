@@ -30,7 +30,7 @@ def test_new():
         transl=np.zeros(shape=(2, 3)),
         betas=np.zeros(shape=(2, 10)),
         mask=np.ones(shape=(2, )),
-        displacement=np.zeros(shape=(2, 10475)),
+        displacement=np.zeros(shape=(2, 10475, 3)),
         logger='root')
     assert smplxd_data['betas'][0, 0] == 0
     assert smplxd_data.get_expression().shape == (2, 10)
@@ -100,7 +100,7 @@ def test_setitem():
     smplxd_data['transl'] = np.zeros(shape=[2, 3])
     smplxd_data['fullpose'] = np.zeros(shape=[2, 55, 3])
     smplxd_data['gender'] = 'neutral'
-    smplxd_data['displacement'] = np.zeros(shape=(2, 10475))
+    smplxd_data['displacement'] = np.zeros(shape=(2, 10475, 3))
     # set arbitrary key
     smplxd_data['frame_number'] = 1000
 

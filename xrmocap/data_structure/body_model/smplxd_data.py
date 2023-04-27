@@ -54,7 +54,7 @@ class SMPLXDData(SMPLXData):
                 zero-tensor in shape [frame_num, 10] will be created.
             displacement (Union[np.ndarray, torch.Tensor, None], optional):
                 A tensor or ndarray for displacement,
-                in shape [frame_num, NUM_VERTS].
+                in shape [frame_num, NUM_VERTS, 3].
                 Defaults to None,
                 zero-tensor in shape [frame_num, NUM_VERTS] will be created.
             mask (Union[np.ndarray, torch.Tensor, None], optional):
@@ -77,7 +77,7 @@ class SMPLXDData(SMPLXData):
             logger=logger)
         if displacement is None and 'displacement' not in self:
             displacement = np.zeros(
-                shape=(self.get_batch_size(), self.__class__.NUM_VERTS))
+                shape=(self.get_batch_size(), self.__class__.NUM_VERTS, 3))
         if displacement is not None:
             self.set_displacement(displacement)
 
@@ -117,7 +117,7 @@ class SMPLXDData(SMPLXData):
         Args:
             displacement (Union[np.ndarray, torch.Tensor]):
                 Displacement parameters in ndarray or tensor,
-                in shape [batch_size, NUM_VERTS].
+                in shape [batch_size, NUM_VERTS, 3].
 
         Raises:
             TypeError: Type of displacement is not correct.
@@ -129,9 +129,13 @@ class SMPLXDData(SMPLXData):
                               f'Type: {type(displacement)}.')
             raise TypeError
         if len(displacement.shape) == 1:
+            self.logger.error('Shape of displacement is not correct.\n' +
+                              f'Shape: {type(displacement.shape)}.')
+            raise ValueError
+        elif len(displacement.shape) == 2:
             displacement = displacement[np.newaxis, ...]
         displacement_dim = displacement.shape[-1]
-        displacement_np = displacement.reshape(-1, displacement_dim)
+        displacement_np = displacement.reshape(-1, displacement_dim, 3)
         dict.__setitem__(self, 'displacement', displacement_np)
 
     def get_displacement(self) -> np.ndarray:
@@ -139,7 +143,7 @@ class SMPLXDData(SMPLXData):
 
         Returns:
             ndarray:
-                Displacement in shape [batch_size, NUM_VERTS].
+                Displacement in shape [batch_size, NUM_VERTS, 3].
         """
         displacement = self.__getitem__('displacement')
         return displacement
