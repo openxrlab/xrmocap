@@ -128,15 +128,11 @@ class SMPLXDData(SMPLXData):
             self.logger.error('Type of displacement is not correct.\n' +
                               f'Type: {type(displacement)}.')
             raise TypeError
-        if len(displacement.shape) == 1:
+        if len(displacement.shape) < 3:
             self.logger.error('Shape of displacement is not correct.\n' +
                               f'Shape: {type(displacement.shape)}.')
             raise ValueError
-        elif len(displacement.shape) == 2:
-            displacement = displacement[np.newaxis, ...]
-        displacement_dim = displacement.shape[-2]
-        displacement_np = displacement.reshape(-1, displacement_dim, 3)
-        dict.__setitem__(self, 'displacement', displacement_np)
+        dict.__setitem__(self, 'displacement', displacement)
 
     def get_displacement(self) -> np.ndarray:
         """Get displacement.
