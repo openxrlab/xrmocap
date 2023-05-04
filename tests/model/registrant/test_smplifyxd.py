@@ -98,7 +98,7 @@ def test_smplifyxd_keypoints3d():
             np_v = v.detach().cpu().numpy()
             assert not np.any(np.isnan(np_v)), f'{k} fails.'
     smplxd_data.from_param_dict(smplifyxd_output)
-    assert len(smplxd_data.get_displacement().shape) == 2
+    assert len(smplxd_data.get_displacement().shape) == 3
     result_path = os.path.join(output_dir, 'smplxd_result.npz')
     smplxd_data.dump(result_path)
     # test not use_one_betas_per_video and return values
