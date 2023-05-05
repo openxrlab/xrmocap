@@ -1,5 +1,45 @@
 # Changelog
 
+### v0.8.0 (05/05/2023/)
+
+**Highlights**
+
+- Refactor evaluation for MvP, mvpose_tracking, mvpose and fourdag, sharing the same super-class.
+- Add smpl visualization and unit test, based on `minimal_pytorch_rasterizer`. Multi-person and multi-gender are supported.
+- Add mmdeploy for faster human perception.
+
+**New Features**
+
+- Add `PriorConstraint` optimizer for 3D keypoints, filtering out poorly quality bboxes and limbs.
+- Add mask in smpl_data. The person whose mask is zero will not be plotted.
+- Add function `auto_load_smpl_data`, it chooses a correct class when you forget of which type the npz file is.
+- Add class Timer for recording average time consumption.
+
+**Refactors**
+
+- Refactor evaluation metrics including MPJPE, PA-MPJPE, PCK, PCP, mAP, and recall.
+
+### v0.7.0 (23/12/2022/)
+
+**Highlights**
+
+- Add [mview_mperson_end2end_estimator](https://github.com/openxrlab/xrmocap/blob/main/xrmocap/core/estimation/mview_mperson_end2end_estimator.py) for learning-based method.
+- Add SMPLX support and allow smpl_data initiation in [mview_sperson_smpl_estimator](https://github.com/openxrlab/xrmocap/blob/main/xrmocap/core/estimation/mview_sperson_smpl_estimator.py).
+- Add multiple optimizers, detailed joint weights and priors, grad clipping for better SMPLify results.
+- Add [mediapipe_estimator](https://github.com/openxrlab/xrmocap/blob/main/xrmocap/human_perception/keypoints_estimation/mediapipe_estimator.py) for human keypoints2d perception.
+
+**New Features**
+
+- Add `mview_mperson_end2end_estimator`, performing MvP estimation on customized data.
+- Add `mediapipe_estimator`, another alternative human keypoints2d perception method like `mmpose_top_down_estimator`.
+- Add `RemoveDuplicate`  keypoints3d optimizer to remove duplicate MvP keypoints3d predictions.
+
+**Refactors**
+
+- Refactor `mview_sperson_smpl_estimator`, compatible with SMPLX.
+- Refactor `SMPLify`, add grad clipping, joint angle priors, loss-parameter mapping, per-parameter optimizers, and body part weights.
+- Refactor evaluation for learning-based methods.
+
 ### v0.6.0 (14/10/2022/)
 
 **Highlights**
@@ -18,30 +58,6 @@
 **Refactors**
 
 - Refactor Deformable and ProjAttn for MvP
-
-**Documentation**
-
-- Add readthedocs
-- Add shape-aware 3d pose optim doc
-- Update docs and tutorials for MvP training and evaluation
-- Update docs and benchmark for MVPose and MVPose tracking
-- Update docs for single person in getting started
-- Add LICENSE note
-- Add S-Lab license
-- Fix outdata URL, and advices for docs
-
-**CICD**
-
-- Add some github actions for issue management
-- Fix github workflow build job won't fail when pytest fails
-- Remove secrets in build CI
-
-**Bug Fixes**
-
-- Fix SMPL(X/XD)Data
-- Fix mistakes for mview sperson
-- Fix bugs in MvP training
-
 
 ### v0.5.0 (01/09/2022/)
 
