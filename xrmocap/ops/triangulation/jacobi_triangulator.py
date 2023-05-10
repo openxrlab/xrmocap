@@ -127,7 +127,7 @@ class JacobiTriangulator(BaseTriangulator):
             K = camera_parameters[view].intrinsic33()
             T = np.array(camera_parameters[view].get_extrinsic_t())
             R = np.array(camera_parameters[view].get_extrinsic_r())
-            Proj = np.zeros((3, 4), dtype=np.float)
+            Proj = np.zeros((3, 4), dtype=np.float32)
             for i in range(3):
                 for j in range(4):
                     Proj[i, j] = R[i, j] if j < 3 else T[i]

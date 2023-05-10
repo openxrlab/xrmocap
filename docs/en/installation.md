@@ -158,6 +158,8 @@ pip install -r requirements/build.txt
 pip install -r requirements/runtime.txt
 pip install -e .
 ```
+**Note1:** Because of the strict requirements, we do not install mmtrack by default anymore. To install it,
+please refer to our release history before v0.8.0.
 
 #### f. Install mmdeploy and build ops.
 

@@ -5,8 +5,8 @@ mediapipe
 mmdet @ git+https://github.com/open-mmlab/mmdetection.git@v2.27.0
 mmhuman3d @ git+https://github.com/open-mmlab/mmhuman3d.git
 mmpose @ git+https://github.com/open-mmlab/mmpose.git@v0.29.0
-mmtrack @ git+https://github.com/open-mmlab/mmtracking.git@v0.14.0
-numpy
+# required by smplx
+numpy<1.24.0
 pre-commit
 prettytable
 scipy

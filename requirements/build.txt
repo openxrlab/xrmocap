@@ -1,8 +1,7 @@
 filterpy
-numpy==1.23.5
-opencv-python-headless
+numpy
+opencv-python
 pre-commit
 prettytable
-scipy==1.10.0
-smplx
+scipy
 tqdm
