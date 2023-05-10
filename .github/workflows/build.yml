@@ -52,7 +52,7 @@ jobs:
           rm -rf xrmocap.egg-info
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
           pip install xrprimer
-          pip install -e .
+          pip install .
       - name: Install pytest plugin
         run: |
           source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
