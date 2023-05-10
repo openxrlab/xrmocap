@@ -5,10 +5,10 @@ import os.path as osp
 from prettytable import PrettyTable
 from tqdm import tqdm
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 
 from xrmocap.data.data_visualization.builder import BaseDataVisualization
 from xrmocap.data.dataset.builder import MviewMpersonDataset
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.ops.top_down_association.builder import (
     MvposeAssociator, build_top_down_associator,
 )

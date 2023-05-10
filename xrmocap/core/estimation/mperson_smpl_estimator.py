@@ -2,9 +2,9 @@
 import logging
 import torch
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 
 from xrmocap.data_structure.body_model import SMPLData
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.registrant.builder import SMPLify, build_registrant
 from xrmocap.model.registrant.handler.builder import build_handler
 from xrmocap.transform.convention.keypoints_convention import convert_keypoints

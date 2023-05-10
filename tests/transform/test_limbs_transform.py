@@ -3,8 +3,8 @@ import numpy as np
 import os
 import pytest
 import shutil
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.limbs import get_limbs_from_keypoints
 
 input_dir = 'tests/data/transform/test_limbs'

@@ -1,9 +1,8 @@
 # yapf: disable
 import numpy as np
 from typing import Tuple, Union
+from xrprimer.data_structure import Keypoints, Limbs
 
-from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.data_structure.limbs import Limbs
 from xrmocap.transform.convention.keypoints_convention import (
     convert_keypoints, get_keypoint_idx, get_keypoint_names,
     get_keypoints_factory, get_mapping_dict, human_data,

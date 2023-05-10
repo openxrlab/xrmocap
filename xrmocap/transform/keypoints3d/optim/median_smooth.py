@@ -2,8 +2,8 @@ import logging
 import numpy as np
 from scipy import signal
 from typing import Union
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from .base_optimizer import BaseOptimizer
 
 

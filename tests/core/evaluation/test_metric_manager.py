@@ -1,9 +1,9 @@
 import os
 import pytest
 import shutil
+from xrprimer.data_structure import Keypoints
 
 from xrmocap.core.evaluation.metric_manager import MetricManager
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 
 INPUT_DIR = 'tests/data/core/evaluation/test_metric_manager'

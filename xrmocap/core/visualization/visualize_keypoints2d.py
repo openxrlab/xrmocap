@@ -1,8 +1,7 @@
 # yapf: disable
 import numpy as np
 from typing import List, Tuple, Union, overload
-
-from xrmocap.data_structure.keypoints import Keypoints
+from xrprimer.data_structure import Keypoints
 
 try:
     from mmhuman3d.core.visualization.visualize_keypoints2d import (

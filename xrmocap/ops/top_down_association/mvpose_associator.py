@@ -6,12 +6,12 @@ from mmcv.runner import load_checkpoint
 from PIL import Image
 from torchvision.transforms import transforms as T
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.ops.top_down_association.body_tracking.builder import (
     build_kalman_tracking,

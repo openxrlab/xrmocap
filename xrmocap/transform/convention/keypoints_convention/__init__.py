@@ -10,8 +10,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
     get_keypoint_idx, get_keypoint_idxs_by_part, get_keypoint_num, get_mapping,
 )
 from typing import List
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
 from .paf import ALL_PAF_MAPPING
 

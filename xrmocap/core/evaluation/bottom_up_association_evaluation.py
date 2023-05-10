@@ -6,11 +6,11 @@ import prettytable
 import string
 from tqdm import tqdm
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.utils.path_utils import prepare_output_path
 
 from xrmocap.data.data_visualization.builder import BaseDataVisualization
 from xrmocap.data.dataset.builder import MviewMpersonDataset
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.ops.bottom_up_association.builder import (
     FourDAGAssociator, build_bottom_up_associator,
 )

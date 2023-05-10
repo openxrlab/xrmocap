@@ -47,7 +47,7 @@ We allow you to set other keys and values in a Keypoints instance, but they will
 a. Call `Keypoints()`, keypoints, mask and convention are necessary.
 
 ```python
-from xrmocap.data_structure.keypoints import Keypoints
+from xrprimer.data_structure import Keypoints
 
 # If we have kps and mask in numpy.
 kps_arr = np.zeros(shape=(2, 3, 25, 3))

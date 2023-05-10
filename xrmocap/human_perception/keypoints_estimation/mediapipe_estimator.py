@@ -3,10 +3,10 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.utils.ffmpeg_utils import video_to_array
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 
 try:

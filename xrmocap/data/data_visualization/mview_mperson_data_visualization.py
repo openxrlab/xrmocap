@@ -3,12 +3,12 @@ import logging
 import numpy as np
 import os
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.core.visualization import (
     visualize_keypoints2d, visualize_project_keypoints3d,
 )
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 from xrmocap.utils.ffmpeg_utils import mview_array_to_video
 from .base_data_visualization import BaseDataVisualization

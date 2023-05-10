@@ -4,10 +4,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from typing import List, Tuple, Union, overload
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.data_structure.body_model import SMPLData
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import (
     MMdetDetector, MMposeTopDownEstimator, build_detector,
 )

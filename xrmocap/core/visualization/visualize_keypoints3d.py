@@ -1,12 +1,12 @@
 # yapf: disable
 import numpy as np
 from typing import List, Union, overload
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
 from xrprimer.ops.projection.opencv_projector import OpencvProjector
 
-from xrmocap.data_structure.keypoints import Keypoints
 from .visualize_keypoints2d import visualize_keypoints2d
 
 try:

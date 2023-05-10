@@ -2,8 +2,8 @@
 import logging
 import numpy as np
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from .base_metric import BaseMetric
 
 # yapf: enable

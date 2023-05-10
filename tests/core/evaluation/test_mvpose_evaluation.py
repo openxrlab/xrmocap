@@ -4,9 +4,9 @@ import os.path as osp
 import pytest
 import shutil
 import torch
+from xrprimer.data_structure import Keypoints
 
 from xrmocap.core.evaluation.builder import build_evaluation
-from xrmocap.data_structure.keypoints import Keypoints
 
 output_dir = 'tests/data/output/core/test_mvpose_evaluation'
 device = 'cpu' if not torch.cuda.is_available() else 'cuda'

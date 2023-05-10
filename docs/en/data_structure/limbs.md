@@ -22,7 +22,7 @@ Limbs is a class for person limbs data, recording connection vectors between key
 a. Create instance with raw data and `__init__()`.
 
 ```python
-from xrmocap.data_structure.limbs import Limbs
+from xrprimer.data_structure import Limbs
 
 # only connections arg is necessary for Limbs
 connections = np.asarray(

@@ -3,8 +3,8 @@ import itertools
 import logging
 import numpy as np
 from typing import Union
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import (
     get_keypoint_idxs_by_part,
 )

@@ -8,12 +8,12 @@ import re
 from json.decoder import JSONDecodeError
 from tqdm import tqdm
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.ffmpeg_utils import VideoInfoReader, video_to_array
 from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_visualization import MviewMpersonDataVisualization
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import MMtrackDetector, build_detector
 from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .base_data_converter import BaseDataCovnerter

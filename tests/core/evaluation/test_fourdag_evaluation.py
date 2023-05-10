@@ -3,9 +3,9 @@ import os
 import os.path as osp
 import pytest
 import shutil
+from xrprimer.data_structure import Keypoints
 
 from xrmocap.core.evaluation.builder import build_evaluation
-from xrmocap.data_structure.keypoints import Keypoints
 
 output_dir = 'tests/data/output/core/test_fourdag_evaluation'
 

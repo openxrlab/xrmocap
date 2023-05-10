@@ -5,10 +5,10 @@ import torch
 from torch import nn, optim
 from tqdm import tqdm
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 
 from xrmocap.data_structure.body_model import SMPLData
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.body_model.builder import SMPL, build_body_model
 from xrmocap.model.registrant.builder import SMPLify, build_registrant
 from xrmocap.model.registrant.handler.builder import build_handler

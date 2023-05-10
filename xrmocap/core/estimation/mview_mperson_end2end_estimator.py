@@ -7,11 +7,11 @@ from mmcv.runner import load_checkpoint
 from torchvision.transforms import Compose
 from tqdm import tqdm
 from typing import List, Tuple, Union, overload
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.data_structure.body_model import SMPLData
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.io.image import (
     get_n_frame_from_mview_src, load_clip_from_mview_src,
 )
