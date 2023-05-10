@@ -3,14 +3,14 @@ import logging
 import numpy as np
 from typing import List, Union
 from xrprimer.ops.triangulation.base_triangulator import BaseTriangulator
+from xrprimer.transform.convention.keypoints_convention import (
+    get_keypoint_idx, get_keypoint_num,
+)
 
 from xrmocap.ops.top_down_association.matching.pictorial import (
     get_conns, get_struct, infer_kps3d_max_product,
 )
 from xrmocap.ops.triangulation.builder import build_triangulator
-from xrmocap.transform.convention.keypoints_convention import (
-    get_keypoint_idx, get_keypoint_num,
-)
 from xrmocap.utils.triangulation_utils import prepare_triangulate_input
 from .base_selector import BaseSelector
 

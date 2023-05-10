@@ -5,11 +5,10 @@ import torch
 from smplx import SMPL as _SMPL
 from smplx.lbs import vertices2joints
 from typing import Union
-from xrprimer.utils.log_utils import get_logger
-
-from xrmocap.transform.convention.keypoints_convention import (
+from xrprimer.transform.convention.keypoints_convention import (
     get_keypoints_factory,
 )
+from xrprimer.utils.log_utils import get_logger
 
 # yapf: enable
 

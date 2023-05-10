@@ -13,10 +13,12 @@ from mmhuman3d.utils.demo_utils import get_different_colors
 from typing import List
 from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints,
+)
 from xrprimer.utils.log_utils import setup_logger
 
 from xrmocap.core.estimation.builder import build_estimator
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 
 # yapf: enable
 

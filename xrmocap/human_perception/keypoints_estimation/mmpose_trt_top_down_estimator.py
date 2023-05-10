@@ -3,9 +3,9 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from typing import Tuple, Union
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_num
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .mmpose_top_down_estimator import (
     MMposeTopDownEstimator, __translate_data_source__,
 )

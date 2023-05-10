@@ -172,7 +172,7 @@ keypoints.load(load_path)
 The definition of keypoints varies among dataset. Keypoints convention helps us convert keypoints from one to another.
 
 ```python
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
+from xrprimer.transform.convention.keypoints_convention import convert_keypoints
 
 # assume we have a keypoint defined in coco_wholebody
 # keypoints.get_convention() == 'coco_wholebody'

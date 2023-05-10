@@ -1,118 +1,90 @@
 # yapf: disable
 import numpy as np
-import torch
-from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
+from typing import List, Union
+from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import (
     KEYPOINTS_FACTORY,
 )
-from mmhuman3d.core.conventions.keypoints_mapping import \
-    convert_kps as convert_kps_mm  # noqa:F401
-from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
-    get_keypoint_idx, get_keypoint_idxs_by_part, get_keypoint_num, get_mapping,
+from xrprimer.transform.convention.keypoints_convention import \
+    convert_keypoints as convert_keypoints_xrprimer
+from xrprimer.transform.convention.keypoints_convention import (
+    get_keypoint_num, get_mapping,
 )
-from typing import List
-from xrprimer.data_structure import Keypoints
+from xrprimer.utils.log_utils import get_logger, logging
 
-from . import campus, fourdag_19, human_data, panoptic  # noqa:F401
+from . import fourdag_19, human_data, panoptic
 from .paf import ALL_PAF_MAPPING
 
+try:
+    from mmhuman3d.core.conventions.keypoints_mapping import \
+        KEYPOINTS_FACTORY as KEYPOINTS_FACTORY_MM
+    has_mmhuman3d = True
+    import_exception = ''
+except (ImportError, ModuleNotFoundError):
+    has_mmhuman3d = False
+    import traceback
+    stack_str = ''
+    for line in traceback.format_stack():
+        if 'frozen' not in line:
+            stack_str += line + '\n'
+    import_exception = traceback.format_exc() + '\n'
+    import_exception = stack_str + import_exception
 # yapf: enable
 if isinstance(KEYPOINTS_FACTORY, dict):
-    KEYPOINTS_FACTORY['campus'] = campus.CAMPUS_KEYPOINTS
-    KEYPOINTS_FACTORY['panoptic'] = panoptic.PANOPTIC_KEYPOINTS
     KEYPOINTS_FACTORY['panoptic_15'] = panoptic.PANOPTIC15_KEYPOINTS
     KEYPOINTS_FACTORY['fourdag_19'] = fourdag_19.FOURDAG19_KEYPOINTS
+if has_mmhuman3d:
+    KEYPOINTS_FACTORY_MM.update(KEYPOINTS_FACTORY)
+
+convert_keypoints_warned = False
 
 
 def convert_keypoints(
-    keypoints: Keypoints,
-    dst: str,
-    approximate: bool = False,
-    keypoints_factory: dict = KEYPOINTS_FACTORY,
-) -> Keypoints:
-    """Convert keypoints following the mapping correspondence between src and
-    dst keypoints definition.
+        keypoints: Keypoints,
+        dst: str,
+        approximate: bool = False,
+        keypoints_factory: dict = KEYPOINTS_FACTORY,
+        logger: Union[None, str, logging.Logger] = None) -> Keypoints:
+    global convert_keypoints_warned
+    if not convert_keypoints_warned:
+        convert_keypoints_warned = True
+        logger = get_logger(logger)
+        logger.warning(
+            'Keypoints defined in XRMoCap is deprecated,' +
+            ' use `from xrprimer.data_structure import Keypoints` instead.' +
+            ' This class will be removed from XRMoCap before v0.9.0.')
+    return convert_keypoints_xrprimer(
+        keypoints=keypoints,
+        dst=dst,
+        approximate=approximate,
+        keypoints_factory=keypoints_factory,
+        logger=logger)
+
+
+def get_keypoint_idxs_by_part(
+        part: str,
+        convention: str = 'smplx',
+        human_data_parts: dict = human_data.HUMAN_DATA_PARTS,
+        keypoints_factory: dict = KEYPOINTS_FACTORY) -> List[int]:
+    """Get part keypoints indices from specified part and convention.
 
     Args:
-        keypoints (Keypoints):
-            An instance of Keypoints class.
-        dst (str):
-            The name of destination convention.
-        approximate (bool, optional):
-            Whether approximate mapping is allowed.
-            Defaults to False.
-        keypoints_factory (dict, optional):
-            A dict to store all the keypoint conventions.
+        part (str): part to search from
+        convention (str): data type from keypoints_factory.
+            Defaults to 'smplx'.
+        human_data_parts (dict, optional): A dict to store the part
+            keypoints. Defaults to human_data.HUMAN_DATA_PARTS.
+        keypoints_factory (dict, optional): A class to store the attributes.
             Defaults to KEYPOINTS_FACTORY.
-
     Returns:
-        Keypoints:
-            An instance of Keypoints class, whose convention is dst,
-            and dtype, device are same as input.
+        List[int]: part keypoint indices
     """
-    src = keypoints.get_convention()
-    src_arr = keypoints.get_keypoints()
-    n_frame, n_person, kps_n, dim = src_arr.shape
-    flat_arr = src_arr.reshape(-1, kps_n, dim)
-    flat_mask = keypoints.get_mask().reshape(-1, kps_n)
-
-    if isinstance(src_arr, torch.Tensor):
-
-        def new_array_func(shape, value, ref_data, if_uint8):
-            if if_uint8:
-                dtype = torch.uint8
-            else:
-                dtype = ref_data.dtype
-            if value == 1:
-                return torch.ones(
-                    size=shape, dtype=dtype, device=ref_data.device)
-            elif value == 0:
-                return torch.zeros(
-                    size=shape, dtype=dtype, device=ref_data.device)
-            else:
-                raise ValueError
-
-    elif isinstance(src_arr, np.ndarray):
-
-        def new_array_func(shape, value, ref_data, if_uint8):
-            if if_uint8:
-                dtype = np.uint8
-            else:
-                dtype = ref_data.dtype
-            if value == 1:
-                return np.ones(shape=shape)
-            elif value == 0:
-                return np.zeros(shape=shape, dtype=dtype)
-            else:
-                raise ValueError
-
-    dst_n_kps = get_keypoint_num(
-        convention=dst, keypoints_factory=keypoints_factory)
-    dst_idxs, src_idxs, _ = \
-        get_mapping(src, dst, approximate, keypoints_factory)
-    # multi frame multi person kps
-    dst_arr = new_array_func(
-        shape=(n_frame * n_person, dst_n_kps, dim),
-        value=0,
-        ref_data=src_arr,
-        if_uint8=False)
-    # multi frame multi person mask
-    dst_mask = new_array_func(
-        shape=(n_frame * n_person, dst_n_kps),
-        value=0,
-        ref_data=src_arr,
-        if_uint8=True)
-    # mapping from source
-    dst_mask[:, dst_idxs] = flat_mask[:, src_idxs]
-    dst_arr[:, dst_idxs, :] = flat_arr[:, src_idxs, :]
-    multi_mask = dst_mask.reshape(n_frame, n_person, dst_n_kps)
-    multi_arr = dst_arr.reshape(n_frame, n_person, dst_n_kps, dim)
-    ret_kps = Keypoints(
-        dtype=keypoints.dtype,
-        kps=multi_arr,
-        mask=multi_mask,
-        convention=dst,
-        logger=keypoints.logger)
-    return ret_kps
+    keypoints = keypoints_factory[convention]
+    if part not in human_data_parts.keys():
+        raise ValueError('part not in allowed parts')
+    part_keypoints = list(set(human_data_parts[part]) & set(keypoints))
+    part_keypoints_idx = [keypoints.index(kp) for kp in part_keypoints]
+    return part_keypoints_idx
 
 
 def convert_bottom_up_kps_paf(
@@ -200,69 +172,6 @@ def convert_bottom_up_kps_paf(
                         kps_paf[frame_id]['pafs'][paf_mapping[i]],
                         dtype=np.float32)
     return dst_detections
-
-
-def get_keypoints_factory() -> dict:
-    """Get the KEYPOINTS_FACTORY defined in keypoints convention.
-
-    Returns:
-        dict:
-            KEYPOINTS_FACTORY whose keys are convention
-            names and values are keypoints lists.
-    """
-    return KEYPOINTS_FACTORY
-
-
-def get_mapping_dict(src: str,
-                     dst: str,
-                     approximate: bool = False,
-                     keypoints_factory: dict = KEYPOINTS_FACTORY) -> dict:
-    """Call get_mapping from mmhuman3d and make a dict mapping src index to dst
-    index.
-
-    Args:
-        src (str):
-            The name of source convention.
-        dst (str):
-            The name of destination convention.
-        approximate (bool, optional):
-            Whether approximate mapping is allowed.
-            Defaults to False.
-        keypoints_factory (dict, optional):
-            A dict to store all the keypoint conventions.
-            Defaults to KEYPOINTS_FACTORY.
-
-    Returns:
-        dict:
-            A mapping dict whose keys are src indexes
-            and values are dst indexes.
-    """
-    mapping_back = get_mapping(
-        src=src,
-        dst=dst,
-        keypoints_factory=keypoints_factory,
-        approximate=approximate)
-    inter_to_dst, inter_to_src = mapping_back[:2]
-    mapping_dict = {}
-    for index in range(len(inter_to_dst)):
-        mapping_dict[inter_to_src[index]] = inter_to_dst[index]
-    return mapping_dict
-
-
-def get_keypoint_names(
-        convention: str = 'smplx',
-        keypoints_factory: dict = KEYPOINTS_FACTORY) -> List[str]:
-    """Get names of keypoints of specified convention.
-
-    Args:
-        convention (str): data type from keypoints_factory.
-        keypoints_factory (dict, optional): A class to store the attributes.
-            Defaults to KEYPOINTS_FACTORY.
-    Returns:
-        List[str]: keypoint names
-    """
-    keypoints = keypoints_factory[convention]
-    return keypoints
 
 
 def get_intersection_mask(convention_a: str,

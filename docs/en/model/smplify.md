@@ -42,7 +42,7 @@ We could have keypoints, pointcloud and meshes as input for optimization targets
 
 ```python
 from xrmocap.model.registrant.handler.builder import build_handler
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
+from xrprimer.transform.convention.keypoints_convention import convert_keypoints
 
 # keypoints3d is an instance of class Keypoints
 keypoints_smpl = convert_keypoints(keypoints=keypoints3d, dst='smpl')

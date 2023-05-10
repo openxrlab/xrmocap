@@ -6,6 +6,9 @@ import torch
 from mmcv.runner import build_optimizer
 from mmcv.runner.hooks import Hook
 from typing import List, Union
+from xrprimer.transform.convention.keypoints_convention import (  # noqa:E501
+    get_keypoint_idx,
+)
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.core.hook.smplify_hook.builder import (
@@ -13,8 +16,8 @@ from xrmocap.core.hook.smplify_hook.builder import (
 )
 from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.model.loss.mapping import LOSS_MAPPING
-from xrmocap.transform.convention.keypoints_convention import (  # noqa:E501
-    get_keypoint_idx, get_keypoint_idxs_by_part,
+from xrmocap.transform.convention.keypoints_convention import (
+    get_keypoint_idxs_by_part,
 )
 from .handler.base_handler import BaseHandler, BaseInput
 from .handler.builder import build_handler

@@ -10,6 +10,7 @@ from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_num
 from xrprimer.utils.log_utils import get_logger
 
 from xrmocap.model.architecture.builder import build_architecture
@@ -23,7 +24,6 @@ from xrmocap.ops.triangulation.builder import (
 from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
 )
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .identity_tracking.builder import BaseTracking, build_identity_tracking
 
 # yapf: enable

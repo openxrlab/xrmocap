@@ -7,15 +7,15 @@ import string
 from tqdm import tqdm
 from typing import List, Union
 from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints, get_keypoint_idx, get_keypoint_num,
+)
 from xrprimer.utils.path_utils import prepare_output_path
 
 from xrmocap.data.data_visualization.builder import BaseDataVisualization
 from xrmocap.data.dataset.builder import MviewMpersonDataset
 from xrmocap.ops.bottom_up_association.builder import (
     FourDAGAssociator, build_bottom_up_associator,
-)
-from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_keypoint_idx, get_keypoint_num,
 )
 from xrmocap.utils.mvpose_utils import (
     add_campus_jaw_headtop, add_campus_jaw_headtop_mask,

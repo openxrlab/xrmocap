@@ -1,10 +1,15 @@
+# yapf: disable
 import os
 import pytest
 import shutil
 from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints,
+)
 
 from xrmocap.core.evaluation.metric_manager import MetricManager
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
+
+# yapf: enable
 
 INPUT_DIR = 'tests/data/core/evaluation/test_metric_manager'
 OUTPUT_DIR = 'tests/data/output/core/evaluation/test_metric_manager'

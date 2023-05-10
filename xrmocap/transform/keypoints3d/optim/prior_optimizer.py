@@ -2,13 +2,13 @@
 import itertools
 import logging
 import numpy as np
-from typing import Union
-from xrprimer.data_structure import Keypoints
-
-from xrmocap.transform.convention.keypoints_convention import (
+from mmhuman3d.core.conventions.keypoints_mapping import (  # noqa:F401
     get_keypoint_idxs_by_part,
 )
-from xrmocap.transform.limbs import search_limbs
+from typing import Union
+from xrprimer.data_structure import Keypoints
+from xrprimer.transform.limbs import search_limbs
+
 from .base_optimizer import BaseOptimizer
 
 # yapf: enable
@@ -106,8 +106,7 @@ class PriorConstraint(BaseOptimizer):
         hip_shoulder_idxs = shoulder_keypoint_idxs + hip_keypoint_idxs
 
         if self.use_limb_length:
-            limb_idxs, _ = search_limbs(
-                data_source=keypoints3d.get_convention())
+            limb_idxs = search_limbs(data_source=keypoints3d.get_convention())
             limb_idxs = sorted(limb_idxs['body'])
             self.limb_idxs = np.array(
                 list(x for x, _ in itertools.groupby(limb_idxs)))
