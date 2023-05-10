@@ -3,11 +3,11 @@ import logging
 import numpy as np
 from typing import Union
 from xrprimer.data_structure import Keypoints
+from xrprimer.transform.limbs import get_limbs_from_keypoints
 
 from xrmocap.ops.triangulation.builder import (
     AniposelibTriangulator, build_triangulator,
 )
-from xrmocap.transform.limbs import get_limbs_from_keypoints
 from .base_optimizer import BaseOptimizer
 
 # yapf: enable
