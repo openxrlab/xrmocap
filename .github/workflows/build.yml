@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Show conda env
         run: |
-          source /root/miniconda3/etc/profile.d/conda.sh && conda deactivate
+          source /opt/miniconda/etc/profile.d/conda.sh && conda deactivate
           conda info -e
           conda activate openxrlab
           conda list | grep torch
@@ -50,20 +50,20 @@ jobs:
       - name: Build and install
         run: |
           rm -rf xrmocap.egg-info
-          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
+          source /opt/miniconda/etc/profile.d/conda.sh && conda activate openxrlab
           pip install xrprimer
           pip install .
       - name: Install pytest plugin
         run: |
-          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
+          source /opt/miniconda/etc/profile.d/conda.sh && conda activate openxrlab
           pip install pytest-github-actions-annotate-failures
       - name: Run unittests
         run: |
-          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
+          source /opt/miniconda/etc/profile.d/conda.sh && conda activate openxrlab
           coverage run --source xrmocap -m pytest tests/
       - name: Generate coverage report
         run: |
-          source /root/miniconda3/etc/profile.d/conda.sh && conda activate openxrlab
+          source /opt/miniconda/etc/profile.d/conda.sh && conda activate openxrlab
           coverage xml
           coverage report -m
       - name: Upload coverage to Codecov
