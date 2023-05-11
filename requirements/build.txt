@@ -1,6 +1,9 @@
 filterpy
 numpy
-opencv-python
+# # opencv-python for GL equipped env
+# opencv-python
+# # opencv-python-headless for headless env
+# opencv-python-headless
 pre-commit
 prettytable
 scipy
