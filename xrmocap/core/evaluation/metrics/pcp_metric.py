@@ -3,10 +3,10 @@ import logging
 import numpy as np
 from prettytable import PrettyTable
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_idx
+from xrprimer.transform.limbs import get_limbs_from_keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
-from xrmocap.transform.limbs import get_limbs_from_keypoints
 from xrmocap.utils.mvpose_utils import check_limb_is_correct
 from .base_metric import BaseMetric
 

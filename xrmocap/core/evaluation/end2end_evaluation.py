@@ -7,9 +7,9 @@ import time
 import torch
 from torch.utils.data import DataLoader
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 
 from xrmocap.data.data_visualization.builder import BaseDataVisualization
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.base_architecture import BaseArchitecture
 from xrmocap.utils.distribute_utils import collect_results, is_main_process
 from xrmocap.utils.eval_utils import align_convention_mask

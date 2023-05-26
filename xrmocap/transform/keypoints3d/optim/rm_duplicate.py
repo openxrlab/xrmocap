@@ -3,8 +3,8 @@ import logging
 import numpy as np
 import torch
 from typing import Union
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.ops.top_down_association.identity_tracking.builder import (
     BaseTracking, build_identity_tracking,
 )

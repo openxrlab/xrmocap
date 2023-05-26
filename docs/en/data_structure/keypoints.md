@@ -47,7 +47,7 @@ We allow you to set other keys and values in a Keypoints instance, but they will
 a. Call `Keypoints()`, keypoints, mask and convention are necessary.
 
 ```python
-from xrmocap.data_structure.keypoints import Keypoints
+from xrprimer.data_structure import Keypoints
 
 # If we have kps and mask in numpy.
 kps_arr = np.zeros(shape=(2, 3, 25, 3))
@@ -172,7 +172,7 @@ keypoints.load(load_path)
 The definition of keypoints varies among dataset. Keypoints convention helps us convert keypoints from one to another.
 
 ```python
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
+from xrprimer.transform.convention.keypoints_convention import convert_keypoints
 
 # assume we have a keypoint defined in coco_wholebody
 # keypoints.get_convention() == 'coco_wholebody'

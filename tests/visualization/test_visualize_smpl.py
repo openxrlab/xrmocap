@@ -10,9 +10,9 @@ from xrprimer.data_structure.camera import (
 )
 from xrprimer.utils.ffmpeg_utils import array_to_video
 
-from xrmocap.core.visualization.visualize_smpl import visualize_smpl_data
 from xrmocap.data_structure.body_model import SMPLData
 from xrmocap.model.body_model.builder import build_body_model
+from xrmocap.visualization.visualize_smpl import visualize_smpl_data
 
 # yapf: enable
 

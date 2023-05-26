@@ -1,7 +1,7 @@
 # yapf: disable
 import numpy as np
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.keypoints3d.optim.builder import (
     build_keypoints3d_optimizer,
 )

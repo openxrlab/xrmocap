@@ -2,15 +2,18 @@
 import logging
 import numpy as np
 import os
-from typing import List, Tuple, Union
+from typing import List, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
-
-from xrmocap.core.visualization import (
-    visualize_keypoints2d, visualize_project_keypoints3d,
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints,
 )
-from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
+
 from xrmocap.utils.ffmpeg_utils import mview_array_to_video
+from xrmocap.visualization.visualize_keypoints2d import visualize_keypoints2d
+from xrmocap.visualization.visualize_keypoints3d import (
+    visualize_keypoints3d_projected,
+)
 from .base_data_visualization import BaseDataVisualization
 
 # yapf: enable
@@ -28,7 +31,6 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
                  pred_kps3d_convention: Union[None, str] = None,
                  vis_gt_kps3d: bool = True,
                  vis_bottom_up: bool = False,
-                 resolution: Tuple = None,
                  gt_kps3d_convention: Union[None, str] = None,
                  vis_cameras: bool = False,
                  vis_aio_video: bool = True,
@@ -107,7 +109,6 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             if pred_kps3d_paths is not None \
             else []
         self.pred_kps3d_convention = pred_kps3d_convention
-        self.resolution = resolution
 
     def run(self, overwrite: bool = False) -> None:
         """Visualize meta-data selected in __init__().
@@ -203,9 +204,8 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             plot_arr = visualize_keypoints2d(
                 keypoints=keypoints2d,
                 output_path=video_path,
-                img_paths=frame_list,
+                background_img_list=frame_list,
                 overwrite=True,
-                resolution=self.resolution,
                 return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)
         # draw views all in one
@@ -265,8 +265,7 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             plot_arr = visualize_keypoints2d(
                 keypoints=keypoints2d,
                 output_path=video_path,
-                img_paths=frame_list,
-                resolution=self.resolution,
+                background_img_list=frame_list,
                 overwrite=True,
                 return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)
@@ -356,11 +355,11 @@ class MviewMpersonDataVisualization(BaseDataVisualization):
             video_path = os.path.join(
                 scene_vis_dir,
                 f'{output_prefix}_project_view_{view_idx:02d}.mp4')
-            plot_arr = visualize_project_keypoints3d(
+            plot_arr = visualize_keypoints3d_projected(
                 keypoints=keypoints3d,
-                cam_param=fisheye_param,
+                camera=fisheye_param,
                 output_path=video_path,
-                img_paths=frame_list,
+                background_img_list=frame_list,
                 overwrite=True,
                 return_array=self.vis_aio_video)
             mview_plot_arr.append(plot_arr)

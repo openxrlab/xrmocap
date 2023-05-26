@@ -8,14 +8,14 @@ import re
 from json.decoder import JSONDecodeError
 from tqdm import tqdm
 from typing import List, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_num
 from xrprimer.utils.ffmpeg_utils import VideoInfoReader, video_to_array
 from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_visualization import MviewMpersonDataVisualization
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import MMtrackDetector, build_detector
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .base_data_converter import BaseDataCovnerter
 
 # yapf: enable
@@ -217,7 +217,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
             video_path = os.path.join(self.data_root, scene_name,
                                       video_dir_name, video_name)
             reader = VideoInfoReader(video_path, logger=self.logger)
-            min_n_frame = min(int(reader['nb_frames']) - 1, min_n_frame)
+            min_n_frame = min(int(reader['nb_frames']), min_n_frame)
         self.scene_range[scene_idx][1] = min(min_n_frame,
                                              self.scene_range[scene_idx][1])
         n_frame = self.scene_range[scene_idx][1] - \
@@ -351,7 +351,7 @@ class PanopticDataCovnerter(BaseDataCovnerter):
         end_idx = self.scene_range[scene_idx][1]
         gt_path = os.path.join(self.data_root, scene_name,
                                'hdPose3d_stage1_coco19')
-        n_frame = int((end_idx - start_idx) / self.frame_period) + 1
+        n_frame = int((end_idx - start_idx) / self.frame_period)
         n_person = 1
         n_kps = get_keypoint_num('panoptic')
         kps3d_arr = np.zeros(shape=(n_frame, n_person, n_kps, 4))

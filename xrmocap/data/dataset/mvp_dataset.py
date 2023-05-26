@@ -4,8 +4,8 @@ import logging
 import numpy as np
 import torch
 from typing import Tuple, Union
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_idx
 
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from xrmocap.transform.image.shape import get_affine_trans_aug
 from xrmocap.transform.point import affine_transform_pts
 from xrmocap.utils.geometry import get_scale, project_3dpts

@@ -4,10 +4,13 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from typing import List, Tuple, Union, overload
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints, get_keypoint_num,
+)
 
 from xrmocap.data_structure.body_model import SMPLData
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import (
     MMdetDetector, MMposeTopDownEstimator, build_detector,
 )
@@ -23,9 +26,6 @@ from xrmocap.ops.triangulation.builder import (
 )
 from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
-)
-from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_keypoint_num,
 )
 from xrmocap.transform.keypoints3d.optim.builder import BaseOptimizer
 from .mperson_smpl_estimator import MultiPersonSMPLEstimator

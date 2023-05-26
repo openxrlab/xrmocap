@@ -1,8 +1,8 @@
 import logging
 import numpy as np
 from typing import List, Union
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_idx
 
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
 from .base_tracking import BaseTracking
 
 

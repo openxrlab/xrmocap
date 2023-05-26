@@ -158,6 +158,8 @@ pip install -r requirements/build.txt
 pip install -r requirements/runtime.txt
 pip install -e .
 ```
+**Note1:** Because of the strict requirements, we do not install mmtrack by default anymore. To install it,
+please refer to our release history before v0.8.0.
 
 #### f. Install mmdeploy and build ops.
 
@@ -200,16 +202,16 @@ If everything goes well, try to [run unittest](#test-environment) or go back to 
 
 ### Run with Docker Image
 
-We provide a [Dockerfile](../../Dockerfile) to build an image. Ensure that you are using [docker version](https://docs.docker.com/engine/install/) >=19.03 and `"default-runtime": "nvidia"` in `daemon.json`.
+We provide a Dockerfile to build a runtime image. Ensure that you are using [docker version](https://docs.docker.com/engine/install/) >=19.03 and `"default-runtime": "nvidia"` in `daemon.json`.
 
 ```shell
-sh scripts/build_docker.sh
+./dockerfiles/runtime_ubt18/build_runtime_docker.sh
 ```
 
 Or pull a built image from docker hub.
 
 ```shell
-docker pull openxrlab/xrmocap_runtime:ubuntu1804_x64_cu114_py38_torch1120_mmcv161
+docker pull openxrlab/xrmocap_runtime:ubuntu1804_x64_cuda116_py38_torch1121_mmcv161
 ```
 
 Run it with:

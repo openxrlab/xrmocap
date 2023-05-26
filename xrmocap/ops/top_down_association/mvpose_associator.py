@@ -6,12 +6,13 @@ from mmcv.runner import load_checkpoint
 from PIL import Image
 from torchvision.transforms import transforms as T
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_num
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.model.architecture.builder import build_architecture
 from xrmocap.ops.top_down_association.body_tracking.builder import (
     build_kalman_tracking,
@@ -23,7 +24,6 @@ from xrmocap.ops.triangulation.builder import (
 from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, build_point_selector,
 )
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_num
 from .identity_tracking.builder import BaseTracking, build_identity_tracking
 
 # yapf: enable

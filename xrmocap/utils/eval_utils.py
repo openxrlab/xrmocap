@@ -2,11 +2,14 @@
 import logging
 import numpy as np
 from typing import Union
+from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints, get_keypoint_idx,
+)
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.keypoints_convention import (
-    convert_keypoints, get_intersection_mask, get_keypoint_idx,
+    get_intersection_mask,
 )
 
 # yapf: enable

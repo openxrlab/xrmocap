@@ -1,8 +1,10 @@
 filterpy
-numpy==1.23.5
-opencv-python-headless
+numpy
+# # opencv-python for GL equipped env
+# opencv-python
+# # opencv-python-headless for headless env
+# opencv-python-headless
 pre-commit
 prettytable
-scipy==1.10.0
-smplx
+scipy
 tqdm

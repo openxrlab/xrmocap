@@ -11,13 +11,13 @@ except ImportError:
 import numpy as np
 import os
 import pickle
+from xrprimer.transform.limbs import search_limbs
 
 from xrmocap.transform.convention.joints_convention.standard_joint_angles import (  # noqa:E501
     STANDARD_JOINT_ANGLE_LIMITS, STANDARD_JOINT_ANGLE_LIMITS_LOCK_APOSE_SPINE,
     STANDARD_JOINT_ANGLE_LIMITS_LOCK_FOOT, TRANSFORMATION_AA_TO_SJA,
     TRANSFORMATION_SJA_TO_AA,
 )
-from xrmocap.transform.limbs import search_limbs
 from xrmocap.transform.rotation import aa_to_rot6d, aa_to_sja
 
 _dtype = TypeVar('_dtype')
@@ -563,7 +563,7 @@ class LimbLengthLoss(torch.nn.Module):
         self.loss_weight = loss_weight
         self.eps = eps
         self.convention = convention
-        limb_idxs, _ = search_limbs(data_source=convention)
+        limb_idxs = search_limbs(data_source=convention)
         limb_idxs = sorted(limb_idxs['body'])
         self.limb_idxs = np.array(
             list(x for x, _ in itertools.groupby(limb_idxs)))

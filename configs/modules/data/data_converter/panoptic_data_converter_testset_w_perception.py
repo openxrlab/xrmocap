@@ -2,7 +2,7 @@ type = 'PanopticDataCovnerter'
 data_root = 'panoptic-toolbox'
 bbox_detector = dict(
     type='MMdetDetector',
-    mmtrack_kwargs=dict(
+    mmdet_kwargs=dict(
         checkpoint='weight/' +
         'faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
         config='configs/modules/human_perception/' +

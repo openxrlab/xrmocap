@@ -2,12 +2,12 @@
 import logging
 import numpy as np
 from typing import List, Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import (
     FisheyeCameraParameter, PinholeCameraParameter,
 )
 from xrprimer.utils.log_utils import get_logger
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.ops.bottom_up_association.graph_solver.builder import (
     build_graph_solver,
 )

@@ -5,6 +5,8 @@ import os
 import pytest
 import shutil
 import torch
+from mmhuman3d.core.conventions.keypoints_mapping import \
+    convert_kps as convert_kps_mm
 
 from xrmocap.data_structure.body_model.smplx_data import SMPLXData
 from xrmocap.model.body_model.builder import build_body_model
@@ -16,7 +18,6 @@ from xrmocap.model.registrant.handler.keypoint3d_limb_length_handler import (
 from xrmocap.model.registrant.handler.keypoint3d_mse_handler import (
     Keypoint3dMSEInput,
 )
-from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 
 # yapf: enable
 input_dir = 'tests/data/model/registrant'

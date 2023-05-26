@@ -3,10 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import torch
-
-from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.transform.convention.keypoints_convention import get_keypoint_idx
-from xrmocap.transform.limbs import get_limbs_from_keypoints
+from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import get_keypoint_idx
+from xrprimer.transform.limbs import get_limbs_from_keypoints
 
 distribution = dict(
     mean=[

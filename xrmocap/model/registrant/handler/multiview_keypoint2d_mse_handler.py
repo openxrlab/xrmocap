@@ -1,10 +1,11 @@
 import logging
 import torch
+from mmhuman3d.core.conventions.keypoints_mapping import \
+    convert_kps as convert_kps_mm
 from pytorch3d.renderer import cameras
 from typing import TypeVar, Union
 
 from xrmocap.model.loss.builder import build_loss
-from xrmocap.transform.convention.keypoints_convention import convert_kps_mm
 from .base_handler import BaseHandler, BaseInput
 
 try:

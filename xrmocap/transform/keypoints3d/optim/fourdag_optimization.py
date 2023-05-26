@@ -623,7 +623,8 @@ class FourDAGOptimizer(FourDAGBaseOptimizer):
                              kps2d_target[:,
                                           view * self.limb_info.get_kps_number(
                                           ):self.limb_info.get_kps_number() *
-                                          (view + 1)][2].T > 0).astype(np.int))
+                                          (view + 1)][2].T > 0).astype(
+                                              np.int32))
                     for kps_id in range(self.limb_info.get_kps_number()):
                         if corr_cnt[kps_id] <= 1:
                             kps_confidence[kps_id] = 0

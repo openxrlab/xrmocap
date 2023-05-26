@@ -1,9 +1,9 @@
-from mmhuman3d.core.conventions.keypoints_mapping.human_data import (  # noqa:F401,E501
-    APPROXIMATE_MAP, APPROXIMATE_MAPPING_LIST, HUMAN_DATA, HUMAN_DATA_BODY,
-    HUMAN_DATA_HEAD, HUMAN_DATA_HIP, HUMAN_DATA_LEFT_HAND, HUMAN_DATA_LIMBS,
-    HUMAN_DATA_LIMBS_INDEX, HUMAN_DATA_PALETTE, HUMAN_DATA_PARTS,
-    HUMAN_DATA_RIGHT_HAND, HUMAN_DATA_SHOULDER,
+# yapf: disable
+from xrprimer.transform.convention.keypoints_convention.human_data import (
+    HUMAN_DATA_PARTS,
 )
+
+# yapf: enable
 
 HUMAN_DATA_LIMB_NAMES = {
     'left_ankle': {

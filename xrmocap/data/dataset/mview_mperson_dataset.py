@@ -6,11 +6,13 @@ import os
 import re
 import torch
 from typing import Tuple, Union
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints,
+)
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.transform.convention.bbox_convention import convert_bbox
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 from .base_dataset import BaseDataset
 
 try:

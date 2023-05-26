@@ -110,6 +110,8 @@ def test_mmdet_detector_infer():
     cv2.imwrite(output_path, canvas)
 
 
+@pytest.mark.skipif(
+    True, reason='MMTrack is not installed and tested by default.')
 def test_mmtrack_detector_build():
     detector_config = dict(
         mmcv.Config.fromfile('configs/modules/human_perception/' +
@@ -119,6 +121,8 @@ def test_mmtrack_detector_build():
     _ = build_detector(detector_config)
 
 
+@pytest.mark.skipif(
+    True, reason='MMTrack is not installed and tested by default.')
 def test_mmtrack_detector_infer():
     detector_config = dict(
         mmcv.Config.fromfile('configs/modules/human_perception/' +

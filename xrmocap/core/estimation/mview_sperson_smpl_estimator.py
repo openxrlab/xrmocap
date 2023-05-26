@@ -2,11 +2,14 @@
 import logging
 import numpy as np
 from typing import List, Tuple, Union, overload
+from xrprimer.data_structure import Keypoints
 from xrprimer.data_structure.camera import FisheyeCameraParameter
+from xrprimer.transform.convention.keypoints_convention import (
+    convert_keypoints,
+)
 from xrprimer.utils.ffmpeg_utils import video_to_array
 
 from xrmocap.data_structure.body_model import SMPLData, SMPLXData
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.human_perception.builder import (
     MMdetDetector, MMposeTopDownEstimator, build_detector,
 )
@@ -19,7 +22,6 @@ from xrmocap.ops.triangulation.builder import (
 from xrmocap.ops.triangulation.point_selection.builder import (
     BaseSelector, CameraErrorSelector, build_point_selector,
 )
-from xrmocap.transform.convention.keypoints_convention import convert_keypoints
 from xrmocap.transform.keypoints3d.optim.builder import (
     BaseOptimizer, build_keypoints3d_optimizer,
 )

@@ -1,9 +1,8 @@
 # yapf: disable
 import numpy as np
 import torch
-
-from xrmocap.data_structure.keypoints import Keypoints
-from xrmocap.transform.convention.keypoints_convention import (
+from xrprimer.data_structure import Keypoints
+from xrprimer.transform.convention.keypoints_convention import (
     convert_keypoints, get_keypoint_num, get_mapping_dict,
 )
 

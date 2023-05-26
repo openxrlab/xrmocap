@@ -2,8 +2,8 @@
 import logging
 import numpy as np
 from typing import Union
+from xrprimer.data_structure import Keypoints
 
-from xrmocap.data_structure.keypoints import Keypoints
 from xrmocap.utils.eval_utils import align_by_keypoint
 from .base_metric import BaseMetric
 
