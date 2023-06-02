@@ -43,7 +43,7 @@ Run the tool with visualization.
 ```bash
 python tools/process_smc.py \
 	--estimator_config configs/humman_mocap/mview_sperson_smpl_estimator.py \
-	--smc_path xrmocap_data/humman/raw_smc/p000105_a000195.smc \
-	--output_dir xrmocap_data/humman/p000105_a000195_output \
+	--smc_path xrmocap_data/humman/raw_smc/p000455_a000986.smc \
+	--output_dir xrmocap_data/humman/p000455_a000986_output \
 	--visualize
 ```
