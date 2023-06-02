@@ -1,6 +1,5 @@
 # yapf: disable
 import argparse
-import datetime
 import logging
 import mmcv
 import os
@@ -9,6 +8,7 @@ from xrprimer.utils.log_utils import setup_logger
 from xrprimer.utils.path_utils import Existence, check_path_existence
 
 from xrmocap.data.data_converter.builder import build_data_converter
+from xrmocap.utils.date_utils import get_datetime_local, get_str_from_datetime
 
 # yapf: enable
 
@@ -17,15 +17,17 @@ def main(args):
     converter_config = dict(mmcv.Config.fromfile(args.converter_config))
     if check_path_existence('logs', 'dir') == Existence.DirectoryNotExist:
         os.mkdir('logs')
+    filename = os.path.basename(__file__).split('.')[0]
     if not args.disable_log_file:
-        time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-        log_path = os.path.join('logs', f'converter_log_{time_str}.txt')
+        datetime = get_datetime_local()
+        time_str = get_str_from_datetime(datetime)
+        log_path = os.path.join('logs', f'{filename}_{time_str}.txt')
         logger = setup_logger(
-            logger_name=__name__,
+            logger_name=filename,
             logger_path=log_path,
             logger_level=logging.DEBUG)
     else:
-        logger = setup_logger(logger_name=__name__)
+        logger = setup_logger(logger_name=filename)
     if len(args.data_root) > 0 and len(args.meta_path) > 0:
         logger.info('Taking paths from sys.argv.')
         converter_config['data_root'] = args.data_root
@@ -41,8 +43,8 @@ def main(args):
     data_converter = build_data_converter(converter_config)
     data_converter.run(overwrite=args.overwrite)
     if not args.disable_log_file:
-        shutil.move(
-            log_path,
+        shutil.copy(
+            src=log_path,
             dst=os.path.join(converter_config['meta_path'],
                              f'converter_log_{time_str}.txt'))
 
