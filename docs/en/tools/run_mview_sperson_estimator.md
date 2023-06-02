@@ -49,6 +49,10 @@ Also, you can find our prepared config files at `config/estimation/mview_sperson
 
 `meta_path` is the path to the meta data directory. In the file tree example given above, `meta_path` should point to `xrmocap_meta`.
 
+### Argument: output_dir
+
+`output_dir` is the path to the directory saving all possible output files, including multi-view keypoints2d, keypoints3d, SMPLData and visualization videos.
+
 ### Argument: disable_log_file
 
 By default, disable_log_file is False and a log file named `{tool_name}_{time_str}.txt` will be written. Add `--disable_log_file` makes it True and the tool will only print log to console.

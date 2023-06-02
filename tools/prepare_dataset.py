@@ -25,7 +25,8 @@ def main(args):
         logger = setup_logger(
             logger_name=filename,
             logger_path=log_path,
-            logger_level=logging.DEBUG)
+            file_level=logging.DEBUG,
+            console_level=logging.INFO)
     else:
         logger = setup_logger(logger_name=filename)
     if len(args.data_root) > 0 and len(args.meta_path) > 0:

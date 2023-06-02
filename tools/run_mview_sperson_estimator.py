@@ -27,12 +27,21 @@ def main(args):
     filename = os.path.basename(__file__).split('.')[0]
     # check input and output path
     logger = setup_logger(logger_name=filename)
-    if len(args.data_root) <= 0 or \
-            len(args.meta_path) <= 0:
+    if check_path_existence(args.data_root) != \
+            Existence.DirectoryExistNotEmpty or \
+            check_path_existence(args.meta_path) != \
+            Existence.DirectoryExistNotEmpty or \
+            len(args.output_dir) <= 0:
         logger.error('Not all necessary args have been configured.\n' +
-                     f'fbx_path: {args.data_root}\n' +
-                     f'output_path: {args.meta_path}')
+                     f'data_root: {args.data_root}\n' +
+                     f'meta_path: {args.meta_path}' +
+                     f'output_dir: {args.output_dir}\n')
         raise ValueError
+    if check_path_existence(args.output_dir) == Existence.MissingParent:
+        logger.error(f'Parent directory of {args.output_dir} does not exist.')
+        raise FileNotFoundError
+    elif check_path_existence(args.output_dir) == Existence.DirectoryNotExist:
+        os.mkdir(args.output_dir)
     if check_path_existence('logs', 'dir') == Existence.DirectoryNotExist:
         os.mkdir('logs')
     if not args.disable_log_file:
@@ -42,17 +51,19 @@ def main(args):
         logger = setup_logger(
             logger_name=filename,
             logger_path=log_path,
-            logger_level=logging.DEBUG)
+            file_level=logging.DEBUG,
+            console_level=logging.INFO)
     # build estimator
     estimator_config = dict(mmcv.Config.fromfile(args.estimator_config))
     estimator_config['logger'] = logger
     mview_sp_smpl_estimator = build_estimator(estimator_config)
     scene_paths = sorted(glob.glob(os.path.join(args.meta_path, 'scene_*')))
     for _, scene_path in enumerate(scene_paths):
+        scene_name = os.path.basename(scene_path)
+        scene_output_dir = os.path.join(args.output_dir, scene_name)
         # load input data
         image_list_paths = sorted(
             glob.glob(os.path.join(scene_path, 'image_list_view_*')))
-        image_list_paths = image_list_paths[:7]
         mview_img_list = []
         cam_param_list = []
         for _, img_list_path in enumerate(image_list_paths):
@@ -76,7 +87,7 @@ def main(args):
         keypoints2d_list, keypoints3d, smpl_data = mview_sp_smpl_estimator.run(
             cam_param=cam_param_list, img_paths=mview_img_list)
         # save results
-        keypoints2d_dir = os.path.join(scene_path, 'keypoints2d_pred')
+        keypoints2d_dir = os.path.join(scene_output_dir, 'keypoints2d_pred')
         os.makedirs(keypoints2d_dir, exist_ok=True)
         for keypoints2d, img_list_path in zip(keypoints2d_list,
                                               image_list_paths):
@@ -90,17 +101,17 @@ def main(args):
             else:
                 logger.warning(
                     f'No keypoints2d has been detected in view{view_idx:02d}.')
-        keypoints3d_path = os.path.join(scene_path, 'keypoints3d_pred.npz')
+        keypoints3d_path = os.path.join(scene_output_dir,
+                                        'keypoints3d_pred.npz')
         keypoints3d.dump(keypoints3d_path)
         if isinstance(smpl_data, SMPLXData):
             smpl_type = 'smplx'
         else:
             smpl_type = 'smpl'
-        smpl_path = os.path.join(scene_path, f'{smpl_type}_data.npz')
+        smpl_path = os.path.join(scene_output_dir, f'{smpl_type}_data.npz')
         smpl_data.dump(smpl_path)
         if args.visualize:
-            vis_dir = os.path.join(args.meta_path, 'visualize')
-            scene_name = os.path.basename(scene_path)
+            vis_dir = os.path.join(args.output_dir, 'visualize')
             scene_vis_dir = os.path.join(vis_dir, scene_name)
             os.makedirs(scene_vis_dir, exist_ok=True)
             if keypoints3d is not None:
@@ -135,7 +146,6 @@ def main(args):
                         background_img_list=mview_img_list[idx],
                         disable_tqdm=False,
                         logger=logger)
-                    break  # TODO: remove this break
             if smpl_data is not None:
                 body_model = mview_sp_smpl_estimator.smplify.body_model
                 for idx, img_list_path in enumerate(image_list_paths):
@@ -171,7 +181,6 @@ def main(args):
                         disable_tqdm=False,
                         logger=logger,
                         device=body_model.betas.device)
-                    break  # TODO: remove this break
 
 
 def setup_parser():
@@ -187,8 +196,14 @@ def setup_parser():
         '--meta_path',
         type=str,
         help='Path to the meta-data dir.' +
-        ' Camera parameters and image paths will be read from here.' +
-        ' Estimation results will be written here.',
+        ' Camera parameters and image paths will be read from here.',
+        default='')
+    # output args
+    parser.add_argument(
+        '--output_dir',
+        type=str,
+        help='Path to the directory where the' +
+        ' estimation results and visualization results save.',
         default='')
     # model args
     parser.add_argument(
