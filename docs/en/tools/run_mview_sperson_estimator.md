@@ -34,6 +34,13 @@ your_dataset_root
     └── scene_1
         └── ...
 ```
+`fisheye_param_{view_idx}.json` is a json file for XRPrimer FisheyeCameraParameter, please refer to [XRPrimer docs](https://github.com/openxrlab/xrprimer/blob/main/docs/en/data_structure/camera.md) for details.  
+`image_list_view_{view_idx}.txt` is a list of image paths relative to your dataset root, here's an example.
+```
+xrmocap_meta/scene_0/images_view_00/000000.jpg
+xrmocap_meta/scene_0/images_view_00/000001.jpg
+...
+```
 
 ### Argument: estimator_config
 
