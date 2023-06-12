@@ -2,8 +2,7 @@
 import logging
 import numpy as np
 import os
-from typing import Union
-from xrprimer.data_structure import Keypoints
+from typing import List, Union
 from xrprimer.transform.image.color import rgb2bgr
 from xrprimer.utils.ffmpeg_utils import array_to_images
 from xrprimer.utils.path_utils import (
@@ -25,6 +24,7 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
                  data_root: str,
                  bbox_detector: Union[dict, None],
                  kps2d_estimator: Union[dict, None],
+                 view_idxs: Union[str, List[int]] = 'all',
                  batch_size: int = 500,
                  meta_path: str = 'xrmocap_meta',
                  dataset_name: str = 'humman_smc',
@@ -43,6 +43,10 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
             kps2d_estimator (Union[dict, None]):
                 A top-down kps2d estimator, or its config, or None.
                 If None, converting perception 2d will be skipped.
+            view_idxs (Union[str, List[int]], optional):
+                A list of selected view indexes in each scene,
+                like [[0, 1], [0, 2, 4]].
+                Defaults to 'all', all views will be selected.
             batch_size (int, optional):
                 How many frames are loaded at the same time. Defaults to 500.
             meta_path (str, optional):
@@ -69,6 +73,7 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
         self.batch_size = batch_size
         # check how many smc files in the data_root
         file_names = sorted(os.listdir(data_root))
+        self.view_idxs = view_idxs
         self.smc_paths = []
         for file_name in file_names:
             file_path = os.path.join(data_root, file_name)
@@ -93,6 +98,7 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
                 data_root=data_root,
                 meta_path=meta_path,
                 vis_percep2d=vis_percep2d,
+                vis_gt_kps3d=False,
                 output_dir=os.path.join(meta_path, 'visualize'),
                 verbose=verbose,
                 logger=logger)
@@ -145,7 +151,9 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
             self.logger.info('Extracting image relative path list' +
                              f' for scene {scene_idx}, file {smc_name}.')
         n_view = smc_reader.num_kinects
-        for view_idx in range(n_view):
+        cur_view_idxs = _get_cur_view_idxs(
+            idxs_setting=self.view_idxs, n_view=n_view, logger=self.logger)
+        for view_idx in cur_view_idxs:
             output_folder = os.path.join(scene_dir,
                                          f'images_view_{view_idx:02d}')
             sv_img_array = smc_reader.get_kinect_color(kinect_id=view_idx)
@@ -173,8 +181,10 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
             self.logger.info('Converting image relative path list' +
                              f' for scene {scene_idx}, file {smc_name}.')
         n_view = smc_reader.num_kinects
+        cur_view_idxs = _get_cur_view_idxs(
+            idxs_setting=self.view_idxs, n_view=n_view, logger=self.logger)
         n_frame = smc_reader.kinect_num_frames
-        for view_idx in range(n_view):
+        for view_idx in cur_view_idxs:
             image_dir = os.path.join(scene_dir, f'images_view_{view_idx:02d}')
             frame_list = []
             for frame_idx in range(n_frame):
@@ -214,7 +224,12 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
             smc_reader=smc_reader, align_floor=True, logger=self.logger)
         cam_dir = os.path.join(scene_dir, 'camera_parameters')
         os.makedirs(cam_dir, exist_ok=True)
-        for view_idx, cam_param in enumerate(cam_param_list):
+        cur_view_idxs = _get_cur_view_idxs(
+            idxs_setting=self.view_idxs,
+            n_view=len(cam_param_list),
+            logger=self.logger)
+        for view_idx in cur_view_idxs:
+            cam_param = cam_param_list[view_idx]
             cam_param.name = f'fisheye_param_{view_idx:02d}'
             cam_param.dump(os.path.join(cam_dir, f'{cam_param.name}.json'))
 
@@ -228,20 +243,10 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
             smc_reader (SMCReader):
                 SMCReader of this scene.
         """
-        # DOING
         if self.verbose:
             self.logger.info(
                 f'Converting ground truth keypoints3d for scene {scene_idx}.')
-        scene_dir = os.path.join(self.meta_path, f'scene_{scene_idx}')
-        n_frame = smc_reader.kinect_num_frames
-        kps3d_arr = np.zeros(shape=(n_frame, 1, 17, 4))
-        kps3d_mask = np.zeros_like(kps3d_arr[..., -1:])
-        keypoints3d = Keypoints(
-            kps=kps3d_arr,
-            mask=kps3d_mask,
-            convention='coco',
-            logger=self.logger)
-        keypoints3d.dump(os.path.join(scene_dir, 'keypoints3d_GT.npz'))
+        raise NotImplementedError
 
     def convert_perception_2d(self, scene_idx: int,
                               smc_reader: SMCReader) -> None:
@@ -258,7 +263,9 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
         scene_bbox_list = []
         scene_keypoints_list = []
         n_view = smc_reader.num_kinects
-        for view_idx in range(n_view):
+        cur_view_idxs = _get_cur_view_idxs(
+            idxs_setting=self.view_idxs, n_view=n_view, logger=self.logger)
+        for view_idx in cur_view_idxs:
             if self.verbose:
                 self.logger.info('Inferring perception 2D data for' +
                                  f' scene {scene_idx} view {view_idx}')
@@ -309,3 +316,18 @@ class HummanSMCDataCovnerter(BaseDataCovnerter):
                     view_idx].get_mask()
         np.savez_compressed(
             file=os.path.join(scene_dir, 'perception_2d.npz'), **dict_to_save)
+
+
+def _get_cur_view_idxs(idxs_setting: Union[str, List[int]], n_view: int,
+                       logger: logging.Logger) -> List[int]:
+    if idxs_setting == 'all':
+        cur_view_idxs = [i for i in range(n_view)]
+    else:
+        for idx in idxs_setting:
+            if idx >= n_view:
+                logger.error(
+                    f'View index {idx} is larger than the number of views' +
+                    f' {n_view}.')
+                raise ValueError
+        cur_view_idxs = idxs_setting.copy()
+    return cur_view_idxs
