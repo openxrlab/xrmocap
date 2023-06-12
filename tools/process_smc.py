@@ -1,6 +1,5 @@
 # yapf: disable
 import argparse
-import datetime
 import glob
 import mmcv
 import numpy as np
@@ -11,7 +10,7 @@ from mmhuman3d.core.visualization.visualize_smpl import (
     visualize_smpl_calibration,
 )
 from xrprimer.utils.ffmpeg_utils import array_to_images
-from xrprimer.utils.log_utils import setup_logger
+from xrprimer.utils.log_utils import logging, setup_logger
 from xrprimer.utils.path_utils import (
     Existence, check_path_existence, prepare_output_path,
 )
@@ -21,11 +20,13 @@ from xrmocap.data_structure.body_model import SMPLXData
 from xrmocap.data_structure.smc_reader import SMCReader
 from xrmocap.io.camera import get_all_color_kinect_parameter_from_smc
 from xrmocap.transform.image.color import rgb2bgr
+from xrmocap.utils.date_utils import get_datetime_local, get_str_from_datetime
 
 # yapf: enable
 
 
 def main(args):
+    filename = os.path.basename(__file__).split('.')[0]
     # check output path
     exist_result = check_path_existence(args.output_dir, 'dir')
     if exist_result == Existence.MissingParent:
@@ -35,11 +36,16 @@ def main(args):
     file_name = args.smc_path.rsplit('/', 1)[-1]
     smc_name = file_name.rsplit('.', 1)[0]
     if not args.disable_log_file:
-        time_str = datetime.datetime.now().strftime('%Y.%m.%d_%H:%M:%S')
-        log_path = os.path.join(args.output_dir, f'{smc_name}_{time_str}.txt')
-        logger = setup_logger(logger_name=__name__, logger_path=log_path)
+        datetime = get_datetime_local()
+        time_str = get_str_from_datetime(datetime)
+        log_path = os.path.join('logs', f'{filename}_{time_str}.txt')
+        logger = setup_logger(
+            logger_name=filename,
+            logger_path=log_path,
+            file_level=logging.DEBUG,
+            console_level=logging.INFO)
     else:
-        logger = setup_logger(logger_name=__name__)
+        logger = setup_logger(logger_name=filename)
     # check input path
     exist_result = check_path_existence(args.smc_path, 'file')
     if exist_result != Existence.FileExist:

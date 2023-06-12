@@ -52,15 +52,15 @@ class PanopticDataCovnerter(BaseDataCovnerter):
                 A top-down kps2d estimator, or its config, or None.
                 If None, converting perception 2d will be skipped.
                 Defaults to None.
-            scene_names (List[str], optional):
+            scene_names (Union[str, List[str]], optional):
                 A list of scene directory names, like
                 ['160422_haggling1', '160906_ian5'].
                 Defaults to 'all', all scenes in data_root will be selected.
-            view_idxs (List[int], optional):
+            view_idxs (Union[str, List[int]], optional):
                 A list of selected view indexes in each scene,
                 like [[0, 1], [0, 2, 4]].
                 Defaults to 'all', all views will be selected.
-            scene_range (List[List[int]], optional):
+            scene_range (Union[str, List[List[int]]], optional):
                 Frame range of scenes. For instance,
                 [[350, 470], [650, 750]]
                 will select 120 frames from scene_0 and
