@@ -1,8 +1,11 @@
 # yapf: disable
+import gzip
 import numpy as np
 import os
 import time
 import torch
+import uuid
+from flask import session
 from flask_socketio import SocketIO, emit
 from threading import RLock
 from typing import Union
@@ -35,19 +38,57 @@ _SMPLX_CONFIG_TEMPLATE = dict(
 
 
 class SMPLVertsService(BaseFlaskService):
-    """TODO: Docstring."""
+    """A websocket service that provides SMPL/SMPLX vertices."""
 
     def __init__(self,
                  name: str,
                  body_model_dir: str,
                  work_dir: str,
+                 secret_key: Union[None, str] = None,
                  flat_hand_mean: bool = False,
+                 enable_gzip: bool = False,
                  debug: bool = False,
                  enable_cors: bool = False,
                  device: Union[torch.device, str] = 'cuda',
                  host: str = '0.0.0.0',
                  port: int = 29091,
                  logger: Union[None, str, logging.Logger] = None) -> None:
+        """
+        Args:
+            name (str): Name of this service.
+            body_model_dir (str):
+                Path to the directory for SMPL(X) body models, folder `smpl`
+                and `smplx` are below body_model_dir.
+            work_dir (str):
+                Path to a directory, for temp files of this server.
+            secret_key (Union[None, str], optional):
+                Secret key for this service. If None, a random key will be
+                generated. Defaults to None.
+            flat_hand_mean (bool, optional):
+                If False, then the pose of the hand is initialized to False.
+                Defaults to False.
+            enable_gzip (bool, optional):
+                Whether to enable gzip compression for the verts response.
+                Defaults to False.
+            debug (bool, optional):
+                If `debug` flag is set the server will automatically reload
+                for code changes and show a debugger in case
+                an exception happened.
+                Defaults to False.
+            enable_cors (bool, optional):
+                Whether to enable Cross Origin Resource Sharing (CORS).
+                Defaults to False.
+            host (str, optional):
+                Host IP address. 127.0.0.1 for localhost,
+                0.0.0.0 for all local network interfaces.
+                Defaults to '0.0.0.0'.
+            port (int, optional):
+                Port for this http service.
+                Defaults to 80.
+            logger (Union[None, str, logging.Logger], optional):
+                Logger for logging. If None, root logger will be selected.
+                Defaults to None.
+        """
         BaseFlaskService.__init__(
             self,
             name=name,
@@ -58,15 +99,16 @@ class SMPLVertsService(BaseFlaskService):
             port=port,
             logger=logger,
         )
+        self.app.config['SECRET_KEY'] = os.urandom(24) \
+            if secret_key is None \
+            else secret_key
         self.socketio = SocketIO(self.app)
         self.device = device
         self.worker_lock = RLock()
         # set body model configs for all types and genders
         # stored in self.body_model_configs
         self._set_body_model_config(body_model_dir, flat_hand_mean)
-        # save clients' uuid, body model type, gender and
-        # last connection time in self.client_config_cache
-        self.client_config_cache = {}
+        self.enable_gzip = enable_gzip
         self.socketio.on_event(
             message='upload',
             handler=self.upload_smpl_data,
@@ -78,6 +120,10 @@ class SMPLVertsService(BaseFlaskService):
         self.socketio.on_event(
             message='disconnect',
             handler=self.on_disconnect,
+        )
+        self.socketio.on_event(
+            message='connect',
+            handler=self.on_connect,
         )
         self.forward_timer = Timer(
             name='forward_timer',
@@ -92,29 +138,50 @@ class SMPLVertsService(BaseFlaskService):
         self.socketio.run(
             app=self.app, debug=self.debug, host=self.host, port=self.port)
 
+    def on_connect(self) -> None:
+        """Connect event handler.
+
+        Register client uuid.
+        """
+        uuid_str = str(uuid.uuid4())
+        session['uuid'] = uuid_str
+        self.logger.info(f'Client {uuid_str} connected.')
+
+    def on_disconnect(self) -> None:
+        """Disconnect event handler.
+
+        Args:
+            data (dict): Request data. uuid is required.
+        """
+        uuid_str = session['uuid']
+        self.logger.info(
+            f'Client {uuid_str} disconnected. Cleaning files and session.')
+        self._clean_files_by_uuid(uuid_str)
+        session.clear()
+
     def upload_smpl_data(self, data: dict) -> dict:
         """Upload smpl data file, check whether the corresponding body model
         config exists, and save it to work_dir if success.
 
         Args:
             data (dict): smpl data file info, including
-                uuid, file_name and file_data.
+                file_name and file_data.
 
         Returns:
             dict: response info, including status, and
                 msg when fails.
         """
         resp_dict = dict()
-        # save file to work_dir
-        uuid = data['uuid']
-        if uuid in self.client_config_cache:
-            warn_msg = f'Client {uuid} already registered.' +\
-                ' Overwrite its body model config.'
+        uuid_str = session['uuid']
+        smpl_data_in_session = session.get('smpl_data', None)
+        if smpl_data_in_session is not None:
+            warn_msg = f'Client {uuid_str} has already uploaded a file.' +\
+                ' Overwriting.'
             self.logger.warning(warn_msg)
             resp_dict['msg'] = f'Warning: {warn_msg}'
         file_name = data['file_name']
         file_data = data['file_data']
-        file_path = os.path.join(self.work_dir, f'{uuid}_{file_name}.npz')
+        file_path = os.path.join(self.work_dir, f'{uuid_str}_{file_name}.npz')
         with open(file_path, 'wb') as file:
             file.write(file_data)
         # load smpl data
@@ -125,7 +192,7 @@ class SMPLVertsService(BaseFlaskService):
         # check if the body model files exist
         if smpl_type not in self.body_model_configs or\
                 smpl_gender not in self.body_model_configs[smpl_type]:
-            error_msg = f'Client {uuid} has smpl type {smpl_type} ' +\
+            error_msg = f'Client {uuid_str} has smpl type {smpl_type} ' +\
                 f'and smpl gender {smpl_gender}, ' +\
                 'but no corresponding body model config found.'
             resp_dict['msg'] = f'Error: {warn_msg}'
@@ -135,15 +202,14 @@ class SMPLVertsService(BaseFlaskService):
         body_model_cfg = self.body_model_configs[smpl_type][smpl_gender]
         body_model = build_body_model(body_model_cfg).to(self.device)
         # save body model to cache
-        self.client_config_cache[uuid] = dict(
-            smpl_type=smpl_type.replace('Data', '').lower(),
-            smpl_gender=smpl_data.get_gender(),
-            smpl_data=smpl_data,
-            body_model=body_model,
-            last_connect_time=time.time())
-        self.logger.info(f'Client {uuid} smpl data file loaded confirmed.\n' +
-                         f'Body model type: {smpl_type}\n' +
-                         f'Gender: {smpl_gender}')
+        session['smpl_type'] = smpl_type.replace('Data', '').lower()
+        session['smpl_gender'] = smpl_data.get_gender()
+        session['smpl_data'] = smpl_data
+        session['body_model'] = body_model
+        session['last_connect_time'] = time.time()
+        self.logger.info(
+            f'Client {uuid_str} smpl data file loaded confirmed.\n' +
+            f'Body model type: {smpl_type}\n' + f'Gender: {smpl_gender}')
         resp_dict['status'] = 'success'
         emit('upload_response', resp_dict)
         return resp_dict
@@ -152,50 +218,51 @@ class SMPLVertsService(BaseFlaskService):
         """Call body_model.forward() to get SMPL vertices.
 
         Args:
-            data (dict): Request data. uuid, frame_idx are required.
+            data (dict): Request data, frame_idx is required.
 
         Returns:
             dict: Response data.
                 If success, status is 'success' and
-                vertices is a list of vertices.
+                vertices bytes for an ndarray.
         """
         resp_dict = dict()
         req_dict = data
-        uuid = req_dict['uuid']
+        uuid_str = session['uuid']
         frame_idx = req_dict['frame_idx']
-        smpl_data = self.client_config_cache[uuid]['smpl_data']
+        smpl_data = session['smpl_data']
         # check if data and args are valid
         failed = False
-        if uuid not in self.client_config_cache:
-            error_msg = f'Client {uuid} not registered.'
-            failed = True
-        elif smpl_data is None:
-            error_msg = f'Client {uuid}\'s smpl data not uploaded.'
+        if smpl_data is None:
+            error_msg = f'Client {uuid_str}\'s smpl data not uploaded.'
             failed = True
         elif frame_idx >= smpl_data.get_batch_size():
-            error_msg = f'Client {uuid}\'s smpl data only has ' +\
+            error_msg = f'Client {uuid_str}\'s smpl data only has ' +\
                 f'{smpl_data.get_batch_size()} frames, ' +\
-                f'but got frame_idx {frame_idx} in request.'
+                f'but got frame_idx={frame_idx} in request.'
             failed = True
         if failed:
             self.logger.error(error_msg)
             resp_dict['msg'] = f'Error: {error_msg}'
             resp_dict['status'] = 'fail'
             emit('forward_response', resp_dict)
+        # no error, forward body model
         else:
             self.forward_timer.start()
             tensor_dict = smpl_data.to_tensor_dict(
                 repeat_betas=True, device=self.device)
             for k, v in tensor_dict.items():
                 tensor_dict[k] = v[frame_idx:frame_idx + 1]
-            body_model = self.client_config_cache[uuid]['body_model']
+            body_model = session['body_model']
             with self.worker_lock:
                 with torch.no_grad():
                     body_model_output = body_model(**tensor_dict)
             verts = body_model_output['vertices']  # n_batch=1, n_verts, 3
             verts_np = verts.cpu().numpy().squeeze(0).astype(np.float16)
-            self.client_config_cache[uuid]['last_connect_time'] = time.time()
-            resp_dict['verts'] = verts_np.tolist()
+            session['last_connect_time'] = time.time()
+            verts_bytes = verts_np.tobytes()
+            if self.enable_gzip:
+                verts_bytes = gzip.compress(verts_bytes)
+            resp_dict['verts'] = verts_bytes
             resp_dict['status'] = 'success'
             self.forward_timer.stop()
             if self.forward_timer.count >= 50:
@@ -205,25 +272,12 @@ class SMPLVertsService(BaseFlaskService):
             emit('forward_response', resp_dict)
         return resp_dict
 
-    def on_disconnect(self, data: dict) -> None:
-        """Disconnect event handler.
-
-        Args:
-            data (dict): Request data. uuid is required.
-        """
-        req_dict = data
-        uuid = req_dict['uuid']
-        self.logger.info(
-            f'Client {uuid} disconnected. Cleaning files and cache.')
-        self._clean_by_uuid(uuid)
-
-    def _clean_by_uuid(self, uuid: str) -> None:
+    def _clean_files_by_uuid(self, uuid: str) -> None:
         file_names = os.listdir(self.work_dir)
         for file_name in file_names:
             if file_name.startswith(uuid):
                 file_path = os.path.join(self.work_dir, file_name)
                 os.remove(file_path)
-        self.client_config_cache.pop(uuid, None)
 
     def _set_body_model_config(self, body_model_dir: str,
                                flat_hand_mean: bool) -> None:

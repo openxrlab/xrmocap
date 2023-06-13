@@ -1,9 +1,9 @@
 # yapf: disable
 import argparse
+import numpy as np
 import os
 import socketio
 import time
-import uuid
 from tqdm import tqdm
 from xrprimer.utils.log_utils import logging, setup_logger
 
@@ -32,8 +32,7 @@ def main(args):
     file_name = os.path.basename(args.smpl_data_path)
     with open(args.smpl_data_path, 'rb') as file:
         file_data = file.read()
-    uuid_str = str(uuid.uuid4())
-    data = {'uuid': uuid_str, 'file_name': file_name, 'file_data': file_data}
+    data = {'file_name': file_name, 'file_data': file_data}
     socketio_client = socketio.Client()
     socketio_client.connect(f'http://{args.server_ip}:{args.server_port}')
     logger.info('Sending upload request...')
@@ -62,6 +61,11 @@ def main(args):
     @socketio_client.on('forward_response')
     def on_forward_response(data):
         if data['status'] == 'success':
+            # bytes_np = gzip.decompress(data['verts'])
+            bytes_np = data['verts']
+            verts = np.frombuffer(bytes_np, dtype=np.float16)
+            verts = verts.reshape(-1, 3)
+            assert verts.shape == (6890, 3)
             nonlocal resp_idx
             nonlocal n_frame
             resp_idx += 1
@@ -75,12 +79,9 @@ def main(args):
             exit(1)
 
     for frame_idx in tqdm(range(n_frame)):
-        socketio_client.emit('forward', {
-            'uuid': uuid_str,
-            'frame_idx': frame_idx
-        })
+        socketio_client.emit('forward', {'frame_idx': frame_idx})
         while frame_idx > resp_idx:
-            time.sleep(1.0 / 120.0)
+            time.sleep(1.0 / 240)
     logger.info('Forward success.')
 
 
