@@ -247,15 +247,20 @@ class SMPLVertsService(BaseFlaskService):
             emit('forward_response', resp_dict)
         # no error, forward body model
         else:
-            self.forward_timer.start()
             tensor_dict = smpl_data.to_tensor_dict(
                 repeat_betas=True, device=self.device)
             for k, v in tensor_dict.items():
                 tensor_dict[k] = v[frame_idx:frame_idx + 1]
             body_model = session['body_model']
             with self.worker_lock:
+                self.forward_timer.start()
                 with torch.no_grad():
                     body_model_output = body_model(**tensor_dict)
+                self.forward_timer.stop()
+                if self.forward_timer.count >= 50:
+                    self.logger.info(
+                        'Average forward time per-frame:' +
+                        f' {self.forward_timer.get_average(reset=True):.4f} s')
             verts = body_model_output['vertices']  # n_batch=1, n_verts, 3
             verts_np = verts.cpu().numpy().squeeze(0).astype(np.float16)
             session['last_connect_time'] = time.time()
@@ -264,11 +269,6 @@ class SMPLVertsService(BaseFlaskService):
                 verts_bytes = gzip.compress(verts_bytes)
             resp_dict['verts'] = verts_bytes
             resp_dict['status'] = 'success'
-            self.forward_timer.stop()
-            if self.forward_timer.count >= 50:
-                self.logger.info(
-                    'Average forward time per-frame:' +
-                    f' {self.forward_timer.get_average(reset=True):.4f} s')
             emit('forward_response', resp_dict)
         return resp_dict
 
