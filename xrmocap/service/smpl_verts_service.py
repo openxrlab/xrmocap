@@ -46,6 +46,7 @@ class SMPLVertsService(BaseFlaskService):
                  work_dir: str,
                  secret_key: Union[None, str] = None,
                  flat_hand_mean: bool = False,
+                 enable_bytes: bool = False,
                  enable_gzip: bool = False,
                  debug: bool = False,
                  enable_cors: bool = False,
@@ -67,6 +68,8 @@ class SMPLVertsService(BaseFlaskService):
             flat_hand_mean (bool, optional):
                 If False, then the pose of the hand is initialized to False.
                 Defaults to False.
+            enable_bytes (bool, optional):
+                Whether to enable bytes response. Defaults to False.
             enable_gzip (bool, optional):
                 Whether to enable gzip compression for the verts response.
                 Defaults to False.
@@ -108,7 +111,13 @@ class SMPLVertsService(BaseFlaskService):
         # set body model configs for all types and genders
         # stored in self.body_model_configs
         self._set_body_model_config(body_model_dir, flat_hand_mean)
+        # set enable_bytes and enable_gzip
+        self.enable_bytes = enable_bytes
         self.enable_gzip = enable_gzip
+        if not self.enable_bytes and self.enable_gzip:
+            self.logger.warning('enable_gzip is set to True,' +
+                                ' but enable_bytes is set to False. '
+                                'enable_gzip will be ignored.')
         self.socketio.on_event(
             message='upload',
             handler=self.upload_smpl_data,
@@ -264,12 +273,15 @@ class SMPLVertsService(BaseFlaskService):
             verts = body_model_output['vertices']  # n_batch=1, n_verts, 3
             verts_np = verts.cpu().numpy().squeeze(0).astype(np.float16)
             session['last_connect_time'] = time.time()
-            verts_bytes = verts_np.tobytes()
-            if self.enable_gzip:
-                verts_bytes = gzip.compress(verts_bytes)
-            resp_dict['verts'] = verts_bytes
-            resp_dict['status'] = 'success'
-            emit('forward_response', resp_dict)
+            if self.enable_bytes:
+                verts_bytes = verts_np.tobytes()
+                if self.enable_gzip:
+                    verts_bytes = gzip.compress(verts_bytes)
+                emit('forward_response', verts_bytes)
+            else:
+                resp_dict['verts'] = verts_np.tolist()
+                resp_dict['status'] = 'success'
+                emit('forward_response', resp_dict)
         return resp_dict
 
     def _clean_files_by_uuid(self, uuid: str) -> None:

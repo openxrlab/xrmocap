@@ -58,19 +58,31 @@ def main(args):
     frame_idx = 0
     resp_idx = -1
 
+    pbar = tqdm(total=n_frame)
+
     @socketio_client.on('forward_response')
     def on_forward_response(data):
-        if data['status'] == 'success':
-            # bytes_np = gzip.decompress(data['verts'])
-            bytes_np = data['verts']
-            verts = np.frombuffer(bytes_np, dtype=np.float16)
+        success = False
+        if args.resp_type == 'bytes':
+            if not isinstance(data, dict):
+                success = True
+                verts = np.frombuffer(data, dtype=np.float16)
+        else:
+            if data['status'] == 'success':
+                success = True
+                verts = np.asarray(data['verts'])
+        if success:
             verts = verts.reshape(-1, 3)
             assert verts.shape == (6890, 3)
             nonlocal resp_idx
             nonlocal n_frame
+            nonlocal pbar
+            pbar.update(1)
             resp_idx += 1
             if resp_idx == n_frame - 1:
                 socketio_client.disconnect()
+                pbar.close()
+                logger.info('Forward success.')
                 exit(0)
         else:
             msg = data['msg']
@@ -78,11 +90,10 @@ def main(args):
             socketio_client.disconnect()
             exit(1)
 
-    for frame_idx in tqdm(range(n_frame)):
+    for frame_idx in tqdm(range(n_frame), disable=True):
         socketio_client.emit('forward', {'frame_idx': frame_idx})
-        while frame_idx > resp_idx:
-            time.sleep(1.0 / 240)
-    logger.info('Forward success.')
+        # while frame_idx > resp_idx:
+        #     time.sleep(1.0 / 240)
 
 
 def setup_parser():
@@ -98,6 +109,12 @@ def setup_parser():
         help='Port number of the server.',
         type=int,
         default=29091)
+    parser.add_argument(
+        '--resp_type',
+        help='Type of the response data.',
+        type=str,
+        choices=['dict', 'bytes'],
+        default='dict')
     # input args
     parser.add_argument(
         '--smpl_data_path', type=str, help='Path to smpl(x)_data.')
