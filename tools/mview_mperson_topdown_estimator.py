@@ -15,7 +15,7 @@ from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.log_utils import setup_logger
 
 from xrmocap.core.estimation.builder import build_estimator
-from xrmocap.core.visualization import visualize_project_keypoints3d
+from xrmocap.visualization import visualize_project_keypoints3d
 
 # yapf: enable
 
