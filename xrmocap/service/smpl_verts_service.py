@@ -53,6 +53,7 @@ class SMPLVertsService(BaseFlaskService):
                  device: Union[torch.device, str] = 'cuda',
                  host: str = '0.0.0.0',
                  port: int = 29091,
+                 max_http_buffer_size: int = 128 * 1024 * 1024,
                  logger: Union[None, str, logging.Logger] = None) -> None:
         """
         Args:
@@ -88,6 +89,9 @@ class SMPLVertsService(BaseFlaskService):
             port (int, optional):
                 Port for this http service.
                 Defaults to 80.
+            max_http_buffer_size (int):
+                Server's payload.
+                Defaults to 128MB.
             logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be selected.
                 Defaults to None.
@@ -105,7 +109,9 @@ class SMPLVertsService(BaseFlaskService):
         self.app.config['SECRET_KEY'] = os.urandom(24) \
             if secret_key is None \
             else secret_key
-        self.socketio = SocketIO(self.app)
+        # max_http_buffer_size: the maximum allowed payload
+        self.socketio = SocketIO(
+            self.app, max_http_buffer_size=max_http_buffer_size)
         self.device = device
         self.worker_lock = RLock()
         # set body model configs for all types and genders
@@ -118,14 +124,13 @@ class SMPLVertsService(BaseFlaskService):
             self.logger.warning('enable_gzip is set to True,' +
                                 ' but enable_bytes is set to False. '
                                 'enable_gzip will be ignored.')
-        self.socketio.on_event(
-            message='upload',
-            handler=self.upload_smpl_data,
-        )
-        self.socketio.on_event(
-            message='forward',
-            handler=self.forward_body_model,
-        )
+
+        self.socketio.on_event('upload', self.upload_smpl_data)
+
+        self.socketio.on_event('forward', self.forward_body_model)
+
+        self.socketio.on_event('get_faces', self.get_faces)
+
         self.socketio.on_event(
             message='disconnect',
             handler=self.on_disconnect,
@@ -180,6 +185,7 @@ class SMPLVertsService(BaseFlaskService):
             dict: response info, including status, and
                 msg when fails.
         """
+
         resp_dict = dict()
         uuid_str = session['uuid']
         smpl_data_in_session = session.get('smpl_data', None)
@@ -219,8 +225,9 @@ class SMPLVertsService(BaseFlaskService):
         self.logger.info(
             f'Client {uuid_str} smpl data file loaded confirmed.\n' +
             f'Body model type: {smpl_type}\n' + f'Gender: {smpl_gender}')
+        resp_dict['num_frames'] = smpl_data.get_batch_size()
         resp_dict['status'] = 'success'
-        emit('upload_response', resp_dict)
+
         return resp_dict
 
     def forward_body_model(self, data: dict) -> dict:
@@ -253,7 +260,7 @@ class SMPLVertsService(BaseFlaskService):
             self.logger.error(error_msg)
             resp_dict['msg'] = f'Error: {error_msg}'
             resp_dict['status'] = 'fail'
-            emit('forward_response', resp_dict)
+            return resp_dict
         # no error, forward body model
         else:
             tensor_dict = smpl_data.to_tensor_dict(
@@ -277,12 +284,43 @@ class SMPLVertsService(BaseFlaskService):
                 verts_bytes = verts_np.tobytes()
                 if self.enable_gzip:
                     verts_bytes = gzip.compress(verts_bytes)
-                emit('forward_response', verts_bytes)
+                return verts_bytes
             else:
                 resp_dict['verts'] = verts_np.tolist()
                 resp_dict['status'] = 'success'
-                emit('forward_response', resp_dict)
-        return resp_dict
+                return resp_dict
+
+    def get_faces(self) -> dict:
+        """Get body face indices.
+
+        Returns:
+            dict: Response data.
+                If success, status is 'success' and
+                face indices for an ndarray.
+        """
+        resp_dict = dict()
+        body_model = session['body_model']
+        # check if data and args are valid
+        if body_model is None:
+            error_msg = 'Failed to get body model.'
+            self.logger.error(error_msg)
+            resp_dict['msg'] = f'Error: {error_msg}'
+            resp_dict['status'] = 'fail'
+
+            return resp_dict
+
+        session['last_connect_time'] = time.time()
+
+        if self.enable_bytes:
+            faces = np.array(body_model.faces, dtype=np.int32)
+            faces_bytes = faces.tobytes()
+            if self.enable_gzip:
+                faces_bytes = gzip.compress(faces_bytes)
+            return faces_bytes
+        else:
+            resp_dict['faces'] = faces
+            resp_dict['status'] = 'success'
+            return resp_dict
 
     def _clean_files_by_uuid(self, uuid: str) -> None:
         file_names = os.listdir(self.work_dir)

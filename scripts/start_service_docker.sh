@@ -7,7 +7,7 @@ PORTS="-p $PORT:$PORT"
 WORKSPACE_VOLUMES="-v $PWD:/workspace/xrmocap"
 WORKDIR="-w /workspace/xrmocap"
 MEMORY="--memory=20g"
-docker run -it --rm --entrypoint=/bin/bash $PORTS $WORKSPACE_VOLUMES $WORKDIR $MEMORY $TAG -c "
+docker run --runtime=nvidia -it --rm --entrypoint=/bin/bash $PORTS $WORKSPACE_VOLUMES $WORKDIR $MEMORY $TAG -c "
   source /opt/miniconda/etc/profile.d/conda.sh
   conda activate openxrlab
   pip install .
