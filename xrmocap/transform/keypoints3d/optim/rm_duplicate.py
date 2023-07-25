@@ -128,8 +128,8 @@ class RemoveDuplicate(BaseOptimizer):
                             ...] = kps3d_frame[keep_idxs, ...]
 
         if self.identity_tracking is not None:
-            kps3d_optim = np.full((n_frame, max_pid+1, n_kps, 4), np.nan)
-            
+            kps3d_optim = np.full((n_frame, max_pid + 1, n_kps, 4), np.nan)
+
             # save to Kps3d
             for frame_idx in range(n_frame):
                 kps3d_frame = kps3d[frame_idx, ...]
@@ -137,17 +137,16 @@ class RemoveDuplicate(BaseOptimizer):
                 # skip empty frame
                 if kps3d_frame.shape[0] == 0:
                     continue
-                
+
                 frame_identities = full_pid[frame_idx]
                 keep_idxs = full_keep_idxs[frame_idx]
                 kps3d_optim[frame_idx, frame_identities,
-                        ...] = kps3d_frame[keep_idxs, ...]
+                            ...] = kps3d_frame[keep_idxs, ...]
 
         keypoints3d_optim.set_keypoints(kps3d_optim)
         keypoints3d_optim.set_mask(kps3d_optim[..., -1] > 0)
 
         return keypoints3d_optim
-    
 
     def get_kps3d_dist(self,
                        kps3d: Union[torch.Tensor, np.ndarray],
