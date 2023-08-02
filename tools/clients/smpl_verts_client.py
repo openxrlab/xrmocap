@@ -1,138 +1,76 @@
 # yapf: disable
+import argparse
+import logging
 import numpy as np
-import socketio
-from enum import Enum
-from typing import List
+import os
+import sys
+import time
+from tqdm import tqdm
+
+from xrmocap.client.smpl_verts_client import SMPLVertsClient
 
 # yapf: enable
 
 
-class XRMocapSMPLClientActionsEnum(str, Enum):
-    UPLOAD = 'upload'
-    FORWARD = 'forward'
-    GET_FACES = 'get_faces'
+def main(args) -> int:
+    name = os.path.basename(__file__).split('.')[0]
+    logger = logging.getLogger(name)
+    if args.verbose:
+        logger.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.WARNING)
+    if args.smpl_data_path is None:
+        logger.error('Please specify smpl_data_path.')
+        raise ValueError
+    client = SMPLVertsClient(
+        server_ip=args.server_ip, server_port=args.server_port, logger=logger)
+    n_frames = client.upload_smpl_data(args.smpl_data_path)
+    logger.info(f'Motion of {n_frames} frames uploaded.')
+    faces = client.get_faces()
+    faces_np = np.array(faces)
+    logger.info(f'Get faces: {faces_np.shape}')
+    start_time = time.time()
+    for frame_idx in tqdm(range(n_frames)):
+        verts = client.forward(frame_idx)
+        verts_np = np.array(verts)
+        if frame_idx == 0:
+            logger.info(f'Get verts for first frame: {verts_np.shape}')
+    loop_time = time.time() - start_time
+    fps = n_frames / loop_time
+    logger.info(f'Get verts for all frames, average fps: {fps:.2f}')
+    client.close()
+    return 0
 
 
-class XRMocapSMPLClient:
-    """Client of the XRMocap SMPL server."""
+def setup_parser():
+    parser = argparse.ArgumentParser(
+        description='Send a smpl data file to ' +
+        'SMPLVertsServer and receive faces and verts.')
+    parser.add_argument(
+        '--smpl_data_path',
+        help='Path to a SMPL(X)Data file.',
+        type=str,
+    )
+    parser.add_argument(
+        '--server_ip',
+        help='IP address of the server.',
+        type=str,
+        default='127.0.0.1')
+    parser.add_argument(
+        '--server_port',
+        help='Port number of the server.',
+        type=int,
+        default=29091)
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='If True, INFO level log will be shown.',
+        default=False)
+    args = parser.parse_args()
+    return args
 
-    def __init__(
-        self,
-        server_ip: str = '127.0.0.1',
-        server_port: int = 8376,
-        resp_type: str = 'bytes',
-    ) -> None:
-        self.server_ip = server_ip
-        self.server_port = server_port
-        self.resp_type = resp_type
 
-        # setup websocket client
-        self.socketio_client = socketio.Client()
-        self.socketio_client.connect(f'http://{server_ip}:{server_port}')
-
-        self.upload_success = False
-        self.verts = None
-
-    def _parse_upload_response(self, data):
-        if data['status'] == 'success':
-            num_frames = int(data['num_frames'])
-        else:
-            msg = data['msg']
-            print(f'Failed to upload body motion: {msg}')
-            self.socketio_client.disconnect()
-            raise RuntimeError
-
-        return num_frames
-
-    def upload_body_motion(self, body_motion: bytes) -> int:
-        """Upload a body motion to the SMPL server.
-
-        Args:
-            body_motion (bytes): body motion in bytes
-
-        Raises:
-            ValueError: raised when the body motion is none
-
-        Returns:
-            int: number of frames in the body motion
-        """
-        if body_motion is None:
-            print('Body motion is empty')
-            raise ValueError
-
-        data = {'file_name': 'body_motion', 'file_data': body_motion}
-        resp_data = self.socketio_client.call(
-            XRMocapSMPLClientActionsEnum.UPLOAD, data)
-        num_frames = self._parse_upload_response(resp_data)
-        print(f'Uploaded body motion, which has {num_frames} frames')
-        return num_frames
-
-    def _parse_get_faces_response(self, data):
-        success = False
-        if self.resp_type == 'bytes':
-            if not isinstance(data, dict):
-                success = True
-                faces = np.frombuffer(
-                    data, dtype=np.int32).reshape((-1, 3)).tolist()
-            else:
-                if data['status'] == 'success':
-                    success = True
-                    faces = data['faces']
-
-        if not success:
-            msg = data['msg']
-            print(f'Get faces failed: {msg}')
-            self.close()
-
-        return faces
-
-    def get_faces(self) -> List[int]:
-        """Send a request to get body face indices from the server.
-
-        Returns:
-            List[int]: the requested face indices, organized as a [|F|, 3] list
-        """
-        resp_data = self.socketio_client.call(
-            XRMocapSMPLClientActionsEnum.GET_FACES)
-        faces = self._parse_get_faces_response(resp_data)
-        print('Got faces')
-
-        return faces
-
-    def _parse_forward_response(self, data):
-        success = False
-        if self.resp_type == 'bytes':
-            if not isinstance(data, dict):
-                success = True
-                verts = np.frombuffer(data, dtype=np.float16)
-        else:
-            if data['status'] == 'success':
-                success = True
-                verts = np.asarray(data['verts'])
-        if success:
-            verts = verts.reshape(-1, 3)
-        else:
-            msg = data['msg']
-            print(f'Forward failed: {msg}')
-
-        return verts.tolist()
-
-    def forward(self, frame_idx: int) -> np.ndarray:
-        """Send a request to get body vertices from the server.
-
-        Args:
-            frame_idx (int): frame index in infer
-
-        Returns:
-            np.ndarray: the inferred body vertices, organized
-                as a [|V|, 3] ndarray
-        """
-        resp_data = self.socketio_client.call(
-            XRMocapSMPLClientActionsEnum.FORWARD, {'frame_idx': frame_idx})
-        verts = self._parse_forward_response(resp_data)
-
-        return verts
-
-    def close(self):
-        """Close the client."""
-        self.socketio_client.disconnect()
+if __name__ == '__main__':
+    args = setup_parser()
+    ret_val = main(args)
+    sys.exit(ret_val)

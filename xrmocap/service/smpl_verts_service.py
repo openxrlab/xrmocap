@@ -46,7 +46,7 @@ class SMPLVertsService(BaseFlaskService):
                  work_dir: str,
                  secret_key: Union[None, str] = None,
                  flat_hand_mean: bool = False,
-                 enable_bytes: bool = False,
+                 enable_bytes: bool = True,
                  enable_gzip: bool = False,
                  debug: bool = False,
                  enable_cors: bool = False,
@@ -70,7 +70,7 @@ class SMPLVertsService(BaseFlaskService):
                 If False, then the pose of the hand is initialized to False.
                 Defaults to False.
             enable_bytes (bool, optional):
-                Whether to enable bytes response. Defaults to False.
+                Whether to enable bytes response. Defaults to True.
             enable_gzip (bool, optional):
                 Whether to enable gzip compression for the verts response.
                 Defaults to False.
@@ -210,7 +210,7 @@ class SMPLVertsService(BaseFlaskService):
             error_msg = f'Client {uuid_str} has smpl type {smpl_type} ' +\
                 f'and smpl gender {smpl_gender}, ' +\
                 'but no corresponding body model config found.'
-            resp_dict['msg'] = f'Error: {warn_msg}'
+            resp_dict['msg'] = f'Error: {error_msg}'
             self.logger.error(error_msg)
             emit('upload_response', resp_dict)
         # build body model
@@ -225,7 +225,7 @@ class SMPLVertsService(BaseFlaskService):
         self.logger.info(
             f'Client {uuid_str} smpl data file loaded confirmed.\n' +
             f'Body model type: {smpl_type}\n' + f'Gender: {smpl_gender}')
-        resp_dict['num_frames'] = smpl_data.get_batch_size()
+        resp_dict['n_frames'] = smpl_data.get_batch_size()
         resp_dict['status'] = 'success'
 
         return resp_dict

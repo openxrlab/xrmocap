@@ -5,6 +5,7 @@
 - [Prepare environment](#prepare-environment)
 - [Run with docker image](#run-with-docker-image)
 - [Test environment](#test-environment)
+- [Client only](#client-only)
 - [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Requirements
@@ -235,6 +236,15 @@ sh scripts/run_docker.sh
 ### Test environment
 
 To test whether the environment is well installed, please refer to [test doc](./test.md).
+
+### Client only
+
+If you only need to use the client provided by XRMoCap, the installation process will be much simpler. We have increased the compatibility of the client by reducing dependencies, and you only need to execute the commands below.
+
+```bash
+pip install numpy tqdm flask-socketio
+pip install . --no-deps
+```
 
 ### Frequently Asked Questions
 
