@@ -242,7 +242,7 @@ To test whether the environment is well installed, please refer to [test doc](./
 If you only need to use the client provided by XRMoCap, the installation process will be much simpler. We have increased the compatibility of the client by reducing dependencies, and you only need to execute the commands below.
 
 ```bash
-pip install numpy tqdm flask-socketio
+pip install numpy tqdm flask-socketio requests websocket-client
 pip install . --no-deps
 ```
 
