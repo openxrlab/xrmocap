@@ -25,7 +25,7 @@ enable_cors = True
 port = 29091
 ```
 
-Also, you can find our prepared config files in `configs/modules/service/smpl_verts_service.py`.
+Also, you can find our prepared config files in `configs/modules/service/smpl_stream_service.py`.
 
 ### Argument: disable_log_file
 
@@ -36,5 +36,5 @@ By default, `disable_log_file` is False and two log files under `logs/f'{service
 Run the tool with explicit paths.
 
 ```bash
-python tools/start_service.py --config_path configs/modules/service/smpl_verts_service.py
+python tools/start_service.py --config_path configs/modules/service/smpl_stream_service.py
 ```
