@@ -37,8 +37,8 @@ _SMPLX_CONFIG_TEMPLATE = dict(
     flat_hand_mean=False)
 
 
-class SMPLVertsService(BaseFlaskService):
-    """A websocket service that provides SMPL/SMPLX vertices."""
+class SMPLStreamService(BaseFlaskService):
+    """A websocket service that provides SMPL/SMPLX vertices in stream."""
 
     def __init__(self,
                  name: str,

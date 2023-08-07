@@ -1,10 +1,8 @@
 # Tool start_service
 
 - [Overview](#overview)
-- [Argument: vis_config](#argument-vis_config)
-- [Argument: overwrite](#argument-overwrite)
+- [Argument: config_path](#argument-config_path)
 - [Argument: disable_log_file](#argument-disable_log_file)
-- [Argument: paths](#argument-paths)
 - [Example](#example)
 
 ### Overview
@@ -18,8 +16,8 @@ For services that use the `work_dir` parameter, please make sure that the target
 `config_path` is the path to a configuration file for server. Please ensure that all parameters required by `SomeService.__init__()` are specified in the configuration file. An example is provided below. For more details, see the docstring in [code](../../../xrmocap/service/base_flask_service.py).
 
 ```python
-type = 'SMPLVertsService'
-name = 'smpl_verts_service'
+type = 'SMPLStreamService'
+name = 'smpl_stream_service'
 work_dir = f'temp/{name}'
 body_model_dir = 'xrmocap_data/body_models'
 device = 'cuda:0'
@@ -33,12 +31,7 @@ Also, you can find our prepared config files in `configs/modules/service/smpl_ve
 
 By default, `disable_log_file` is False and two log files under `logs/f'{service_name}_{time_str}'` will be written. Add `--disable_log_file` makes it True and the tool will only print log to console.
 
-### Examples
-
-```bash
-python tool/visualize_dataset.py \
-	--converter_config config/data/data_visualization/shelf_data_visualization_testset.py
-```
+### Example
 
 Run the tool with explicit paths.
 

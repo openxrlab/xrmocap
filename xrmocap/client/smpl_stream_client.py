@@ -9,14 +9,14 @@ from typing import List, Union
 # yapf: enable
 
 
-class XRMocapSMPLClientActionsEnum(str, Enum):
+class SMPLStreamActionsEnum(str, Enum):
     UPLOAD = 'upload'
     FORWARD = 'forward'
     GET_FACES = 'get_faces'
 
 
-class SMPLVertsClient:
-    """Client of the XRMocap SMPL Verts server."""
+class SMPLStreamClient:
+    """Client of the XRMocap SMPL Stream server."""
 
     def __init__(self,
                  server_ip: str = '127.0.0.1',
@@ -97,8 +97,8 @@ class SMPLVertsClient:
             smpl_data_bytes = smpl_data
 
         data = {'file_name': 'body_motion', 'file_data': smpl_data_bytes}
-        resp_data = self.socketio_client.call(
-            XRMocapSMPLClientActionsEnum.UPLOAD, data)
+        resp_data = self.socketio_client.call(SMPLStreamActionsEnum.UPLOAD,
+                                              data)
         n_frames = self._parse_upload_response(resp_data)
         return n_frames
 
@@ -132,8 +132,7 @@ class SMPLVertsClient:
         Returns:
             List[int]: the requested face indices, organized as a [|F|, 3] list
         """
-        resp_data = self.socketio_client.call(
-            XRMocapSMPLClientActionsEnum.GET_FACES)
+        resp_data = self.socketio_client.call(SMPLStreamActionsEnum.GET_FACES)
         faces = self._parse_get_faces_response(resp_data)
         return faces
 
@@ -171,8 +170,8 @@ class SMPLVertsClient:
                 A nested list for inferred body vertices,
                 shape: [n_verts, 3].
         """
-        resp_data = self.socketio_client.call(
-            XRMocapSMPLClientActionsEnum.FORWARD, {'frame_idx': frame_idx})
+        resp_data = self.socketio_client.call(SMPLStreamActionsEnum.FORWARD,
+                                              {'frame_idx': frame_idx})
         verts = self._parse_forward_response(resp_data)
         return verts
 
