@@ -5,6 +5,7 @@
 - [Prepare environment](#prepare-environment)
 - [Run with docker image](#run-with-docker-image)
 - [Test environment](#test-environment)
+- [Client only](#client-only)
 - [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Requirements
@@ -21,14 +22,15 @@
 
 Optional:
 
-| Name                                                     | When it is required            | What's important                                             |
-| :------------------------------------------------------- | :----------------------------- | :----------------------------------------------------------- |
-| [MMPose](https://github.com/open-mmlab/mmpose)           | Keypoints 2D estimation.       | Install `mmcv-full`, instead of `mmcv`.                      |
-| [MMDetection](https://github.com/open-mmlab/mmdetection) | Bbox 2D estimation.            | Install `mmcv-full`, instead of `mmcv`.                      |
-| [MMTracking](https://github.com/open-mmlab/mmtracking)   | Multiple object tracking.      | Install `mmcv-full`, instead of `mmcv`.                      |
-| [MMDeploy](https://github.com/open-mmlab/mmdeploy)       | Faster mmdet+mmpose inference. | Install `mmcv-full`, `cudnn` and `TensorRT`.                 |
-| [Aniposelib](https://github.com/google/aistplusplus_api) | Triangulation.                 | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
-| [Minimal Pytorch Rasterizer](https://github.com/rmbashirov/minimal_pytorch_rasterizer) | SMPL mesh fast visualization.                 | Tested on torch-1.12.0. |
+| Name                                                         | When it is required                     | What's important                                             |
+| :----------------------------------------------------------- | :-------------------------------------- | :----------------------------------------------------------- |
+| [MMPose](https://github.com/open-mmlab/mmpose)               | Keypoints 2D estimation.                | Install `mmcv-full`, instead of `mmcv`.                      |
+| [MMDetection](https://github.com/open-mmlab/mmdetection)     | Bbox 2D estimation.                     | Install `mmcv-full`, instead of `mmcv`.                      |
+| [MMTracking](https://github.com/open-mmlab/mmtracking)       | Multiple object tracking.               | Install `mmcv-full`, instead of `mmcv`.                      |
+| [MMDeploy](https://github.com/open-mmlab/mmdeploy)           | Faster mmdet+mmpose inference.          | Install `mmcv-full`, `cudnn` and `TensorRT`.                 |
+| [Aniposelib](https://github.com/google/aistplusplus_api)     | Triangulation.                          | Install from [github](https://github.com/liruilong940607/aniposelib), instead of pypi. |
+| [Minimal Pytorch Rasterizer](https://github.com/rmbashirov/minimal_pytorch_rasterizer) | SMPL mesh fast visualization.           | Tested on torch-1.12.0.                                      |
+| [Flask](https://flask.palletsprojects.com/en/2.3.x/)         | Starting an http or a websocket server. |                                                              |
 
 ## A from-scratch setup script
 
@@ -92,6 +94,8 @@ cd xrmocap
 pip install -r requirements/build.txt
 # install requirements for runtime
 pip install -r requirements/runtime.txt
+# install requirements for services
+pip install -r requirements/service.txt
 
 # install xrmocap
 rm -rf .eggs && pip install -e .
@@ -196,7 +200,15 @@ cd /opt && \
 
 **Note3:** We've only tested mmdeploy 0.12.0, other version may not work as expectation.
 
-#### g. Run unittests or demos
+#### g. Install requirements for service
+
+You will only need this when you are going to start a server defined in `xrmocap.service`.
+
+```bash
+pip install -r requirements/service.txt
+```
+
+#### h. Run unittests or demos
 
 If everything goes well, try to [run unittest](#test-environment) or go back to [run demos](./getting_started.md#inference)
 
@@ -224,6 +236,15 @@ sh scripts/run_docker.sh
 ### Test environment
 
 To test whether the environment is well installed, please refer to [test doc](./test.md).
+
+### Client only
+
+If you only need to use the client provided by XRMoCap, the installation process will be much simpler. We have increased the compatibility of the client by reducing dependencies, and you only need to execute the commands below.
+
+```bash
+pip install numpy tqdm flask-socketio requests websocket-client
+pip install . --no-deps
+```
 
 ### Frequently Asked Questions
 

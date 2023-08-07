@@ -1,0 +1,6 @@
+flask
+Flask-Caching
+flask-socketio
+flask_api
+flask_cors
+simple-websocket
