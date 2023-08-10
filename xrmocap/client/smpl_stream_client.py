@@ -116,7 +116,7 @@ class SMPLStreamClient:
                 if self.enable_gzip:
                     bin_data = gzip.decompress(bin_data)
                 faces_list = np.frombuffer(
-                    bin_data, dtype=np.float16).reshape((-1, 3)).tolist()
+                    bin_data, dtype=np.int32).reshape((-1, 3)).tolist()
             else:
                 faces_list = data['faces']
             return faces_list
