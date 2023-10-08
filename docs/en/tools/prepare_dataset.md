@@ -37,7 +37,7 @@ meta_path = 'datasets/Shelf/xrmocap_meta_testset'
 visualize = True
 ```
 
-Also, you can find our prepared config files in `config/data/data_converter`, with or without perception.
+Also, you can find our prepared config files in `configs/modules/data/data_converter`, with or without perception.
 
 ### Argument: overwrite
 
@@ -59,14 +59,14 @@ Run the tool when paths configured in `campus_data_converter_testset.py`.
 
 ```bash
 python tool/prepare_dataset.py \
-	--converter_config config/data/data_converter/campus_data_converter_testset.py
+	--converter_config configs/modules/data/data_converter/campus_data_converter_testset.py
 ```
 
 Run the tool with explicit paths.
 
 ```bash
 python tool/prepare_dataset.py \
-  --converter_config config/data/data_converter/campus_data_converter_testset.py \
+  --converter_config configs/modules/data/data_converter/campus_data_converter_testset.py \
   --data_root datasets/Campus \
   --meta_path datasets/Campus/xrmocap_meta_testset
 ```

@@ -1,5 +1,5 @@
 filterpy
-numpy
+numpy<1.24.0
 # # opencv-python for GL equipped env
 # opencv-python
 # # opencv-python-headless for headless env
