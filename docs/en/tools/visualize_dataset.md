@@ -26,7 +26,7 @@ vis_percep2d = True
 vis_gt_kps3d = True
 ```
 
-Also, you can find our prepared config files in `config/data/data_visualization`.
+Also, you can find our prepared config files in `configs/modules/data/data_visualization`.
 
 ### Argument: overwrite
 
@@ -48,14 +48,14 @@ Run the tool when paths configured in `shelf_data_visualization_testset.py`.
 
 ```bash
 python tool/visualize_dataset.py \
-	--converter_config config/data/data_visualization/shelf_data_visualization_testset.py
+	--converter_config configs/modules/data/data_visualization/shelf_data_visualization_testset.py
 ```
 
 Run the tool with explicit paths.
 
 ```bash
 python tool/prepare_dataset.py \
-  --converter_config config/data/data_converter/shelf_data_visualization_testset.py \
+  --converter_config configs/modules/data/data_converter/shelf_data_visualization_testset.py \
   --data_root datasets/Shelf \
   --meta_path datasets/Shelf/xrmocap_meta_testset \
   --output_dir datasets/Shelf/xrmocap_meta_testset/visualization
