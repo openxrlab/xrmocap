@@ -5,7 +5,7 @@ on:
     - cron: "0 0 */2 * *"
 
 jobs:
-  check-comments:
+  find-issues:
     runs-on: ubuntu-latest
     steps:
       - name: Find issues
