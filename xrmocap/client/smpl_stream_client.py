@@ -60,19 +60,20 @@ class SMPLStreamClient:
         self.socketio_client = socketio.Client()
         self.socketio_client.connect(f'http://{server_ip}:{server_port}')
 
-    def _parse_upload_response(self, data):
+    def _parse_upload_response(self, data) -> dict:
+        msg = None
         if data['status'] == 'success':
             n_frames = int(data['n_frames'])
+            msg = 'success'
         else:
             msg = data['msg']
             self.logger.error(
                 'Failed to upload body motion, msg from server:\n' + msg)
-            self.socketio_client.disconnect()
-            raise RuntimeError
+            n_frames = 0
 
-        return n_frames
+        return {'n_frames': n_frames, 'msg': msg}
 
-    def upload_smpl_data(self, smpl_data: Union[bytes, str]) -> int:
+    def upload_smpl_data(self, smpl_data: Union[bytes, str]) -> dict:
         """Upload a body motion to the SMPL server.
 
         Args:
@@ -85,22 +86,20 @@ class SMPLStreamClient:
                 body_motion is None
 
         Returns:
-            int: number of frames in the body motion
+            dict: a dict that contains number of frames in the body motion
+                and the message describing the data parsing result.
         """
         if isinstance(smpl_data, str):
             with open(smpl_data, 'rb') as f:
                 smpl_data_bytes = f.read()
-        elif smpl_data is None:
-            self.logger.error('SMPL data is None.')
-            raise ValueError
         else:
             smpl_data_bytes = smpl_data
 
         data = {'file_name': 'body_motion', 'file_data': smpl_data_bytes}
         resp_data = self.socketio_client.call(SMPLStreamActionsEnum.UPLOAD,
                                               data)
-        n_frames = self._parse_upload_response(resp_data)
-        return n_frames
+        
+        return self._parse_upload_response(resp_data)
 
     def _parse_get_faces_response(self, data: Union[dict,
                                                     bytes]) -> List[float]:

@@ -14,6 +14,7 @@ from xrprimer.utils.log_utils import logging
 from xrmocap.data_structure.body_model import auto_load_smpl_data
 from xrmocap.model.body_model.builder import build_body_model
 from xrmocap.utils.time_utils import Timer
+from xrmocap.utils.data_convert_utils import SMPLDataConverter, SMPLDataTypeEnum
 from .base_flask_service import BaseFlaskService
 
 # yapf: enable
@@ -144,6 +145,8 @@ class SMPLStreamService(BaseFlaskService):
             logger=self.logger,
         )
 
+        self.data_converter = SMPLDataConverter(logger=self.logger)
+
     def run(self):
         """Run this flask service according to configuration.
 
@@ -199,6 +202,24 @@ class SMPLStreamService(BaseFlaskService):
         file_path = os.path.join(self.work_dir, f'{uuid_str}_{file_name}.npz')
         with open(file_path, 'wb') as file:
             file.write(file_data)
+        data_type = self.data_converter.get_data_type(file_path)
+        # organize the input data as the smpl data
+        if data_type is SMPLDataTypeEnum.AMASS:
+            self.logger.info('Received AMASS data, converting to SMPL(X) data')
+            data = self.data_converter.from_amass(file_path)
+            data.dump(file_path)
+        elif data_type is SMPLDataTypeEnum.HUMANDATA:
+            self.logger.info('Received HumanData, converting to SMPL(X) data')
+            data = self.data_converter.from_humandata(file_path)
+            data.dump(file_path)
+        elif data_type is SMPLDataTypeEnum.UNKNOWN:
+            error_msg = 'Failed to convert uploaded data due to ' + \
+                'unknown data type, supported data types: ' + \
+                f'{[e.value for e in SMPLDataTypeEnum if e is not SMPLDataTypeEnum.UNKNOWN]}'
+            self.logger.error(error_msg)
+            resp_dict['msg'] = f'Error: {error_msg}'
+            resp_dict['status'] = 'fail'
+            return resp_dict
         # load smpl data
         smpl_data, class_name = auto_load_smpl_data(
             npz_path=file_path, logger=self.logger)
@@ -212,7 +233,7 @@ class SMPLStreamService(BaseFlaskService):
                 'but no corresponding body model config found.'
             resp_dict['msg'] = f'Error: {error_msg}'
             self.logger.error(error_msg)
-            emit('upload_response', resp_dict)
+            return resp_dict
         # build body model
         body_model_cfg = self.body_model_configs[smpl_type][smpl_gender]
         body_model = build_body_model(body_model_cfg).to(self.device)
