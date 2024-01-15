@@ -18,7 +18,7 @@ class SMPLDataTypeEnum(str, Enum):
 
 
 def validate_shape(actual_shape: tuple, expected_shape: tuple) -> bool:
-    """Compares the shape of two ndarray.
+    """Compare the shape of two ndarrays.
 
     Args:
         actual_shape (tuple): the actual shape.
