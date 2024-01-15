@@ -17,12 +17,30 @@ class SMPLDataTypeEnum(str, Enum):
     UNKNOWN = 'unknown'
 
 
-def validate_shape(actual_shape, expected_shape):
+def validate_shape(actual_shape: tuple, expected_shape: tuple) -> bool:
+    """Compares the shape of two ndarray.
+
+    Args:
+        actual_shape (tuple): the actual shape.
+        expected_shape (tuple): the expected shape.
+
+    Returns:
+        bool: returns true if the actual shape is the expected shape.
+    """
     return all(a == e or e is None
                for a, e in zip(actual_shape, expected_shape))
 
 
 def validate_spec(specs: dict, data: dict) -> bool:
+    """Validate whether the input data conform to the specs.
+
+    Args:
+        specs (dict): rules that should be followed.
+        data (dict): data to be evaluated.
+
+    Returns:
+        bool: returns true if the data follows the specs.
+    """
     missing_keys = set(specs.keys()) - set(data.keys())
     if missing_keys:
         return False
@@ -190,7 +208,6 @@ class SMPLDataConverter:
 
         n_frames = poses.shape[0]
         mask = np.ones((n_frames, ), dtype=np.uint8)
-
         res = None
         if poses.shape[1] == 156:  # smpl
             body_pose = amass_data['poses'][:, 3:72]
