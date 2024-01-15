@@ -6,15 +6,17 @@ import time
 import torch
 import uuid
 from flask import session
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from threading import RLock
 from typing import Union
 from xrprimer.utils.log_utils import logging
 
 from xrmocap.data_structure.body_model import auto_load_smpl_data
 from xrmocap.model.body_model.builder import build_body_model
+from xrmocap.utils.data_convert_utils import (
+    SMPLDataConverter, SMPLDataTypeEnum,
+)
 from xrmocap.utils.time_utils import Timer
-from xrmocap.utils.data_convert_utils import SMPLDataConverter, SMPLDataTypeEnum
 from .base_flask_service import BaseFlaskService
 
 # yapf: enable
@@ -213,9 +215,13 @@ class SMPLStreamService(BaseFlaskService):
             data = self.data_converter.from_humandata(file_path)
             data.dump(file_path)
         elif data_type is SMPLDataTypeEnum.UNKNOWN:
+            vals = [
+                e.value for e in SMPLDataTypeEnum
+                if e is not SMPLDataTypeEnum.UNKNOWN
+            ]
             error_msg = 'Failed to convert uploaded data due to ' + \
-                'unknown data type, supported data types: ' + \
-                f'{[e.value for e in SMPLDataTypeEnum if e is not SMPLDataTypeEnum.UNKNOWN]}'
+                f'unknown data type, supported data types: {vals}'
+
             self.logger.error(error_msg)
             resp_dict['msg'] = f'Error: {error_msg}'
             resp_dict['status'] = 'fail'

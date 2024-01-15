@@ -1,12 +1,14 @@
 # yapf: disable
-import numpy as np
 import logging
-from typing import Union, Optional, Set
+import numpy as np
 from enum import Enum
 from mmhuman3d.data.data_structures.human_data import HumanData
-from xrmocap.data_structure.body_model import SMPLXData, SMPLData
+from typing import Optional, Union
+
+from xrmocap.data_structure.body_model import SMPLData, SMPLXData
 
 # yapf: enable
+
 
 class SMPLDataTypeEnum(str, Enum):
     SMPLDATA = 'smpl data'
@@ -14,8 +16,11 @@ class SMPLDataTypeEnum(str, Enum):
     AMASS = 'AMASS'
     UNKNOWN = 'unknown'
 
+
 def validate_shape(actual_shape, expected_shape):
-    return all(a == e or e is None for a, e in zip(actual_shape, expected_shape))
+    return all(a == e or e is None
+               for a, e in zip(actual_shape, expected_shape))
+
 
 def validate_spec(specs: dict, data: dict) -> bool:
     missing_keys = set(specs.keys()) - set(data.keys())
@@ -28,13 +33,14 @@ def validate_spec(specs: dict, data: dict) -> bool:
             return False
     return True
 
+
 class SMPLDataConverter:
     """A class that converts the input data into the smpl data."""
     SMPL_DATA_SPECS = {
         'betas': (1, 10),
         'fullpose': (None, 24, 3),
         'gender': (),
-        'mask': (None,),
+        'mask': (None, ),
         'transl': (None, 3)
     }
 
@@ -43,49 +49,40 @@ class SMPLDataConverter:
         'expression': (1, 10),
         'fullpose': (None, 55, 3),
         'gender': (),
-        'mask': (None,),
+        'mask': (None, ),
         'transl': (None, 3)
     }
 
     AMASS_SMPL_SPECS = {
-        'betas': (16,),
+        'betas': (16, ),
         'gender': (),
         'poses': (None, 156),
         'trans': (None, 3)
     }
 
     AMASS_SMPLX_SPECS = {
-        'betas': (16,),
+        'betas': (16, ),
         'gender': (),
         'poses': (None, 165),
         'trans': (None, 3)
     }
 
-    HUMANDATA_SMPL_SPECS = {
-        'meta': (),
-        'smpl': ()
-    }
+    HUMANDATA_SMPL_SPECS = {'meta': (), 'smpl': ()}
 
-    HUMANDATA_SMPLX_SPECS = {
-        'meta': (),
-        'smplx': ()
-    }
+    HUMANDATA_SMPLX_SPECS = {'meta': (), 'smplx': ()}
 
-    def __init__(
-        self,
-        logger: Union[None, str, logging.Logger] = None
-    ) -> None:
+    def __init__(self,
+                 logger: Union[None, str, logging.Logger] = None) -> None:
         """
         Args:
-            logger (Union[None, str, logging.Logger], optional): 
+            logger (Union[None, str, logging.Logger], optional):
                 Logger for logging. If None, root logger will be
                 selected. Defaults to None.
         """
         self.logger = logger
 
     def get_data_type(self, filepath: str) -> str:
-        """Evaluate the data type and the structure of 
-            the motion file.
+        """Evaluate the data type and the structure of the motion file.
 
         Args:
             filepath (str): file to evaluate.
@@ -96,21 +93,22 @@ class SMPLDataConverter:
         try:
             with np.load(filepath, allow_pickle=True) as npz_file:
                 data_dict = dict(npz_file)
-                if validate_spec(self.SMPL_DATA_SPECS, data_dict) or \
-                    validate_spec(self.SMPLX_DATA_SPECS, data_dict):
+                if (validate_spec(self.SMPL_DATA_SPECS, data_dict)
+                        or validate_spec(self.SMPLX_DATA_SPECS, data_dict)):
                     return SMPLDataTypeEnum.SMPLDATA
-                elif validate_spec(self.AMASS_SMPL_SPECS, data_dict) or \
-                    validate_spec(self.AMASS_SMPLX_SPECS, data_dict):
+                elif (validate_spec(self.AMASS_SMPL_SPECS, data_dict)
+                      or validate_spec(self.AMASS_SMPLX_SPECS, data_dict)):
                     return SMPLDataTypeEnum.AMASS
-                elif validate_spec(self.HUMANDATA_SMPL_SPECS, data_dict) or \
-                    validate_spec(self.HUMANDATA_SMPLX_SPECS, data_dict):
+                elif (validate_spec(self.HUMANDATA_SMPL_SPECS, data_dict)
+                      or validate_spec(self.HUMANDATA_SMPLX_SPECS, data_dict)):
                     return SMPLDataTypeEnum.HUMANDATA
         except Exception as e:
             self.logger.error({e})
-        
+
         return SMPLDataTypeEnum.UNKNOWN
 
-    def from_humandata(self, filepath: str) -> Optional[Union[SMPLData, SMPLXData]]:
+    def from_humandata(self,
+                       filepath: str) -> Optional[Union[SMPLData, SMPLXData]]:
         """Convert the humandata into the smpl data.
 
         Args:
@@ -123,18 +121,20 @@ class SMPLDataConverter:
         gender = human_data['meta'].get('gender', None)
         if gender is None:
             gender = 'neutral'
-            self.logger.warning(f'Cannot find gender record in {human_data}.meta, ' +
-                        'Use neutral as default.')
+            self.logger.warning(
+                f'Cannot find gender record in {human_data}.meta, ' +
+                'Use neutral as default.')
         body_model = None
         if 'smpl' in dict(human_data).keys():
             body_model = 'smpl'
         elif 'smplx' in dict(human_data).keys():
             body_model = 'smplx'
         else:
-            self.logger.error(f'Cannot find body model in {human_data}.meta, ' +
-                        f'supported body models: [smpl, smplx].')
+            self.logger.error(
+                f'Cannot find body model in {human_data}.meta, ' +
+                'supported body models: [smpl, smplx].')
             return None
-        
+
         betas = human_data[body_model]['betas']
         transl = human_data[body_model]['transl']
         body_pose = human_data[body_model]['body_pose']
@@ -148,8 +148,7 @@ class SMPLDataConverter:
                 betas=betas,
                 transl=transl,
                 global_orient=global_orient,
-                body_pose=body_pose
-            )
+                body_pose=body_pose)
             res = SMPLData(gender=gender, logger=self.logger)
             res.from_param_dict(param_dict)
             res.set_mask(mask)
@@ -172,7 +171,8 @@ class SMPLDataConverter:
 
         return res
 
-    def from_amass(self, filepath: str) -> Optional[Union[SMPLData, SMPLXData]]:
+    def from_amass(self,
+                   filepath: str) -> Optional[Union[SMPLData, SMPLXData]]:
         """Convert the amass data into the smpl data.
 
         Args:
@@ -198,8 +198,7 @@ class SMPLDataConverter:
                 betas=betas,
                 transl=transl,
                 global_orient=global_orient,
-                body_pose=body_pose
-            )
+                body_pose=body_pose)
 
             res = SMPLData(gender=gender, logger=self.logger)
             res.from_param_dict(param_dict)
@@ -222,12 +221,11 @@ class SMPLDataConverter:
                 leye_pose=leye_pose,
                 reye_pose=reye_pose,
                 left_hand_pose=left_hand_pose,
-                right_hand_pose=right_hand_pose
-            )
+                right_hand_pose=right_hand_pose)
             res = SMPLXData(gender=gender, logger=self.logger)
             res.from_param_dict(param_dict)
             res.set_mask(mask)
         else:
-            self.logger.error(f'Unsupported AMASS data.')
-        
+            self.logger.error('Unsupported AMASS data.')
+
         return res

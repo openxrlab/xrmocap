@@ -98,7 +98,7 @@ class SMPLStreamClient:
         data = {'file_name': 'body_motion', 'file_data': smpl_data_bytes}
         resp_data = self.socketio_client.call(SMPLStreamActionsEnum.UPLOAD,
                                               data)
-        
+
         return self._parse_upload_response(resp_data)
 
     def _parse_get_faces_response(self, data: Union[dict,
