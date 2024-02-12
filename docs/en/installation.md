@@ -223,7 +223,7 @@ We provide a Dockerfile to build a runtime image. Ensure that you are using [doc
 Or pull a built image from docker hub.
 
 ```shell
-docker pull openxrlab/xrmocap_runtime:ubuntu1804_x64_cuda116_py38_torch1121_mmcv161
+docker pull openxrlab/xrmocap_runtime:ubuntu2204_x64_cuda118_py310_torch201_mmcv170
 ```
 
 Run it with:
