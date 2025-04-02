@@ -1,6 +1,6 @@
 mkdir xrmocap_download
 cd xrmocap_download
-wget -q https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/Deformable.tar
+wget -q --no-check-certificate 'https://docs.google.com/uc?export=download&id=1t92uAuJWyoKI0uuiMq_VkBzC6HJ75Bz_' -O Deformable.tar
 tar -xvf Deformable.tar
 cd Deformable
 sh make.sh

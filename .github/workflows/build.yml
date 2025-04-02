@@ -43,6 +43,7 @@ jobs:
           conda list | grep mmcv
       - name: Prepare test data
         run: |
+          pip install gdown
           sh scripts/download_test_data.sh
       - name: Prepare weight
         run: |

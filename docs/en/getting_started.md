@@ -27,7 +27,7 @@ If you want to infer SMPL as well, you can prepare the body model as follows.
     For example, `mv basicModel_neutral_lbs_10_207_0_v1.0.0.pkl SMPL_NEUTRAL.pkl`
 - Download `smpl_mean_params.npz` from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz).
 - [gmm_08.zip](https://github.com/vchoutas/smplify-x/files/3295771/gmm_08.zip) from smplify-x repo.
-- [gmm_08.pkl](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/gmm_08.pkl) from openxrlab backup.
+- [gmm_08.pkl](https://drive.google.com/file/d/1mpRLqK0kdvnbyRsUB-hedeTbm_A6aNGS/view?usp=sharing) from openxrlab backup.
 
 Download the above resources and arrange them in the following file structure:
 
@@ -69,7 +69,7 @@ You could find perception models in `weight` file.
 Currently, we only provide optimization-based method for single person estimation.
 
 1. Download body model. Please refer to [Body Model Preparation](#body-model-preparation-optional)
-2. Download an example raw .smc file from HuMMan dataset [here](https://openxdlab.oss-cn-shanghai.aliyuncs.com/HuMMan/humman_release_v1.0_recon_smc/p000455_a000986.smc).
+2. Download an example raw .smc file from HuMMan dataset [here](https://drive.google.com/file/d/1eVg27ghMCxh8u0GtXcKuiUbQNXiSjMrT/view?usp=sharing).
 3. Place the .smc file in `xrmocap_data/humman/`.
 4. Run [process_smc](./tools/process_smc.md) tool.
 
@@ -84,7 +84,7 @@ python tools/process_smc.py \
 
 ### Multiple People
 
-A small test dataset for quick demo can be downloaded [here](https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
+A small test dataset for quick demo can be downloaded [here](https://drive.google.com/file/d/1vTnmF8QKbp9SQKyEPK11r0DsU11P7PA1/view?usp=sharing). It contains 50 frames from the Shelf sequence, with 5 camera views calibrated and synchronized.
 
 #### Optimization-based methods
 
@@ -96,8 +96,9 @@ For optimization-based approaches, it utilizes the association between 2D keypoi
 
 ```bash
 mkdir xrmocap_data
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
-cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
+cd xrmocap_data
+gdown https://docs.google.com/uc?id=1vTnmF8QKbp9SQKyEPK11r0DsU11P7PA1
+unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 ```
 - download body model
 
@@ -131,12 +132,15 @@ sh scripts/download_install_deformable.sh
 ```bash
 # download data
 mkdir -p xrmocap_data
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/example_resources/Shelf_50.zip -P xrmocap_data
-cd xrmocap_data/ && unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
+cd xrmocap_data
+gdown https://docs.google.com/uc?id=1vTnmF8QKbp9SQKyEPK11r0DsU11P7PA1
+unzip -q Shelf_50.zip && rm Shelf_50.zip && cd ..
 
 # download pretrained model
 mkdir -p weight/mvp
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth -P weight/mvp
+cd weight/mvp
+gdown https://docs.google.com/uc?id=1gnrOVwvjvtisr9kYJfCFaoDd_XK6Pdsw
+cd ../..
 ```
 
 3. Run demo with Shelf_50
@@ -190,8 +194,9 @@ cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
 
 # download meta-data
 mkdir -p xrmocap_data/Shelf
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/xrmocap_meta/Shelf/xrmocap_meta_testset_fasterrcnn.zip -P xrmocap_data/Shelf
-cd xrmocap_data/Shelf && unzip xrmocap_meta_testset_fasterrcnn.zip && rm xrmocap_meta_testset_fasterrcnn.zip && cd ../..
+cd xrmocap_data/Shelf
+gdown https://docs.google.com/uc?id=1X_S5ixym3yZa7GgFHcjwk3W7zV6LfeUo
+unzip xrmocap_meta_testset_fasterrcnn.zip && rm xrmocap_meta_testset_fasterrcnn.zip && cd ../..
 ```
 - download body model
 
@@ -238,12 +243,15 @@ cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
 
 # download meta data
 mkdir -p xrmocap_data
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/xrmocap_meta/Shelf/xrmocap_meta_testset.zip -P xrmocap_data
-cd xrmocap_data/ && unzip xrmocap_meta_testset.zip && rm xrmocap_meta_testset.zip && mv xrmocap_meta_testset ./Shelf && cd ..
+cd xrmocap_data
+gdown https://docs.google.com/uc?id=1lxulqqkVqcIFwHym6VrvDNF4omdoLHkg
+unzip xrmocap_meta_testset.zip && rm xrmocap_meta_testset.zip && mv xrmocap_meta_testset ./Shelf && cd ..
 
 # download pretrained model
 mkdir -p weight/mvp
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_shelf-22d1b5ed_20220831.pth -P weight/mvp
+cd weight/mvp
+gdown https://docs.google.com/uc?id=1gnrOVwvjvtisr9kYJfCFaoDd_XK6Pdsw
+cd ../..
 ```
 
 3. Run the evaluation:
@@ -288,12 +296,15 @@ cd xrmocap_data/ && tar -xf Shelf.tar.bz2 && rm Shelf.tar.bz2 && cd ..
 
 # download meta data
 mkdir -p xrmocap_data
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/xrmocap_meta/Shelf/xrmocap_meta_trainset_pesudo_gt.zip -P xrmocap_data
-cd xrmocap_data/ && unzip xrmocap_meta_trainset_pesudo_gt.zip && rm xrmocap_meta_trainset_pesudo_gt.zip && mv xrmocap_meta_trainset_pesudo_gt ./Shelf && cd ..
+cd xrmocap_data
+gdown https://docs.google.com/uc?id=1XK5cFaTfUyGydTwN8NGZLwDSuud0aXZu
+unzip xrmocap_meta_trainset_pesudo_gt.zip && rm xrmocap_meta_trainset_pesudo_gt.zip && mv xrmocap_meta_trainset_pesudo_gt ./Shelf && cd ..
 
 # download pretrained 5-view panoptic model to finetune with Shelf datasest
 mkdir -p weight/mvp
-wget https://openxrlab-share-mainland.oss-cn-hangzhou.aliyuncs.com/xrmocap/weight/mvp/xrmocap_mvp_panoptic_5view-1b673cdf_20220831.pth -P weight/mvp
+cd weight/mvp
+gdown https://docs.google.com/uc?id=1Z4JhEKSxd9MMimPWR6nmwsrzfNgqYAhx
+cd ../..
 ```
 
 3. Run the training:
