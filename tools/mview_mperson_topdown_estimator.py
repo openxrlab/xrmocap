@@ -15,7 +15,7 @@ from xrprimer.data_structure.camera import FisheyeCameraParameter
 from xrprimer.utils.log_utils import setup_logger
 
 from xrmocap.core.estimation.builder import build_estimator
-from xrmocap.core.visualization import visualize_project_keypoints3d
+from xrmocap.visualization import visualize_keypoints3d_projected
 
 # yapf: enable
 
@@ -102,12 +102,12 @@ def main(args):
                 image_list.append(image_np)
             image_array = np.array(image_list)
 
-            visualize_project_keypoints3d(
+            visualize_keypoints3d_projected(
                 keypoints=pred_keypoints3d,
-                cam_param=fisheye_param,
+                camera=fisheye_param,
                 output_path=os.path.join(args.output_dir, 'kps3d',
                                          f'project_view_{view_name}.mp4'),
-                img_arr=image_array.copy(),
+                background_img_list=mview_img_list[idx],
                 overwrite=True)
 
             visualize_smpl_calibration(

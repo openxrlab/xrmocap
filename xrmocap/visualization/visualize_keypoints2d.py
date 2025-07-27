@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 import os
+from mmhuman3d.utils.ffmpeg_utils import prepare_output_path
 from tqdm import tqdm
 from typing import List, Union
 from xrprimer.data_structure.keypoints import Keypoints
@@ -189,6 +190,14 @@ def visualize_keypoints2d(
         line_palette = None
         mframe_line_data = None
         mframe_line_mask = None
+
+    prepare_output_path(
+        output_path=output_path,
+        allowed_suffix=['.mp4', 'gif', ''],
+        tag='output video',
+        path_type='auto',
+        overwrite=overwrite)
+
     ret_value = plot_video(
         output_path=output_path,
         overwrite=overwrite,
