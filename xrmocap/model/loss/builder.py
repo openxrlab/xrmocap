@@ -7,6 +7,7 @@ from .prior_loss import (
     JointPriorLoss, LimbLengthLoss, MaxMixturePriorLoss, PoseRegLoss,
     ShapePriorLoss, SmoothJointLoss,
 )
+from .silhouette_loss import SilhouetteLoss
 
 # yapf: enable
 
@@ -20,6 +21,7 @@ LOSSES.register_module(name='MaxMixturePriorLoss', module=MaxMixturePriorLoss)
 LOSSES.register_module(name='LimbLengthLoss', module=LimbLengthLoss)
 LOSSES.register_module(name='PoseRegLoss', module=PoseRegLoss)
 LOSSES.register_module(name='SetCriterion', module=SetCriterion)
+LOSSES.register_module(name='SilhouetteLoss', module=SilhouetteLoss)
 
 
 def build_loss(cfg):
