@@ -1,27 +1,27 @@
 # Please build this dockerfile with nvidia-container-runtime
-FROM nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04
+FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu18.04
 
 # Install apt packages
 RUN apt-get update && \
     apt-get install -y \
         wget git vim \
         make \
-        libblas-dev liblapack-dev libatlas-base-dev\
+        libblas-dev liblapack-dev libatlas-base-dev \
     && \
     apt-get autoclean
 
-# Install miniconda
+# Install miniconda (Pinned version for Ubuntu 18.04)
 RUN wget -q \
-    https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-    && bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda \
-    && rm -f Miniconda3-latest-Linux-x86_64.sh
+    https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linux-x86_64.sh \
+    && bash Miniconda3-py38_4.12.0-Linux-x86_64.sh -b -p /opt/miniconda \
+    && rm -f Miniconda3-py38_4.12.0-Linux-x86_64.sh
 
 # Update in bashrc
 RUN echo "source /opt/miniconda/etc/profile.d/conda.sh" >> /root/.bashrc && \
     echo "conda deactivate" >> /root/.bashrc
 
 # Prepare python env
-ARG PY_VER
+ARG PY_VER=3.8
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda create -n openxrlab python=$PY_VER -y && \
     conda activate openxrlab && \
@@ -29,20 +29,17 @@ RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda clean -y --all
 
 # Prepare pytorch env
-ARG CUDA_VER
-ARG TORCH_VER
-ARG TORCHV_VER
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
-    conda install pytorch==$TORCH_VER torchvision==$TORCHV_VER cudatoolkit=$CUDA_VER -c pytorch -c conda-forge && \
+    pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116 && \
     conda clean -y --all
 
-# Prepare pytorch3d env
+# Prepare pytorch3d env (Fixed to prevent Conda freeze)
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
-    conda install -c fvcore -c iopath -c conda-forge fvcore iopath && \
-    conda install -c bottler nvidiacub && \
-    conda install pytorch3d -c pytorch3d && \
+    conda install -c bottler nvidiacub -y && \
+    pip install fvcore iopath && \
+    pip install "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.1" && \
     conda clean -y --all
 
 # Prepare pip env
@@ -80,7 +77,6 @@ RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     pip cache purge
 
 # Re-install opencv for headless system
-# For cudagl base image, please remove both and re-install opencv-python
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
     pip uninstall opencv-python opencv-python-headless -y && \
