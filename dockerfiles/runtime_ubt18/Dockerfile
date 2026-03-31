@@ -1,12 +1,20 @@
 # Please build this dockerfile with nvidia-container-runtime
-FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu18.04
+#
+# FIX 1: Base image aligned to CUDA 11.6 to match build_runtime_docker.sh (CUDA_VER=11.6).
+#         Original used 11.7.1, causing a silent mismatch with torch+cu116.
+FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04
 
 # Install apt packages
+# FIX 4: ffmpeg installed via apt instead of conda.
+#         The conda ffmpeg is built without --enable-libx264, causing
+#         BrokenPipeError when xrmocap writes MP4 video with the libx264 codec.
+#         The apt package includes libx264 support out of the box.
 RUN apt-get update && \
     apt-get install -y \
         wget git vim \
         make \
         libblas-dev liblapack-dev libatlas-base-dev \
+        ffmpeg \
     && \
     apt-get autoclean
 
@@ -25,22 +33,28 @@ ARG PY_VER=3.8
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda create -n openxrlab python=$PY_VER -y && \
     conda activate openxrlab && \
-    conda install ffmpeg -y && \
     conda clean -y --all
 
 # Prepare pytorch env
+ARG CUDA_VER=11.6
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
-    pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116 && \
+    pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 \
+        --extra-index-url https://download.pytorch.org/whl/cu116 && \
     conda clean -y --all
 
-# Prepare pytorch3d env (Fixed to prevent Conda freeze)
+# Prepare pytorch3d env
+#
+# FIX 2: Removed 'conda install -c bottler nvidiacub'.
+#         CUDA 11.6 already ships CUB 1.15 at /usr/local/cuda/include/cub/.
+#         Installing nvidiacub via conda places CUB 1.10 at
+#         /opt/miniconda/envs/openxrlab/include/cub/, creating two conflicting
+#         CUB versions in the include path. nvcc picks up both, causing
+#         "CUB_VERSION redefined" and cascading Thrust/cuda_occupancy errors.
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
     conda activate openxrlab && \
-    conda install -c bottler nvidiacub -y && \
-    pip install fvcore iopath && \
-    pip install "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.1" && \
-    conda clean -y --all
+    pip install fvcore iopath ninja && \
+    pip cache purge
 
 # Prepare pip env
 RUN . /opt/miniconda/etc/profile.d/conda.sh && \
