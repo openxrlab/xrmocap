@@ -53,8 +53,87 @@ pip install -v -e .
 > do container garante compatibilidade automática com qualquer placa (RTX 3060, A100, V100, etc.)
 > sem precisar rebuildar a imagem.
 
----
+## Calibração de Câmeras Próprias
 
+Se você possui câmeras calibradas via ROS ([`camera_calibration`](http://wiki.ros.org/camera_calibration)),
+use o script abaixo para converter os parâmetros para o formato `FisheyeCameraParameter` do XRPrimer,
+que é o formato esperado pelo XRMoCap.
+
+### Conversão dos parâmetros
+
+O script `tools/ros_stereo_calib_to_xrprimer.py` aceita dois formatos de entrada:
+
+**Opção A — par de arquivos YAML** (recomendado; maior precisão numérica):
+
+```bash
+python tools/ros_stereo_calib_to_xrprimer.py \
+    --left  calibration/left.yaml \
+    --right calibration/right.yaml \
+    --output_dir xrmocap_data/meu_dataset/scene_0/camera_parameters
+```
+
+**Opção B — arquivo OST único** (também gerado pelo `camera_calibration` do ROS):
+
+```bash
+python tools/ros_stereo_calib_to_xrprimer.py \
+    --ost calibration/ost.txt \
+    --output_dir xrmocap_data/meu_dataset/scene_0/camera_parameters
+```
+
+**Parâmetros opcionais:**
+
+| Argumento | Padrão | Descrição |
+|---|---|---|
+| `--output_dir` / `-o` | `camera_parameters` | Diretório de saída (criado automaticamente) |
+| `--left_name` | `cam_00` | Nome da câmera esquerda no JSON |
+| `--right_name` | `cam_01` | Nome da câmera direita no JSON |
+
+**Pré-requisitos:**
+```bash
+pip install numpy pyyaml
+```
+
+### Saída gerada
+
+O script cria dois arquivos JSON no diretório especificado:
+
+```
+camera_parameters/
+├── fisheye_param_00.json   # câmera esquerda — origem do mundo (R=I, T=0)
+└── fisheye_param_01.json   # câmera direita — extrínseco relativo à esquerda
+```
+
+Esses arquivos devem ser colocados na estrutura de dataset do XRMoCap:
+
+```
+xrmocap_data/
+└── meu_dataset/
+    └── scene_0/
+        └── camera_parameters/
+            ├── fisheye_param_00.json
+            └── fisheye_param_01.json
+```
+
+### Como carregar em Python
+
+```python
+from xrprimer.data_structure.camera import FisheyeCameraParameter
+
+cam_param_list = [
+    FisheyeCameraParameter.fromfile(
+        f'xrmocap_data/meu_dataset/scene_0/camera_parameters/fisheye_param_{i:02d}.json'
+    )
+    for i in range(2)
+]
+```
+
+> **Nota sobre os extrínsecos:** a câmera esquerda é tratada como origem do mundo.
+> O extrínseco da câmera direita é derivado das matrizes de retificação estéreo e
+> do baseline codificado na matriz de projeção (`Tx / fx'`).
+> Verifique se a unidade do tabuleiro de calibração (parâmetro `square_size` do ROS)
+> está correta — ela define a escala do baseline.
+
+---
 ## Multiple People Estimation
 
 Demonstração rápida com 50 frames da sequência **Shelf**, 5 câmeras calibradas e sincronizadas.

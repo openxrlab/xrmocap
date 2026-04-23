@@ -1,5 +1,5 @@
 type = 'MultiViewMultiPersonTopDownEstimator'
-bbox_thr = 0.9
+bbox_thr = 0.5
 work_dir = './temp'
 verbose = False
 logger = None
@@ -45,9 +45,9 @@ associator = dict(
         use_dual_stochastic_SVT=True,
         lambda_SVT=50,
         alpha_SVT=0.5,
-        n_cam_min=3,
+        n_cam_min=2,
     ),
-    kalman_tracking=dict(type='KalmanTracking', n_cam_min=3, logger=logger),
+    kalman_tracking=dict(type='KalmanTracking', n_cam_min=2, logger=logger),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',
         tracking_distance=1,

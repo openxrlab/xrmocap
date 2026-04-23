@@ -1,0 +1,21 @@
+name: bag_to_xrmocap
+# Criação:   conda env create -f environment_bag_to_xrmocap.yml
+# Ativação:  conda activate bag_to_xrmocap
+# Remoção:   conda env remove -n bag_to_xrmocap
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10          # rosbags>=0.10.x exige Python>=3.10
+  - pip
+
+  # Dependências via conda (binários pré-compilados, mais rápido)
+  - numpy>=1.21
+  - opencv              # fornece cv2
+
+  # Dependências via pip (não disponíveis no conda ou versão específica necessária)
+  - pip:
+    - rosbags>=0.10.10  # lê ROS2 bags v9 (Jazzy/Iron) sem instalação do ROS2
+                        # AnyReader detecta automaticamente o formato do bag

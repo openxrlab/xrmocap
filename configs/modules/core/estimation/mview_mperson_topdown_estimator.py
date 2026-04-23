@@ -45,9 +45,9 @@ associator = dict(
         use_dual_stochastic_SVT=True,
         lambda_SVT=50,
         alpha_SVT=0.5,
-        n_cam_min=3,
+        n_cam_min=2,
     ),
-    kalman_tracking=dict(type='KalmanTracking', n_cam_min=3, logger=logger),
+    kalman_tracking=dict(type='KalmanTracking', n_cam_min=2, logger=logger),
     identity_tracking=dict(
         type='KeypointsDistanceTracking',
         tracking_distance=1,
@@ -58,7 +58,7 @@ associator = dict(
         ]),
     checkpoint_path='./weight/mvpose/' +
     'resnet50_reid_camstyle-98d61e41_20220921.pth',
-    best_distance=600,
+    best_distance=2000,
     interval=5,
     bbox_thr=bbox_thr,
     device='cuda',
