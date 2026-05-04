@@ -321,7 +321,13 @@ class MvposeAssociator:
         if not (dim_group == 0).all():
             cropped_img = torch.stack(cropped_img)
             kps2d = np.concatenate(kps2d, axis=0)
-        ret_bbox2d = np.concatenate(ret_bbox2d, axis=0)
+        valid_bboxes = [np.atleast_2d(b) for b in ret_bbox2d
+                if np.asarray(b).size > 0]
+
+        if valid_bboxes:
+            ret_bbox2d = np.concatenate(valid_bboxes, axis=0)
+        else:
+            ret_bbox2d = np.zeros((0, 5))  # nenhuma câmera detectou pessoas
 
         return cropped_img, kps2d, dim_group, ret_bbox2d
 
